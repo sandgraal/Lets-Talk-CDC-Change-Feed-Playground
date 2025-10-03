@@ -1,10 +1,11 @@
 // Minimal CDC simulator with Debezium-like envelopes.
-// Zero deps. All state kept in-memory + localStorage snapshot.
+// Now with Appwrite Realtime.
+// State is in-memory + localStorage snapshot.
 
 const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
-  events: [],     // emitted events
+  events: [],     // emitted events (local + realtime)
 };
 
 const els = {
@@ -18,15 +19,15 @@ const els = {
 
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
-const clone = (x) => JSON.parse(JSON.stringify(x));
-const save = () => localStorage.setItem("cdc_playground", JSON.stringify(state));
-const load = () => {
+const clone  = (x) => JSON.parse(JSON.stringify(x));
+const save   = () => localStorage.setItem("cdc_playground", JSON.stringify(state));
+const load   = () => {
   try {
     const raw = localStorage.getItem("cdc_playground");
     if (!raw) return;
     const s = JSON.parse(raw);
     state.schema = s.schema || [];
-    state.rows = s.rows || [];
+    state.rows   = s.rows   || [];
     state.events = s.events || [];
   } catch { /* ignore */ }
 };
@@ -44,7 +45,7 @@ function buildEvent(op, before, after) {
   return {
     payload: {
       before: els.includeBefore.checked ? before ?? null : null,
-      after: after ?? null,
+      after:  after ?? null,
       source: { name: "playground", version: "0.1.0" },
       op,            // c,u,d,r
       ts_ms: nowTs()
@@ -58,12 +59,87 @@ function renderJSONLog() {
   els.eventLog.textContent = text || "// no events yet";
 }
 
+// ---------- Appwrite Realtime wiring ----------
+let appwrite = null;
+
+async function initAppwrite() {
+  const cfg = window.APPWRITE_CFG;
+  if (!cfg || !window.Appwrite) return; // run offline if not configured
+
+  const client    = new Appwrite.Client().setEndpoint(cfg.endpoint).setProject(cfg.projectId);
+  const account   = new Appwrite.Account(client);
+  const databases = new Appwrite.Databases(client);
+  const realtime  = new Appwrite.Realtime(client);
+
+  // Try to ensure a session (optional; public perms will still work without it)
+  try { await account.get(); }
+  catch { try { await account.createAnonymousSession(); } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
+
+  const channel = cfg.channel(cfg.databaseId, cfg.collectionId);
+  realtime.subscribe(channel, (msg) => {
+    const ev = (msg.events && msg.events[0]) || "";
+    // Only react to document create events
+    if (!ev.includes(".documents.*.create")) return;
+
+    // Normalize payload (supports either JSON or string columns)
+    const doc = msg.payload;
+    const norm = {
+      ts_ms: doc.ts_ms ?? doc.ts ?? Date.now(),
+      op:    doc.op    ?? "u",
+      before: typeof doc.before === "string" ? safeParse(doc.before) : (doc.before ?? null),
+      after:  typeof doc.after  === "string" ? safeParse(doc.after)  : (doc.after  ?? null),
+      _docId: doc.$id
+    };
+
+    // De-dup (ignore if we already appended this doc id)
+    if (!state.events.some(e => e._docId === norm._docId)) {
+      state.events.push(norm);
+      renderJSONLog();
+      save();
+    }
+  });
+
+  appwrite = { client, account, databases, realtime, cfg };
+}
+
+function safeParse(s) { try { return JSON.parse(s); } catch { return s; } }
+
+// Attempt to write JSON; if it fails (e.g., column is string), retry stringified.
+async function publishEvent(op, before, after) {
+  if (!appwrite) return; // offline mode: skip
+  const { databases, cfg } = appwrite;
+
+  const docBodyJSON = {
+    ts_ms: nowTs(),
+    op,
+    before: els.includeBefore.checked ? (before ?? null) : null,
+    after:  after ?? null
+  };
+
+  try {
+    // First try as JSON
+    await databases.createDocument(cfg.databaseId, cfg.collectionId, Appwrite.ID.unique(), docBodyJSON);
+  } catch (e) {
+    // Fallback to string columns
+    const docBodyStr = {
+      ts_ms: docBodyJSON.ts_ms,
+      op:    docBodyJSON.op,
+      before: docBodyJSON.before == null ? null : JSON.stringify(docBodyJSON.before),
+      after:  docBodyJSON.after  == null ? null : JSON.stringify(docBodyJSON.after)
+    };
+    try {
+      await databases.createDocument(cfg.databaseId, cfg.collectionId, Appwrite.ID.unique(), docBodyStr);
+    } catch (e2) {
+      console.warn("publishEvent failed (JSON and string modes)", e2);
+    }
+  }
+}
+
 // ---------- Schema ----------
 function addColumn({ name, type, pk }) {
   if (!name) return;
   if (state.schema.some(c => c.name === name)) return;
   state.schema.push({ name, type, pk: !!pk });
-  // add blank field to existing rows
   for (const r of state.rows) if (!(name in r)) r[name] = null;
   save(); renderSchema(); renderEditor(); renderTable();
 }
@@ -93,7 +169,7 @@ function renderEditor() {
   els.rowEditor.innerHTML = "";
   for (const c of state.schema) {
     const wrap = document.createElement("div");
-    const inp = document.createElement("input");
+    const inp  = document.createElement("input");
     inp.placeholder = `${c.name}`;
     inp.dataset.col = c.name;
     wrap.appendChild(inp);
@@ -104,10 +180,10 @@ function renderEditor() {
 function readEditorValues() {
   const obj = {};
   els.rowEditor.querySelectorAll("input").forEach(inp => {
-    const col = inp.dataset.col;
+    const col  = inp.dataset.col;
     const type = state.schema.find(c => c.name === col)?.type || "string";
     let val = inp.value;
-    if (type === "number") val = val === "" ? null : Number(val);
+    if (type === "number")  val = val === "" ? null : Number(val);
     if (type === "boolean") val = (val || "").toLowerCase() === "true";
     obj[col] = val === "" ? null : val;
   });
@@ -120,10 +196,8 @@ function clearEditor() { els.rowEditor.querySelectorAll("input").forEach(i => i.
 function renderTable() {
   const thead = els.tbl.tHead || els.tbl.createTHead();
   const tbody = els.tbl.tBodies[0] || els.tbl.createTBody();
-  thead.innerHTML = "";
-  tbody.innerHTML = "";
+  thead.innerHTML = ""; tbody.innerHTML = "";
 
-  // header
   const trh = thead.insertRow();
   state.schema.forEach(c => {
     const th = document.createElement("th");
@@ -131,7 +205,6 @@ function renderTable() {
     trh.appendChild(th);
   });
 
-  // rows
   for (const r of state.rows) {
     const tr = tbody.insertRow();
     state.schema.forEach(c => {
@@ -147,11 +220,13 @@ function findByPK(values) {
   return state.rows.findIndex(row => pks.every(k => row[k] === values[k]));
 }
 
-// ---------- Operations ----------
+// ---------- Operations (now publish to Appwrite too) ----------
 function insertRow(values) {
   const after = clone(values);
   state.rows.push(after);
-  state.events.push(buildEvent("c", null, after));
+  const evt = buildEvent("c", null, after);
+  state.events.push(evt);
+  publishEvent("c", null, after);
   save(); renderTable(); renderJSONLog();
 }
 
@@ -159,10 +234,13 @@ function updateRow(values) {
   const idx = findByPK(values);
   if (idx === -1) return alert("Row with matching PK not found.");
   const before = clone(state.rows[idx]);
-  const after = clone(before);
+  const after  = clone(before);
   Object.keys(values).forEach(k => { if (values[k] !== null && values[k] !== "") after[k] = values[k]; });
   state.rows[idx] = after;
-  state.events.push(buildEvent("u", before, after));
+
+  const evt = buildEvent("u", before, after);
+  state.events.push(evt);
+  publishEvent("u", before, after);
   save(); renderTable(); renderJSONLog();
 }
 
@@ -171,30 +249,35 @@ function deleteRow(values) {
   if (idx === -1) return alert("Row with matching PK not found.");
   const before = clone(state.rows[idx]);
   state.rows.splice(idx, 1);
-  state.events.push(buildEvent("d", before, null));
+
+  const evt = buildEvent("d", before, null);
+  state.events.push(evt);
+  publishEvent("d", before, null);
   save(); renderTable(); renderJSONLog();
 }
 
 function emitSnapshot() {
-  // Debezium uses op=r for snapshot read events
-  for (const row of state.rows) state.events.push(buildEvent("r", null, clone(row)));
+  for (const row of state.rows) {
+    const evt = buildEvent("r", null, clone(row));
+    state.events.push(evt);
+    publishEvent("r", null, row);
+  }
   save(); renderJSONLog();
 }
 
 // ---------- Seeds / export ----------
 function seedRows() {
   if (state.schema.length === 0) {
-    // sensible default schema
     state.schema = [
-      { name: "id", type: "number", pk: true },
-      { name: "email", type: "string", pk: false },
+      { name: "id",     type: "number",  pk: true  },
+      { name: "email",  type: "string",  pk: false },
       { name: "active", type: "boolean", pk: false },
     ];
     renderSchema(); renderEditor();
   }
   if (state.rows.length === 0) {
     state.rows = [
-      { id: 1, email: "user1@example.com", active: true },
+      { id: 1, email: "user1@example.com", active: true  },
       { id: 2, email: "user2@example.com", active: false },
     ];
   }
@@ -216,25 +299,24 @@ function importScenario(file) {
     try {
       const s = JSON.parse(reader.result);
       state.schema = s.schema || [];
-      state.rows = s.rows || [];
+      state.rows   = s.rows   || [];
       state.events = s.events || [];
       save(); renderSchema(); renderEditor(); renderTable(); renderJSONLog();
-    } catch (e) {
-      alert("Invalid scenario JSON");
-    }
+    } catch { alert("Invalid scenario JSON"); }
   };
   reader.readAsText(file);
 }
 
 // ---------- Wire up UI ----------
-function main() {
+async function main() {
   load();
   renderSchema(); renderEditor(); renderTable(); renderJSONLog();
+  await initAppwrite();  // enable realtime if configured
 
   document.getElementById("addCol").onclick = () => {
     const name = document.getElementById("colName").value.trim();
     const type = document.getElementById("colType").value;
-    const pk = document.getElementById("colPK").checked;
+    const pk   = document.getElementById("colPK").checked;
     addColumn({ name, type, pk });
     document.getElementById("colName").value = "";
     document.getElementById("colPK").checked = false;
