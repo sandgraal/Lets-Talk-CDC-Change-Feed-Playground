@@ -67,6 +67,12 @@
         <label><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
         <label><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
       </div>
+      <div class="filter-actions">
+        <label><input type="checkbox" id="filterC" checked /> Inserts</label>
+        <label><input type="checkbox" id="filterU" checked /> Updates</label>
+        <label><input type="checkbox" id="filterD" checked /> Deletes</label>
+        <label><input type="checkbox" id="filterR" checked /> Snapshots</label>
+      </div>
       <pre id="eventLog" class="log"></pre>
     </section>
   </main>

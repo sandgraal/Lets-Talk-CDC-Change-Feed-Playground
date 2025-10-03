@@ -55,9 +55,22 @@ function buildEvent(op, before, after) {
 }
 
 function renderJSONLog() {
-  const text = state.events.map(e => JSON.stringify(e, null, 2)).join("\n");
-  els.eventLog.textContent = text || "// no events yet";
+  const allowed = {
+    c: document.getElementById("filterC")?.checked,
+    u: document.getElementById("filterU")?.checked,
+    d: document.getElementById("filterD")?.checked,
+    r: document.getElementById("filterR")?.checked,
+  };
+
+  const filtered = state.events.filter(e => {
+    const op = e.op || e.payload?.op;
+    return allowed[op] ?? true; // default true if no filter
+  });
+
+  const text = filtered.map(e => JSON.stringify(e, null, 2)).join("\n");
+  els.eventLog.textContent = text || "// no events yet (check filters)";
 }
+
 
 // ---------- Appwrite Realtime wiring ----------
 let appwrite = null;
