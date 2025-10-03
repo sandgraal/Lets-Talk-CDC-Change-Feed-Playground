@@ -53,19 +53,40 @@ function buildEvent(op, before, after) {
     key
   };
 }
+function getFilterFlags() {
+  return {
+    c: document.getElementById("filterC")?.checked ?? true,
+    u: document.getElementById("filterU")?.checked ?? true,
+    d: document.getElementById("filterD")?.checked ?? true,
+    r: document.getElementById("filterR")?.checked ?? true,
+  };
+}
+
+function filterEvents(evts) {
+  const allowed = getFilterFlags();
+  return evts.filter(e => {
+    const op = e.op || e.payload?.op;
+    return allowed[op] ?? true;
+  });
+}
+
+function getOp(ev) {
+  // supports both plain and Debezium-envelope shapes
+  return ev.op ?? ev.payload?.op ?? "u";
+}
 
 function renderJSONLog() {
   const allowed = {
-    c: document.getElementById("filterC")?.checked,
-    u: document.getElementById("filterU")?.checked,
-    d: document.getElementById("filterD")?.checked,
-    r: document.getElementById("filterR")?.checked,
+    c: document.getElementById("filterC")?.checked ?? true,
+    u: document.getElementById("filterU")?.checked ?? true,
+    d: document.getElementById("filterD")?.checked ?? true,
+    r: document.getElementById("filterR")?.checked ?? true,
   };
 
-  const filtered = state.events.filter(e => {
-    const op = e.op || e.payload?.op;
-    return allowed[op] ?? true; // default true if no filter
-  });
+  const filtered = state.events.filter(ev => allowed[getOp(ev)]);
+  const text = filtered.map(ev => JSON.stringify(ev, null, 2)).join("\n");
+  els.eventLog.textContent = text || "// no events yet (check filters)";
+}
 
   const text = filtered.map(e => JSON.stringify(e, null, 2)).join("\n");
   els.eventLog.textContent = text || "// no events yet (check filters)";
