@@ -1,11 +1,80 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Lets Talk CDC – Playground</title>
-  </head>
-  <body>
-    <h1>Lets Talk CDC – Change Feed Playground</h1>
-    <p>Work in progress hackathon submission 🚀</p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lets Talk CDC – Change Feed Playground</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Change Feed Playground</h1>
+    <div class="topbar-actions">
+      <button id="btnExport">Export Scenario</button>
+      <label class="file">
+        <input type="file" id="importFile" accept="application/json" />
+        <span>Import Scenario</span>
+      </label>
+      <button id="btnReset">Reset</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- Schema + Row editor -->
+    <section class="card">
+      <h2>Schema</h2>
+      <div class="schema">
+        <input id="colName" placeholder="column name (e.g., id)" />
+        <select id="colType">
+          <option value="string">string</option>
+          <option value="number">number</option>
+          <option value="boolean">boolean</option>
+        </select>
+        <label><input type="checkbox" id="colPK" /> PK</label>
+        <button id="addCol">Add Column</button>
+      </div>
+
+      <div class="pill-row" id="schemaPills"></div>
+
+      <h2>Operate on Table</h2>
+      <div class="row-editor" id="rowEditor"></div>
+      <div class="ops">
+        <button id="opInsert">Insert</button>
+        <button id="opUpdate">Update by PK</button>
+        <button id="opDelete">Delete by PK</button>
+      </div>
+    </section>
+
+    <!-- Table state -->
+    <section class="card">
+      <h2>Current Table</h2>
+      <table id="tbl" class="data-table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-actions">
+        <button id="seedRows">Seed sample rows</button>
+        <button id="clearRows">Clear rows</button>
+      </div>
+    </section>
+
+    <!-- Change feed -->
+    <section class="card">
+      <h2>Change Events</h2>
+      <div class="stream-actions">
+        <button id="emitSnapshot">Emit Snapshot</button>
+        <button id="clearEvents">Clear events</button>
+        <label><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
+        <label><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
+      </div>
+      <pre id="eventLog" class="log"></pre>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Built for Appwrite Hacktoberfest · Deployed on <strong>Sites</strong></span>
+  </footer>
+
+  <script src="assets/app.js" type="module"></script>
+</body>
 </html>
