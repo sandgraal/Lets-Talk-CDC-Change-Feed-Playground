@@ -75,6 +75,18 @@
     <span>Built for Appwrite Hacktoberfest · Deployed on <strong>Sites</strong></span>
   </footer>
 
+  <!-- Appwrite SDK + config -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <script>
+    window.APPWRITE_CFG = {
+      endpoint: "https://cloud.appwrite.io/v1",
+      projectId: "<YOUR_PROJECT_ID>",
+      databaseId: "68e028d90039fa4588f5",
+      collectionId: "<YOUR_EVENTS_TABLE_ID>",
+      channel: (db, col) => `databases.${db}.collections.${col}.documents`
+    };
+  </script>
+
   <script src="assets/app.js" type="module"></script>
 </body>
 </html>
