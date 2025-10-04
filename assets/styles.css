@@ -548,12 +548,28 @@ select:focus {
 
 .export-actions { margin-top: 8px; }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.table-shell {
   border: 1px solid rgba(78,116,173,0.35);
   border-radius: 16px;
+  background: rgba(14, 26, 48, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(15,28,52,0.25);
   overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border-radius: inherit;
+}
+
+.table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
 }
 .data-table th,
 .data-table td {

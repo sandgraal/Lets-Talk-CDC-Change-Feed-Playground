@@ -136,10 +136,14 @@
               <p class="card-intro">Review current rows, seed realistic data, or clear the table to reset.</p>
             </div>
           </header>
-          <table id="tbl" class="data-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
+          <div class="table-shell">
+            <div class="table-scroll" role="region" aria-label="Current rows" tabindex="0">
+              <table id="tbl" class="data-table">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
           <div class="table-actions">
             <button id="seedRows" type="button">Seed sample rows</button>
             <button id="clearRows" type="button">Clear rows</button>
