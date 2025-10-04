@@ -142,13 +142,51 @@ function refreshSchemaStatus(message, tone = "muted") {
   const el = els.schemaStatus;
   if (!el) return;
   const columns = state.schema.length;
+  const hasPk = state.schema.some(c => c.pk);
   const defaultMsg = columns === 0
     ? "Add a column to begin building your table."
-    : `${columns} column${columns === 1 ? "" : "s"} defined. Click a pill to remove.`;
+    : hasPk
+      ? `${columns} column${columns === 1 ? "" : "s"} defined. Click a pill to remove.`
+      : `Define at least one primary key so updates and deletes can locate rows.`;
   el.textContent = message ?? defaultMsg;
   el.classList.remove("is-error", "is-success");
   if (tone === "error") el.classList.add("is-error");
   if (tone === "success") el.classList.add("is-success");
+}
+
+function hasPrimaryKey() {
+  return state.schema.some(col => col.pk);
+}
+
+function getPrimaryKeyFields() {
+  return state.schema.filter(col => col.pk).map(col => col.name);
+}
+
+function ensurePrimaryKeyValues(values) {
+  const pks = getPrimaryKeyFields();
+  const missing = pks.filter(name => values[name] === null || typeof values[name] === "undefined");
+  if (!missing.length) return true;
+  alert(`Provide values for primary key column${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}.`);
+  return false;
+}
+
+function demandPrimaryKey(action) {
+  if (hasPrimaryKey()) return true;
+  const msg = action
+    ? `Add a primary key before ${action}.`
+    : `Add at least one primary key to continue.`;
+  refreshSchemaStatus(msg, "error");
+  updateLearning("schema");
+  return false;
+}
+
+function nextDocumentId() {
+  if (!appwrite || !window.Appwrite) return null;
+  try {
+    return Appwrite.ID.unique();
+  } catch {
+    return null;
+  }
 }
 
 function ensureDefaultSchema() {
@@ -352,7 +390,7 @@ async function initAppwrite() {
 function safeParse(s) { try { return JSON.parse(s); } catch { return s; } }
 
 // Attempt to write JSON; if it fails (e.g., column is string), retry stringified.
-async function publishEvent(op, before, after) {
+async function publishEvent(op, before, after, docId) {
   if (!appwrite) return; // offline mode: skip
   const { databases, cfg } = appwrite;
 
@@ -363,9 +401,11 @@ async function publishEvent(op, before, after) {
     after:  after ?? null
   };
 
+  const documentId = docId || Appwrite.ID.unique();
+
   try {
     // First try as JSON
-    await databases.createDocument(cfg.databaseId, cfg.collectionId, Appwrite.ID.unique(), docBodyJSON);
+    await databases.createDocument(cfg.databaseId, cfg.collectionId, documentId, docBodyJSON);
   } catch (e) {
     // Fallback to string columns
     const docBodyStr = {
@@ -375,7 +415,7 @@ async function publishEvent(op, before, after) {
       after:  docBodyJSON.after  == null ? null : JSON.stringify(docBodyJSON.after)
     };
     try {
-      await databases.createDocument(cfg.databaseId, cfg.collectionId, Appwrite.ID.unique(), docBodyStr);
+      await databases.createDocument(cfg.databaseId, cfg.collectionId, documentId, docBodyStr);
     } catch (e2) {
       console.warn("publishEvent failed (JSON and string modes)", e2);
     }
@@ -444,6 +484,10 @@ function renderEditor() {
     const inp  = document.createElement("input");
     inp.placeholder = `${c.name}`;
     inp.dataset.col = c.name;
+    inp.dataset.touched = "false";
+    inp.addEventListener("input", () => {
+      inp.dataset.touched = "true";
+    });
     wrap.appendChild(inp);
     els.rowEditor.appendChild(wrap);
   }
@@ -451,18 +495,46 @@ function renderEditor() {
 
 function readEditorValues() {
   const obj = {};
+  const touched = {};
   els.rowEditor.querySelectorAll("input").forEach(inp => {
     const col  = inp.dataset.col;
     const type = state.schema.find(c => c.name === col)?.type || "string";
     let val = inp.value;
-    if (type === "number")  val = val === "" ? null : Number(val);
-    if (type === "boolean") val = (val || "").toLowerCase() === "true";
+    if (type === "number") {
+      if (val === "") {
+        val = null;
+      } else {
+        const num = Number(val);
+        val = Number.isNaN(num) ? null : num;
+      }
+    }
+    if (type === "boolean") {
+      if (val === "") {
+        val = null;
+      } else {
+        const normalized = val.toLowerCase();
+        if (normalized === "true" || normalized === "1") {
+          val = true;
+        } else if (normalized === "false" || normalized === "0") {
+          val = false;
+        } else {
+          val = null;
+        }
+      }
+    }
     obj[col] = val === "" ? null : val;
+    touched[col] = inp.dataset.touched === "true";
   });
+  Object.defineProperty(obj, "__touched", { value: touched, enumerable: false });
   return obj;
 }
 
-function clearEditor() { els.rowEditor.querySelectorAll("input").forEach(i => i.value = ""); }
+function clearEditor() {
+  els.rowEditor.querySelectorAll("input").forEach(i => {
+    i.value = "";
+    i.dataset.touched = "false";
+  });
+}
 
 // ---------- Table ----------
 function renderTable() {
@@ -495,48 +567,73 @@ function findByPK(values) {
 
 // ---------- Operations (now publish to Appwrite too) ----------
 function insertRow(values) {
+  if (!demandPrimaryKey("inserting rows")) return;
+  if (!ensurePrimaryKeyValues(values)) return;
   const after = clone(values);
   state.rows.push(after);
+  const docId = nextDocumentId();
   const evt = buildEvent("c", null, after);
+  if (docId) evt._docId = docId;
   state.events.push(evt);
-  publishEvent("c", null, after);
+  publishEvent("c", null, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("c");
 }
 
 function updateRow(values) {
+  if (!demandPrimaryKey("updating rows")) return;
+  if (!ensurePrimaryKeyValues(values)) return;
+  const touched = values.__touched || {};
   const idx = findByPK(values);
-  if (idx === -1) return alert("Row with matching PK not found.");
+  if (idx === -1) return alert("Row with matching primary key not found.");
   const before = clone(state.rows[idx]);
   const after  = clone(before);
-  Object.keys(values).forEach(k => { if (values[k] !== null && values[k] !== "") after[k] = values[k]; });
+  let mutated = false;
+  state.schema.forEach(col => {
+    const key = col.name;
+    if (!touched[key]) return;
+    after[key] = values[key];
+    mutated = true;
+  });
+  if (!mutated) {
+    alert("No fields were changed.");
+    return;
+  }
   state.rows[idx] = after;
 
+  const docId = nextDocumentId();
   const evt = buildEvent("u", before, after);
+  if (docId) evt._docId = docId;
   state.events.push(evt);
-  publishEvent("u", before, after);
+  publishEvent("u", before, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("u");
 }
 
 function deleteRow(values) {
+  if (!demandPrimaryKey("deleting rows")) return;
+  if (!ensurePrimaryKeyValues(values)) return;
   const idx = findByPK(values);
-  if (idx === -1) return alert("Row with matching PK not found.");
+  if (idx === -1) return alert("Row with matching primary key not found.");
   const before = clone(state.rows[idx]);
   state.rows.splice(idx, 1);
 
+  const docId = nextDocumentId();
   const evt = buildEvent("d", before, null);
+  if (docId) evt._docId = docId;
   state.events.push(evt);
-  publishEvent("d", before, null);
+  publishEvent("d", before, null, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("d");
 }
 
 function emitSnapshot() {
   for (const row of state.rows) {
+    const docId = nextDocumentId();
     const evt = buildEvent("r", null, clone(row));
+    if (docId) evt._docId = docId;
     state.events.push(evt);
-    publishEvent("r", null, row);
+    publishEvent("r", null, row, docId);
   }
   save(); renderJSONLog();
   emitSparkleTrail("r");
@@ -544,21 +641,37 @@ function emitSnapshot() {
 
 // ---------- Seeds / export ----------
 function seedRows() {
-  if (state.schema.length === 0) {
-    state.schema = [
-      { name: "id",     type: "number",  pk: true  },
-      { name: "email",  type: "string",  pk: false },
-      { name: "active", type: "boolean", pk: false },
-    ];
-    renderSchema(); renderEditor();
+  const seeded = ensureDefaultSchema();
+  if (seeded) {
+    renderSchema();
+    renderEditor();
   }
+
+  if (!demandPrimaryKey("seeding sample rows")) return;
+
   if (state.rows.length === 0) {
-    state.rows = [
-      { id: 1, email: "user1@example.com", active: true  },
-      { id: 2, email: "user2@example.com", active: false },
-    ];
+    const samples = [];
+    const pkFields = getPrimaryKeyFields();
+    const seen = new Set();
+    const desired = 3;
+
+    while (samples.length < desired) {
+      const candidate = generateSampleRow();
+      if (pkFields.length) {
+        const key = pkFields.map(pk => candidate[pk]).join("::");
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      samples.push(candidate);
+    }
+    state.rows = samples;
+    refreshSchemaStatus("Seeded sample rows based on your schema.", "success");
+  } else {
+    refreshSchemaStatus("Rows already exist. Clear rows to regenerate fresh samples.", "muted");
   }
-  save(); renderTable();
+
+  save();
+  renderTable();
 }
 
 function exportScenario() {
@@ -735,9 +848,11 @@ function autofillRowAndInsert() {
   // mutate table state + log event
   const after = clone(sample);
   state.rows.push(after);
+  const docId = nextDocumentId();
   const evt = buildEvent("c", null, after);
+  if (docId) evt._docId = docId;
   state.events.push(evt);
-  publishEvent("c", null, after);
+  publishEvent("c", null, after, docId);
 
   save();
   renderTable();
