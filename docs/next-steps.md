@@ -1,15 +1,15 @@
 # Implementation Next Steps
 
-_Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`._
+_Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`. React comparator now renders multi-lane polling/trigger/log preview._
 
 ## Immediate Decisions
-- **Data contract between DOM + React**: decide how the new React shell exchanges schema/row/event data with the legacy controls during the migration window.
-- **State container**: confirm whether we use lightweight emitter only or layer Zustand/RxJS before multi-lane comparator work starts.
-- **Scenario authoring**: define a single source of truth for built-in scenarios so simulator, harness, and legacy templates stay in sync.
+- **Legacy ↔ React data sync**: decide how schema/table edits from `assets/app.js` feed the comparator (shared store vs. message bus).
+- **State container**: confirm whether we stay with lightweight emitters or introduce Zustand/RxJS before guided tour scripting.
+- **Scenario source of truth**: converge scenario definitions (legacy templates, React comparator, harness) on one module to prevent drift.
 
 ## Near-Term Build Goals
-1. Expand the React shell to support multi-lane comparison and shared timeline metrics.
-2. Introduce deterministic clock/tick loop hooks to drive guided tour scripting from the React layer.
+1. Drive the comparator from live schema/table state (not canned scenarios) and surface diffs back to the legacy UI.
+2. Introduce deterministic clock hooks that power the guided onboarding/tour flow across lanes.
 3. Implement property-based tests for Polling/Trigger/Log invariants (lag behaviour, delete visibility, ordering).
 4. Freeze Scenario JSON schema for export/import and ensure existing templates or seeds map cleanly onto it.
 

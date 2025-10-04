@@ -8,8 +8,10 @@ Open `index.html` in a browser. No build step.
 ### Build artefacts
 - Install tooling: `npm install`
 - Build simulator engines: `npm run build:sim` → emits `assets/generated/sim-bundle.js` for `assets/sim-loader.js`
-- Build the React preview shell: `npm run build:web` → emits `assets/generated/ui-shell.js` for `assets/ui-shell-loader.js`
+- Build the React comparator shell: `npm run build:web` → emits `assets/generated/ui-shell.js` for `assets/ui-shell-loader.js`
 - Build everything: `npm run build`
+
+The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines in parallel to visualise lag, ordering, and delete capture differences.
 
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).
