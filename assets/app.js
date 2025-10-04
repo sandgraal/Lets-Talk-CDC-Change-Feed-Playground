@@ -2,6 +2,20 @@
 // Now with Appwrite Realtime.
 // State is in-memory + localStorage snapshot.
 
+const DEFAULT_SCHEMA = [
+  { name: "id", type: "number", pk: true },
+  { name: "customer_name", type: "string", pk: false },
+  { name: "customer_email", type: "string", pk: false },
+  { name: "customer_since", type: "string", pk: false },
+  { name: "paper_grade", type: "string", pk: false },
+  { name: "paper_size", type: "string", pk: false },
+  { name: "sheet_count", type: "number", pk: false },
+  { name: "price_per_unit", type: "number", pk: false },
+  { name: "order_total", type: "number", pk: false },
+  { name: "sales_rep", type: "string", pk: false },
+  { name: "region", type: "string", pk: false },
+];
+
 const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
@@ -91,6 +105,18 @@ function refreshSchemaStatus(message, tone = "muted") {
   el.classList.remove("is-error", "is-success");
   if (tone === "error") el.classList.add("is-error");
   if (tone === "success") el.classList.add("is-success");
+}
+
+function ensureDefaultSchema() {
+  let mutated = false;
+  if (!state.schema.length) {
+    state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
+    mutated = true;
+  }
+  if (!state.rows.length) {
+    state.rows = [];
+  }
+  return mutated;
 }
 
 // Debezium-ish envelope
@@ -511,6 +537,8 @@ function importScenario(file) {
 // ---------- Wire up UI ----------
 async function main() {
   load();
+  const seeded = ensureDefaultSchema();
+  if (seeded) save();
   renderSchema(); renderEditor(); renderTable(); renderJSONLog();
   await initAppwrite();  // enable realtime if configured
 
