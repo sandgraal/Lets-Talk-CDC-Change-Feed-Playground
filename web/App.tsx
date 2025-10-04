@@ -6,6 +6,7 @@ import { SCENARIOS, ShellScenario } from "./scenarios";
 import "./styles/shell.css";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
+const PREFERENCES_KEY = "cdc_comparator_prefs_v1" as const;
 
 type WorkspaceBroadcastDetail = {
   scenario?: {
@@ -48,6 +49,19 @@ type MethodConfigMap = {
   polling: PollingConfig;
   trigger: TriggerConfig;
   log: LogConfig;
+};
+
+type PartialMethodConfigMap = Partial<{
+  polling: Partial<PollingConfig>;
+  trigger: Partial<TriggerConfig>;
+  log: Partial<LogConfig>;
+}>;
+
+type ComparatorPreferences = {
+  scenarioId?: string | null;
+  activeMethods?: MethodOption[];
+  methodConfig?: PartialMethodConfigMap;
+  userPinnedScenario?: boolean;
 };
 
 type LaneMetrics = {
@@ -110,6 +124,98 @@ function cloneConfig(config: MethodConfigMap): MethodConfigMap {
   };
 }
 
+function sanitizeNumber(value: unknown, fallback: number, min?: number) {
+  let parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (typeof min === "number") parsed = Math.max(min, parsed);
+  return parsed;
+}
+
+function sanitizeActiveMethods(methods: unknown): MethodOption[] {
+  if (!Array.isArray(methods)) return [...METHOD_ORDER];
+  const unique: MethodOption[] = [];
+  METHOD_ORDER.forEach(method => {
+    if ((methods as unknown[]).includes(method) && !unique.includes(method)) {
+      unique.push(method);
+    }
+  });
+  return unique.length >= MIN_LANES ? unique : [...METHOD_ORDER];
+}
+
+function sanitizeMethodConfig(partial?: PartialMethodConfigMap): MethodConfigMap {
+  const base = cloneConfig(DEFAULT_METHOD_CONFIG);
+  if (!partial) return base;
+
+  if (partial.polling) {
+    if (partial.polling.pollIntervalMs != null) {
+      base.polling.pollIntervalMs = sanitizeNumber(
+        partial.polling.pollIntervalMs,
+        base.polling.pollIntervalMs,
+        50,
+      );
+    }
+    if (partial.polling.includeSoftDeletes != null) {
+      base.polling.includeSoftDeletes = Boolean(partial.polling.includeSoftDeletes);
+    }
+  }
+
+  if (partial.trigger) {
+    if (partial.trigger.extractIntervalMs != null) {
+      base.trigger.extractIntervalMs = sanitizeNumber(
+        partial.trigger.extractIntervalMs,
+        base.trigger.extractIntervalMs,
+        50,
+      );
+    }
+    if (partial.trigger.triggerOverheadMs != null) {
+      base.trigger.triggerOverheadMs = sanitizeNumber(
+        partial.trigger.triggerOverheadMs,
+        base.trigger.triggerOverheadMs,
+        0,
+      );
+    }
+  }
+
+  if (partial.log) {
+    if (partial.log.fetchIntervalMs != null) {
+      base.log.fetchIntervalMs = sanitizeNumber(
+        partial.log.fetchIntervalMs,
+        base.log.fetchIntervalMs,
+        10,
+      );
+    }
+  }
+
+  return base;
+}
+
+function loadPreferences(): ComparatorPreferences | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PREFERENCES_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      scenarioId: typeof parsed.scenarioId === "string" ? parsed.scenarioId : undefined,
+      activeMethods: Array.isArray(parsed.activeMethods) ? parsed.activeMethods : undefined,
+      methodConfig: parsed.methodConfig ?? undefined,
+      userPinnedScenario: typeof parsed.userPinnedScenario === "boolean" ? parsed.userPinnedScenario : undefined,
+    };
+  } catch (err) {
+    console.warn("Comparator prefs load failed", err);
+    return null;
+  }
+}
+
+function savePreferences(prefs: ComparatorPreferences) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+  } catch (err) {
+    console.warn("Comparator prefs save failed", err);
+  }
+}
+
 function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenario, method: MethodOption): Metrics {
   const lastEvent = events.length ? events[events.length - 1] : null;
   const lagMs = lastEvent ? Math.max(clock - lastEvent.ts_ms, 0) : clock;
@@ -161,17 +267,31 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
 }
 
 export function App() {
+  const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
+  if (storedPrefsRef.current === null) {
+    storedPrefsRef.current = loadPreferences();
+  }
+  const storedPrefs = storedPrefsRef.current || undefined;
+  const initialActiveMethods = sanitizeActiveMethods(storedPrefs?.activeMethods);
+  const initialMethodConfig = sanitizeMethodConfig(storedPrefs?.methodConfig);
+
   const [liveScenario, setLiveScenario] = useState<ShellScenario | null>(null);
-  const [scenarioId, setScenarioId] = useState<string>(SCENARIOS[0].name);
-  const [activeMethods, setActiveMethods] = useState<MethodOption[]>(() => [...METHOD_ORDER]);
+  const [scenarioId, setScenarioId] = useState<string>(
+    () => storedPrefs?.scenarioId ?? SCENARIOS[0].name,
+  );
+  const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
+    () => initialActiveMethods,
+  );
   const [laneEvents, setLaneEvents] = useState<Partial<Record<MethodOption, CdcEvent[]>>>(() =>
-    emptyEventMap([...METHOD_ORDER]),
+    emptyEventMap(initialActiveMethods),
   );
   const [clock, setClock] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [methodConfig, setMethodConfig] = useState<MethodConfigMap>(() => cloneConfig(DEFAULT_METHOD_CONFIG));
+  const [methodConfig, setMethodConfig] = useState<MethodConfigMap>(
+    () => initialMethodConfig,
+  );
 
-  const userSelectedScenarioRef = useRef(false);
+  const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
   const scenarioOptions = useMemo(() => {
     const list = [...SCENARIOS];
@@ -194,6 +314,7 @@ export function App() {
   useEffect(() => {
     if (!scenarioOptions.length) return;
     if (!scenarioOptions.some(option => option.name === scenarioId)) {
+      userSelectedScenarioRef.current = false;
       setScenarioId(scenarioOptions[0].name);
     }
   }, [scenarioId, scenarioOptions]);
@@ -237,6 +358,15 @@ export function App() {
     if (userSelectedScenarioRef.current) return;
     setScenarioId(LIVE_SCENARIO_NAME);
   }, [liveScenario]);
+
+  useEffect(() => {
+    savePreferences({
+      scenarioId,
+      activeMethods,
+      methodConfig,
+      userPinnedScenario: userSelectedScenarioRef.current,
+    });
+  }, [scenarioId, activeMethods, methodConfig]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);

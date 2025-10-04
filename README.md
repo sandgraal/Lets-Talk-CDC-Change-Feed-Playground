@@ -18,6 +18,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Trigger: extractor cadence and per-write trigger overhead
 - Log: WAL/Binlog fetch interval
 - Live workspace feed: the comparator listens for table mutations and exposes them as a "Workspace (live)" scenario alongside curated demos
+- Comparator preferences (scenario, methods, knobs) persist locally so you resume where you left off
 
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).
