@@ -95,6 +95,30 @@ const flashButton = (btn, msg) => {
 
 const toNdjson = (events) => events.map(ev => JSON.stringify(ev)).join("\n");
 
+function escapeHtml(str = "") {
+  return str.replace(/[&<>"]/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+  })[ch] || ch);
+}
+
+function highlightJson(json = "") {
+  const escaped = escapeHtml(json);
+  return escaped.replace(/("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?::)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+    let cls = "json-number";
+    if (match.startsWith("\"")) {
+      cls = match.endsWith(":") ? "json-key" : "json-string";
+    } else if (match === "true" || match === "false") {
+      cls = "json-boolean";
+    } else if (match === "null") {
+      cls = "json-null";
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+}
+
 function emitSparkleTrail(op = "c") {
   const source = els.rowEditor;
   const target = els.eventLog;
@@ -246,8 +270,14 @@ function getOp(ev) {
 
 function renderJSONLog() {
   const filtered = filterEvents(state.events);
-  const text = filtered.map(ev => JSON.stringify(ev, null, 2)).join("\n");
-  els.eventLog.textContent = text || "// no events yet (check filters)";
+  if (!filtered.length) {
+    els.eventLog.textContent = "// no events yet (check filters)";
+    updateLearning();
+    return;
+  }
+
+  const payload = filtered.map(ev => JSON.stringify(ev, null, 2)).join("\n");
+  els.eventLog.innerHTML = highlightJson(payload);
   updateLearning();
 }
 
