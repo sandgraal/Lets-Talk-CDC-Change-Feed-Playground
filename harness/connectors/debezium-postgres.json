@@ -1,0 +1,19 @@
+{
+  "name": "debezium-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "demo",
+    "database.server.name": "dbserver1",
+    "schema.include.list": "public",
+    "table.include.list": "public.customers",
+    "tombstones.on.delete": "true",
+    "plugin.name": "pgoutput",
+    "slot.name": "cdc_slot",
+    "publication.autocreate.mode": "filtered"
+  }
+}

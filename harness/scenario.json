@@ -1,0 +1,26 @@
+{
+  "name": "crud-basic",
+  "seed": 42,
+  "ops": [
+    {
+      "t": 100,
+      "op": "insert",
+      "table": "customers",
+      "pk": { "id": "1" },
+      "after": { "name": "A", "email": "a@example.com" }
+    },
+    {
+      "t": 400,
+      "op": "update",
+      "table": "customers",
+      "pk": { "id": "1" },
+      "after": { "name": "A1" }
+    },
+    {
+      "t": 700,
+      "op": "delete",
+      "table": "customers",
+      "pk": { "id": "1" }
+    }
+  ]
+}
