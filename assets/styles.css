@@ -491,12 +491,12 @@ button.danger:hover {
 
 .schema {
   display: grid;
-  grid-template-columns: minmax(200px, 320px) minmax(120px, 200px) auto auto;
-  gap: 10px;
+  grid-template-columns: minmax(200px, 1.6fr) minmax(120px, 1fr) auto auto;
+  gap: 12px;
   align-items: center;
   justify-content: flex-start;
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
+  max-width: 640px;
 }
 .schema-status {
   min-height: 18px;
@@ -507,18 +507,24 @@ button.danger:hover {
 .schema-status.is-error { color: var(--danger); }
 .schema-status.is-success { color: var(--accent); }
 .pill-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-bottom: 4px;
 }
 .pill {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
   background: rgba(18,34,64,0.6);
   border: 1px dashed rgba(78,116,173,0.5);
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
   color: var(--muted);
+  text-align: center;
+  min-height: 32px;
 }
 .pill .pk { color: var(--accent-yellow); margin-left: 6px; }
 
@@ -690,6 +696,17 @@ code {
   .topbar-actions { justify-content: flex-start; }
   .layout { width: min(100%, calc(100% - 24px)); padding-top: 36px; }
   .workspace-panels { gap: 20px; }
+}
+
+@media (max-width: 600px) {
+  .schema {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+  }
+  .schema > * {
+    width: 100%;
+  }
 }
 
 @media (max-width: 520px) {
