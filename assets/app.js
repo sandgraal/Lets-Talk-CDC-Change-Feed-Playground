@@ -95,6 +95,49 @@ const flashButton = (btn, msg) => {
 
 const toNdjson = (events) => events.map(ev => JSON.stringify(ev)).join("\n");
 
+function emitSparkleTrail(op = "c") {
+  const source = els.rowEditor;
+  const target = els.eventLog;
+  if (!source || !target) return;
+
+  const srcRect = source.getBoundingClientRect();
+  const dstRect = target.getBoundingClientRect();
+
+  const sparks = 6;
+  for (let i = 0; i < sparks; i++) {
+    const originX = srcRect.left + srcRect.width * (0.2 + Math.random() * 0.6);
+    const originY = srcRect.top + srcRect.height * (0.2 + Math.random() * 0.6);
+    const destX = dstRect.left + dstRect.width * (0.15 + Math.random() * 0.7);
+    const destY = dstRect.top + dstRect.height * (0.08 + Math.random() * 0.22);
+
+    const sparkle = document.createElement("span");
+    sparkle.className = "sparkle";
+    sparkle.dataset.op = op;
+    sparkle.style.left = `${originX}px`;
+    sparkle.style.top = `${originY}px`;
+    document.body.appendChild(sparkle);
+
+    const dx = destX - originX;
+    const dy = destY - originY;
+    const midX = dx * (0.45 + Math.random() * 0.15);
+    const midY = dy * (0.45 + Math.random() * 0.2) - 20 * Math.random();
+    const duration = 620 + Math.random() * 280;
+    const delay = Math.random() * 90;
+
+    const animation = sparkle.animate([
+      { transform: "translate(-50%, -50%) scale(0.5)", opacity: 0.95 },
+      { transform: `translate(-50%, -50%) translate(${midX}px, ${midY}px) scale(1)`, opacity: 0.8 },
+      { transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(0.1)`, opacity: 0 }
+    ], { duration, delay, easing: "cubic-bezier(0.22, 1, 0.36, 1)" });
+
+    if (animation.finished) {
+      animation.finished.then(() => sparkle.remove()).catch(() => sparkle.remove());
+    }
+    animation.onfinish = () => sparkle.remove();
+    setTimeout(() => sparkle.remove(), duration + delay + 120);
+  }
+}
+
 function refreshSchemaStatus(message, tone = "muted") {
   const el = els.schemaStatus;
   if (!el) return;
@@ -458,6 +501,7 @@ function insertRow(values) {
   state.events.push(evt);
   publishEvent("c", null, after);
   save(); renderTable(); renderJSONLog();
+  emitSparkleTrail("c");
 }
 
 function updateRow(values) {
@@ -472,6 +516,7 @@ function updateRow(values) {
   state.events.push(evt);
   publishEvent("u", before, after);
   save(); renderTable(); renderJSONLog();
+  emitSparkleTrail("u");
 }
 
 function deleteRow(values) {
@@ -484,6 +529,7 @@ function deleteRow(values) {
   state.events.push(evt);
   publishEvent("d", before, null);
   save(); renderTable(); renderJSONLog();
+  emitSparkleTrail("d");
 }
 
 function emitSnapshot() {
@@ -493,6 +539,7 @@ function emitSnapshot() {
     publishEvent("r", null, row);
   }
   save(); renderJSONLog();
+  emitSparkleTrail("r");
 }
 
 // ---------- Seeds / export ----------
@@ -698,4 +745,5 @@ function autofillRowAndInsert() {
 
   refreshSchemaStatus("Sample row inserted into the table.", "success");
   updateLearning("rows");
+  emitSparkleTrail("c");
 }
