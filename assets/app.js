@@ -35,6 +35,7 @@ const els = {
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
   stepCards: Array.from(document.querySelectorAll(".step-card")),
+  autofillRow: document.getElementById("btnAutofillRow"),
 };
 
 const learningConfig = [
@@ -554,6 +555,9 @@ async function main() {
   document.getElementById("opInsert").onclick = () => { insertRow(readEditorValues()); clearEditor(); };
   document.getElementById("opUpdate").onclick = () => { updateRow(readEditorValues()); };
   document.getElementById("opDelete").onclick = () => { deleteRow(readEditorValues()); };
+  if (els.autofillRow) {
+    els.autofillRow.onclick = () => { autofillRowInputs(); };
+  }
 
   document.getElementById("emitSnapshot").onclick = emitSnapshot;
   document.getElementById("clearEvents").onclick = () => { state.events = []; save(); renderJSONLog(); };
@@ -585,3 +589,61 @@ async function main() {
   document.getElementById("btnReset").onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
 }
 main();
+function randomSampleForColumn(col) {
+  switch (col.name) {
+    case "id":
+      return Math.floor(1000 + Math.random() * 9000);
+    case "customer_name": {
+      const names = ["Pam Beesly", "Jim Halpert", "Dwight Schrute", "Stanley Hudson", "Phyllis Vance", "Michael Scott", "Angela Martin", "Kevin Malone", "Oscar Martinez", "Creed Bratton", "Kelly Kapoor"]; return names[Math.floor(Math.random() * names.length)];
+    }
+    case "customer_email":
+      return `customer${Math.floor(Math.random() * 9000 + 1000)}@dundermifflin.com`;
+    case "customer_since": {
+      const year = Math.floor(Math.random() * 10) + 2014;
+      const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
+      const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    case "paper_grade": {
+      const grades = ["Premium", "Standard", "Recycled", "Cardstock", "Gloss"];
+      return grades[Math.floor(Math.random() * grades.length)];
+    }
+    case "paper_size": {
+      const sizes = ["Letter", "Legal", "A4", "Tabloid", "Custom"];
+      return sizes[Math.floor(Math.random() * sizes.length)];
+    }
+    case "sheet_count":
+      return [250, 500, 750, 1000][Math.floor(Math.random() * 4)];
+    case "price_per_unit":
+      return Number((Math.random() * 20 + 5).toFixed(2));
+    case "order_total":
+      return Number((Math.random() * 1000 + 200).toFixed(2));
+    case "sales_rep": {
+      const reps = ["Andy Bernard", "Phyllis Vance", "Stanley Hudson", "Jim Halpert", "Dwight Schrute", "Karen Filippelli"];
+      return reps[Math.floor(Math.random() * reps.length)];
+    }
+    case "region": {
+      const regions = ["Scranton", "Stamford", "Nashua", "Utica", "Akron"];
+      return regions[Math.floor(Math.random() * regions.length)];
+    }
+    default:
+      if (col.type === "number") return Math.floor(Math.random() * 1000);
+      if (col.type === "boolean") return Math.random() > 0.5;
+      return `${col.name}_${Math.floor(Math.random() * 9999)}`;
+  }
+}
+
+function autofillRowInputs() {
+  if (!state.schema.length) {
+    refreshSchemaStatus("Add columns before autofilling rows.", "error");
+    return;
+  }
+  els.rowEditor.querySelectorAll("input").forEach(inp => {
+    const colName = inp.dataset.col;
+    const col = state.schema.find(c => c.name === colName);
+    if (!col) return;
+    const value = randomSampleForColumn(col);
+    inp.value = value;
+  });
+  refreshSchemaStatus("Sample row generated. Adjust as needed before inserting.", "success");
+}
