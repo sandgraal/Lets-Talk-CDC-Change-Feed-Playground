@@ -48,7 +48,13 @@ const learningConfig = [
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
 const clone  = (x) => JSON.parse(JSON.stringify(x));
-const save   = () => localStorage.setItem("cdc_playground", JSON.stringify(state));
+const save   = () => {
+  try {
+    localStorage.setItem("cdc_playground", JSON.stringify(state));
+  } catch (err) {
+    console.warn("Save to localStorage failed", err?.message || err);
+  }
+};
 const load   = () => {
   try {
     const raw = localStorage.getItem("cdc_playground");
