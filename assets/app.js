@@ -5,11 +5,6 @@
 const DEFAULT_SCHEMA = [
   { name: "id", type: "number", pk: true },
   { name: "customer_name", type: "string", pk: false },
-  { name: "customer_email", type: "string", pk: false },
-  { name: "customer_since", type: "string", pk: false },
-  { name: "paper_grade", type: "string", pk: false },
-  { name: "paper_size", type: "string", pk: false },
-  { name: "sheet_count", type: "number", pk: false },
   { name: "price_per_unit", type: "number", pk: false },
   { name: "order_total", type: "number", pk: false },
   { name: "sales_rep", type: "string", pk: false },
@@ -857,6 +852,10 @@ function generateSampleRow() {
   const row = {};
   for (const col of state.schema) {
     row[col.name] = randomSampleForColumn(col);
+  }
+  if (typeof row.price_per_unit === "number" && typeof row.order_total === "number") {
+    const quantity = Math.floor(Math.random() * 40) + 5;
+    row.order_total = Number((row.price_per_unit * quantity).toFixed(2));
   }
   return row;
 }
