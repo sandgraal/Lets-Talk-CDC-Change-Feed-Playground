@@ -19,10 +19,11 @@ const DEFAULT_SCHEMA = [
   { name: "region", type: "string", pk: false },
 ];
 
-const SCENARIO_TEMPLATES = Object.freeze([
+const FALLBACK_SCENARIOS = [
   {
     id: "orders",
     name: "Omnichannel Orders",
+    label: "Omnichannel Orders",
     description: "Track order lifecycle and fulfillment signals across channels.",
     highlight: "Focus on status transitions, totals, and fulfillment metadata.",
     schema: [
@@ -38,62 +39,12 @@ const SCENARIO_TEMPLATES = Object.freeze([
       { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
       { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" },
     ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742472000000
-        },
-        key: { order_id: "ORD-1001" }
-      },
-      {
-        payload: {
-          before: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
-          after: { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742473440000
-        },
-        key: { order_id: "ORD-1001" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742472300000
-        },
-        key: { order_id: "ORD-1002" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742384520000
-        },
-        key: { order_id: "ORD-1003" }
-      },
-      {
-        payload: {
-          before: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
-          after: { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742391000000
-        },
-        key: { order_id: "ORD-1003" }
-      }
-    ]
+    events: [],
   },
   {
     id: "payments",
     name: "Real-time Payments",
+    label: "Real-time Payments",
     description: "Model authorization, capture, and decline flows for transactions.",
     highlight: "Great for demonstrating idempotent updates and risk review.",
     schema: [
@@ -110,62 +61,12 @@ const SCENARIO_TEMPLATES = Object.freeze([
       { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
       { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
     ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742292240000
-        },
-        key: { transaction_id: "PAY-88341" }
-      },
-      {
-        payload: {
-          before: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
-          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742292370000
-        },
-        key: { transaction_id: "PAY-88341" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742478000000
-        },
-        key: { transaction_id: "PAY-88355" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742448660000
-        },
-        key: { transaction_id: "PAY-88377" }
-      },
-      {
-        payload: {
-          before: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742449200000
-        },
-        key: { transaction_id: "PAY-88377" }
-      }
-    ]
+    events: [],
   },
   {
     id: "iot",
     name: "IoT Telemetry",
+    label: "IoT Telemetry",
     description: "Capture rolling sensor readings with anomaly flags.",
     highlight: "Simulate snapshots, drifts, and device alerts in edge pipelines.",
     schema: [
@@ -181,60 +82,28 @@ const SCENARIO_TEMPLATES = Object.freeze([
       { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
       { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" },
     ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742471400000
-        },
-        key: { reading_id: "READ-301" }
-      },
-      {
-        payload: {
-          before: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
-          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742473200000
-        },
-        key: { reading_id: "READ-301" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742474100000
-        },
-        key: { reading_id: "READ-302" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742473800000
-        },
-        key: { reading_id: "READ-377" }
-      },
-      {
-        payload: {
-          before: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
-          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 26.3, pressure_kpa: 100.8, status: "alert", recorded_at: "2025-03-20T15:20:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742474400000
-        },
-        key: { reading_id: "READ-302" }
-      }
-    ]
-  }
-]);
+    events: [],
+  },
+];
+
+const SHARED_SCENARIOS =
+  (typeof window !== "undefined" && Array.isArray(window.CDC_SCENARIOS) && window.CDC_SCENARIOS.length)
+    ? window.CDC_SCENARIOS
+    : FALLBACK_SCENARIOS;
+
+const SCENARIO_TEMPLATES = Object.freeze(
+  SHARED_SCENARIOS
+    .filter(template => Array.isArray(template.rows) && template.rows.length)
+    .map(template => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      highlight: template.highlight,
+      schema: template.schema,
+      rows: template.rows,
+      events: template.events || [],
+    }))
+);
 
 const state = {
   schema: [],     // [{name, type, pk}]
