@@ -362,6 +362,8 @@ function addColumn({ name, type, pk }) {
   renderSchema();
   renderEditor();
   renderTable();
+  const newInput = els.rowEditor.querySelector(`input[data-col="${normalized}"]`);
+  if (newInput) newInput.focus();
   refreshSchemaStatus(`Added column "${normalized}".`, "success");
 }
 
@@ -556,7 +558,7 @@ async function main() {
   document.getElementById("opUpdate").onclick = () => { updateRow(readEditorValues()); };
   document.getElementById("opDelete").onclick = () => { deleteRow(readEditorValues()); };
   if (els.autofillRow) {
-    els.autofillRow.onclick = () => { autofillRowInputs(); };
+    els.autofillRow.onclick = () => { autofillRowInputs({ autoInsert: true }); };
   }
 
   document.getElementById("emitSnapshot").onclick = emitSnapshot;
@@ -633,17 +635,33 @@ function randomSampleForColumn(col) {
   }
 }
 
-function autofillRowInputs() {
+function generateSampleRow() {
+  const row = {};
+  for (const col of state.schema) {
+    row[col.name] = randomSampleForColumn(col);
+  }
+  return row;
+}
+
+function autofillRowInputs({ autoInsert = false } = {}) {
   if (!state.schema.length) {
     refreshSchemaStatus("Add columns before autofilling rows.", "error");
     return;
   }
+
+  const sample = generateSampleRow();
   els.rowEditor.querySelectorAll("input").forEach(inp => {
     const colName = inp.dataset.col;
-    const col = state.schema.find(c => c.name === colName);
-    if (!col) return;
-    const value = randomSampleForColumn(col);
-    inp.value = value;
+    if (colName in sample) {
+      inp.value = sample[colName];
+    }
   });
-  refreshSchemaStatus("Sample row generated. Adjust as needed before inserting.", "success");
+
+  if (autoInsert) {
+    insertRow(clone(sample));
+    clearEditor();
+    refreshSchemaStatus("Sample row inserted into the table.", "success");
+  } else {
+    refreshSchemaStatus("Sample row generated. Adjust as needed before inserting.", "success");
+  }
 }
