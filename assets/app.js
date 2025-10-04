@@ -2,6 +2,20 @@
 // Now with Appwrite Realtime.
 // State is in-memory + localStorage snapshot.
 
+const DEFAULT_SCHEMA = [
+  { name: "id", type: "number", pk: true },
+  { name: "customer_name", type: "string", pk: false },
+  { name: "customer_email", type: "string", pk: false },
+  { name: "customer_since", type: "string", pk: false },
+  { name: "paper_grade", type: "string", pk: false },
+  { name: "paper_size", type: "string", pk: false },
+  { name: "sheet_count", type: "number", pk: false },
+  { name: "price_per_unit", type: "number", pk: false },
+  { name: "order_total", type: "number", pk: false },
+  { name: "sales_rep", type: "string", pk: false },
+  { name: "region", type: "string", pk: false },
+];
+
 const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
@@ -21,6 +35,7 @@ const els = {
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
   stepCards: Array.from(document.querySelectorAll(".step-card")),
+  autofillRow: document.getElementById("btnAutofillRow"),
 };
 
 const learningConfig = [
@@ -91,6 +106,18 @@ function refreshSchemaStatus(message, tone = "muted") {
   el.classList.remove("is-error", "is-success");
   if (tone === "error") el.classList.add("is-error");
   if (tone === "success") el.classList.add("is-success");
+}
+
+function ensureDefaultSchema() {
+  let mutated = false;
+  if (!state.schema.length) {
+    state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
+    mutated = true;
+  }
+  if (!state.rows.length) {
+    state.rows = [];
+  }
+  return mutated;
 }
 
 // Debezium-ish envelope
@@ -335,6 +362,8 @@ function addColumn({ name, type, pk }) {
   renderSchema();
   renderEditor();
   renderTable();
+  const newInput = els.rowEditor.querySelector(`input[data-col="${normalized}"]`);
+  if (newInput) newInput.focus();
   refreshSchemaStatus(`Added column "${normalized}".`, "success");
 }
 
@@ -508,31 +537,49 @@ function importScenario(file) {
   reader.readAsText(file);
 }
 
-// ---------- Wire up UI ----------
-async function main() {
-  load();
-  renderSchema(); renderEditor(); renderTable(); renderJSONLog();
-  await initAppwrite();  // enable realtime if configured
+function bindUiHandlers() {
+  const addColBtn = document.getElementById("addCol");
+  if (addColBtn) {
+    addColBtn.onclick = () => {
+      const name = document.getElementById("colName").value.trim();
+      const type = document.getElementById("colType").value;
+      const pk   = document.getElementById("colPK").checked;
+      addColumn({ name, type, pk });
+      document.getElementById("colName").value = "";
+      document.getElementById("colPK").checked = false;
+    };
+  }
 
-  document.getElementById("addCol").onclick = () => {
-    const name = document.getElementById("colName").value.trim();
-    const type = document.getElementById("colType").value;
-    const pk   = document.getElementById("colPK").checked;
-    addColumn({ name, type, pk });
-    document.getElementById("colName").value = "";
-    document.getElementById("colPK").checked = false;
-  };
+  const insertBtn = document.getElementById("opInsert");
+  if (insertBtn) insertBtn.onclick = () => { insertRow(readEditorValues()); clearEditor(); };
 
-  document.getElementById("opInsert").onclick = () => { insertRow(readEditorValues()); clearEditor(); };
-  document.getElementById("opUpdate").onclick = () => { updateRow(readEditorValues()); };
-  document.getElementById("opDelete").onclick = () => { deleteRow(readEditorValues()); };
+  const updateBtn = document.getElementById("opUpdate");
+  if (updateBtn) updateBtn.onclick = () => { updateRow(readEditorValues()); };
 
-  document.getElementById("emitSnapshot").onclick = emitSnapshot;
-  document.getElementById("clearEvents").onclick = () => { state.events = []; save(); renderJSONLog(); };
-  document.getElementById("seedRows").onclick = seedRows;
-  document.getElementById("clearRows").onclick = () => { state.rows = []; save(); renderTable(); };
-  document.getElementById("btnCopyNdjson").onclick = copyNdjson;
-  document.getElementById("btnDownloadNdjson").onclick = downloadNdjson;
+  const deleteBtn = document.getElementById("opDelete");
+  if (deleteBtn) deleteBtn.onclick = () => { deleteRow(readEditorValues()); };
+
+  if (els.autofillRow) {
+    els.autofillRow.onclick = () => { autofillRowAndInsert(); };
+  }
+
+  const emitSnapshotBtn = document.getElementById("emitSnapshot");
+  if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;
+
+  const clearEventsBtn = document.getElementById("clearEvents");
+  if (clearEventsBtn) clearEventsBtn.onclick = () => { state.events = []; save(); renderJSONLog(); };
+
+  const seedRowsBtn = document.getElementById("seedRows");
+  if (seedRowsBtn) seedRowsBtn.onclick = seedRows;
+
+  const clearRowsBtn = document.getElementById("clearRows");
+  if (clearRowsBtn) clearRowsBtn.onclick = () => { state.rows = []; save(); renderTable(); };
+
+  const copyNdjsonBtn = document.getElementById("btnCopyNdjson");
+  if (copyNdjsonBtn) copyNdjsonBtn.onclick = copyNdjson;
+
+  const downloadNdjsonBtn = document.getElementById("btnDownloadNdjson");
+  if (downloadNdjsonBtn) downloadNdjsonBtn.onclick = downloadNdjson;
 
   ["filterC", "filterU", "filterD", "filterR"].forEach(id => {
     const cb = document.getElementById(id);
@@ -552,8 +599,103 @@ async function main() {
     });
   }
 
-  document.getElementById("btnExport").onclick = exportScenario;
-  document.getElementById("importFile").onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
-  document.getElementById("btnReset").onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
+  const exportBtn = document.getElementById("btnExport");
+  if (exportBtn) exportBtn.onclick = exportScenario;
+
+  const importInput = document.getElementById("importFile");
+  if (importInput) importInput.onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
+
+  const resetBtn = document.getElementById("btnReset");
+  if (resetBtn) resetBtn.onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
+}
+
+// ---------- Wire up UI ----------
+async function main() {
+  load();
+  const seeded = ensureDefaultSchema();
+  if (seeded) save();
+  renderSchema(); renderEditor(); renderTable(); renderJSONLog();
+  bindUiHandlers();
+  initAppwrite().catch(err => console.warn("Appwrite init skipped", err));
 }
 main();
+function randomSampleForColumn(col) {
+  switch (col.name) {
+    case "id":
+      return Math.floor(1000 + Math.random() * 9000);
+    case "customer_name": {
+      const names = ["Pam Beesly", "Jim Halpert", "Dwight Schrute", "Stanley Hudson", "Phyllis Vance", "Michael Scott", "Angela Martin", "Kevin Malone", "Oscar Martinez", "Creed Bratton", "Kelly Kapoor"]; return names[Math.floor(Math.random() * names.length)];
+    }
+    case "customer_email":
+      return `customer${Math.floor(Math.random() * 9000 + 1000)}@dundermifflin.com`;
+    case "customer_since": {
+      const year = Math.floor(Math.random() * 10) + 2014;
+      const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
+      const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    case "paper_grade": {
+      const grades = ["Premium", "Standard", "Recycled", "Cardstock", "Gloss"];
+      return grades[Math.floor(Math.random() * grades.length)];
+    }
+    case "paper_size": {
+      const sizes = ["Letter", "Legal", "A4", "Tabloid", "Custom"];
+      return sizes[Math.floor(Math.random() * sizes.length)];
+    }
+    case "sheet_count":
+      return [250, 500, 750, 1000][Math.floor(Math.random() * 4)];
+    case "price_per_unit":
+      return Number((Math.random() * 20 + 5).toFixed(2));
+    case "order_total":
+      return Number((Math.random() * 1000 + 200).toFixed(2));
+    case "sales_rep": {
+      const reps = ["Andy Bernard", "Phyllis Vance", "Stanley Hudson", "Jim Halpert", "Dwight Schrute", "Karen Filippelli"];
+      return reps[Math.floor(Math.random() * reps.length)];
+    }
+    case "region": {
+      const regions = ["Scranton", "Stamford", "Nashua", "Utica", "Akron"];
+      return regions[Math.floor(Math.random() * regions.length)];
+    }
+    default:
+      if (col.type === "number") return Math.floor(Math.random() * 1000);
+      if (col.type === "boolean") return Math.random() > 0.5;
+      return `${col.name}_${Math.floor(Math.random() * 9999)}`;
+  }
+}
+
+function generateSampleRow() {
+  const row = {};
+  for (const col of state.schema) {
+    row[col.name] = randomSampleForColumn(col);
+  }
+  return row;
+}
+
+function autofillRowAndInsert() {
+  if (!state.schema.length) {
+    refreshSchemaStatus("Add columns before autofilling rows.", "error");
+    return;
+  }
+
+  const sample = generateSampleRow();
+
+  // reflect values in the editor for transparency
+  els.rowEditor.querySelectorAll("input").forEach(inp => {
+    const colName = inp.dataset.col;
+    if (colName in sample) inp.value = sample[colName];
+  });
+
+  // mutate table state + log event
+  const after = clone(sample);
+  state.rows.push(after);
+  const evt = buildEvent("c", null, after);
+  state.events.push(evt);
+  publishEvent("c", null, after);
+
+  save();
+  renderTable();
+  renderJSONLog();
+
+  refreshSchemaStatus("Sample row inserted into the table.", "success");
+  updateLearning("rows");
+}
