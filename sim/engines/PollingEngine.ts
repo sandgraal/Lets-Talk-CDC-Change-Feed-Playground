@@ -14,6 +14,12 @@ export class PollingEngine extends BaseEngine {
     if (opts.include_soft_deletes !== undefined) this.includeSoftDeletes = opts.include_soft_deletes;
   }
 
+  reset(seed: number) {
+    super.reset(seed);
+    this.table.clear();
+    this.lastSync = 0;
+  }
+
   applySourceOp(op: SourceOp) {
     if (op.op === "insert") {
       this.table.set(op.pk.id, {

@@ -14,6 +14,14 @@ export class LogEngine extends BaseEngine {
     if (opts.fetch_interval_ms !== undefined) this.fetchIntervalMs = opts.fetch_interval_ms;
   }
 
+  reset(seed: number) {
+    super.reset(seed);
+    this.table.clear();
+    this.wal = [];
+    this.lsn = 0;
+    this.lastFetch = 0;
+  }
+
   applySourceOp(op: SourceOp) {
     if (op.op === "insert") {
       this.table.set(op.pk.id, {

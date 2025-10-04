@@ -1,15 +1,15 @@
 # Implementation Next Steps
 
-_Tooling status: Vite (library mode) builds `sim/bundle.ts` into `assets/generated/sim-bundle.js` via `npm run build:sim`._
+_Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`._
 
 ## Immediate Decisions
-- **Legacy ↔ Vite boundary**: define which parts of `assets/app.js` migrate first and how data flows between vanilla DOM state and the Vite-powered simulator bundle while React work ramps.
+- **Data contract between DOM + React**: decide how the new React shell exchanges schema/row/event data with the legacy controls during the migration window.
 - **State container**: confirm whether we use lightweight emitter only or layer Zustand/RxJS before multi-lane comparator work starts.
-- **React integration strategy**: outline migration path from the current DOM-driven UI to React components, including carve-out plan for coexisting approaches during the transition.
+- **Scenario authoring**: define a single source of truth for built-in scenarios so simulator, harness, and legacy templates stay in sync.
 
 ## Near-Term Build Goals
-1. Wire ScenarioRunner + engines into a thin React shell (served via Vite) that renders a single-lane simulator using stub metrics, then hydrate it into the existing page.
-2. Introduce deterministic clock/tick loop with pause/resume to support guided tour scripting.
+1. Expand the React shell to support multi-lane comparison and shared timeline metrics.
+2. Introduce deterministic clock/tick loop hooks to drive guided tour scripting from the React layer.
 3. Implement property-based tests for Polling/Trigger/Log invariants (lag behaviour, delete visibility, ordering).
 4. Freeze Scenario JSON schema for export/import and ensure existing templates or seeds map cleanly onto it.
 
