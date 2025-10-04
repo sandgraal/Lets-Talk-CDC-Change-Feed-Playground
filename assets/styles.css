@@ -489,7 +489,15 @@ button.danger:hover {
   line-height: 1.5;
 }
 
-.schema { display: flex; gap: 10px; flex-wrap: wrap; }
+.schema {
+  display: grid;
+  grid-template-columns: minmax(200px, 320px) minmax(120px, 200px) auto auto;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+}
 .schema-status {
   min-height: 18px;
   margin: 0 0 4px;
@@ -672,7 +680,10 @@ code {
     width: 100%;
     justify-content: center;
   }
-  .schema { flex-direction: column; }
+  .schema {
+    display: flex;
+    flex-direction: column;
+  }
   .ops,
   .table-actions,
   .stream-actions,
