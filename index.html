@@ -125,6 +125,44 @@
         </div>
         <pre id="eventLog" class="log"></pre>
       </section>
+
+      <section class="card" id="learning-lab">
+        <h2>Learning lab</h2>
+        <p class="card-intro">Move through the CDC workflow one step at a time and use the tips to reinforce what you learn.</p>
+        <ol class="learning-steps" id="learningSteps">
+          <li>
+            <button type="button" class="learning-step" data-step="schema" data-target="#schema">
+              <span class="step-index">1</span>
+              <span class="step-body">
+                <span class="step-title">Model your schema</span>
+                <span class="step-detail">Add columns and mark primary keys to describe data shape.</span>
+              </span>
+              <span class="step-status" aria-live="polite">Pending</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="learning-step" data-step="rows" data-target="#table-state">
+              <span class="step-index">2</span>
+              <span class="step-body">
+                <span class="step-title">Populate the table</span>
+                <span class="step-detail">Seed sample rows or insert your own records to work with.</span>
+              </span>
+              <span class="step-status" aria-live="polite">Pending</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="learning-step" data-step="events" data-target="#change-feed">
+              <span class="step-index">3</span>
+              <span class="step-body">
+                <span class="step-title">Emit change events</span>
+                <span class="step-detail">Run inserts, updates, deletes, or snapshots and review the log.</span>
+              </span>
+              <span class="step-status" aria-live="polite">Pending</span>
+            </button>
+          </li>
+        </ol>
+        <div class="learning-tip" id="learningTip">Add at least one column to begin building your scenario.</div>
+      </section>
     </div>
   </main>
 
