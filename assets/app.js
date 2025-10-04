@@ -650,13 +650,24 @@ function autofillRowAndInsert() {
   }
 
   const sample = generateSampleRow();
+
+  // reflect values in the editor for transparency
   els.rowEditor.querySelectorAll("input").forEach(inp => {
     const colName = inp.dataset.col;
-    if (colName in sample) {
-      inp.value = sample[colName];
-    }
+    if (colName in sample) inp.value = sample[colName];
   });
 
-  insertRow(clone(sample));
+  // mutate table state + log event
+  const after = clone(sample);
+  state.rows.push(after);
+  const evt = buildEvent("c", null, after);
+  state.events.push(evt);
+  publishEvent("c", null, after);
+
+  save();
+  renderTable();
+  renderJSONLog();
+
   refreshSchemaStatus("Sample row inserted into the table.", "success");
+  updateLearning("rows");
 }
