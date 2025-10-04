@@ -558,7 +558,7 @@ async function main() {
   document.getElementById("opUpdate").onclick = () => { updateRow(readEditorValues()); };
   document.getElementById("opDelete").onclick = () => { deleteRow(readEditorValues()); };
   if (els.autofillRow) {
-    els.autofillRow.onclick = () => { autofillRowInputs({ autoInsert: true }); };
+    els.autofillRow.onclick = () => { autofillRowInputs(); };
   }
 
   document.getElementById("emitSnapshot").onclick = emitSnapshot;
@@ -659,9 +659,9 @@ function autofillRowInputs({ autoInsert = false } = {}) {
 
   if (autoInsert) {
     insertRow(clone(sample));
-    clearEditor();
+    renderEditor();
     refreshSchemaStatus("Sample row inserted into the table.", "success");
   } else {
-    refreshSchemaStatus("Sample row generated. Adjust as needed before inserting.", "success");
+    refreshSchemaStatus("Sample row generated. Review and click Insert to add it.", "success");
   }
 }
