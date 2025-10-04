@@ -20,6 +20,7 @@ const els = {
   learningSteps: document.getElementById("learningSteps"),
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
+  stepCards: Array.from(document.querySelectorAll(".step-card")),
 };
 
 const learningConfig = [
@@ -165,6 +166,12 @@ function updateLearning(activeId) {
   buttons.forEach(btn => {
     btn.classList.toggle("is-active", btn.dataset.step === activeIdResolved);
   });
+
+  if (els.stepCards?.length) {
+    els.stepCards.forEach(card => {
+      card.classList.toggle("is-active", card.dataset.step === activeIdResolved);
+    });
+  }
 
   const activeConfig = learningConfig.find(step => step.id === activeIdResolved);
   if (activeConfig && els.learningTip) {
