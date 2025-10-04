@@ -15,10 +15,12 @@
     <div class="topbar-actions">
       <span class="badge badge-hacktoberfest">Hacktoberfest 2025</span>
       <button id="btnExport" type="button">Export Scenario</button>
+      <button id="btnSaveRemote" type="button" disabled>Save to Cloud</button>
       <label class="file">
         <input type="file" id="importFile" accept="application/json" />
         <span>Import Scenario</span>
       </label>
+      <button id="btnShareLink" type="button" disabled>Copy Share Link</button>
       <button id="btnReset" class="danger" type="button">Reset</button>
     </div>
   </header>
@@ -35,14 +37,53 @@
         <h1>Prototype change data capture without leaving the browser.</h1>
         <p class="hero-lead">Create a lightweight schema, act on rows, and watch the resulting change feed update in real time.</p>
       </div>
-      <div class="hero-quickstart" aria-labelledby="quickstartTitle">
-        <h3 id="quickstartTitle">Quick start</h3>
-        <ol>
-          <li>Add at least one column and mark a primary key.</li>
-          <li>Seed sample rows or insert your own data.</li>
-          <li>Fire operations and inspect the generated events.</li>
-        </ol>
+      <div class="hero-templates" aria-labelledby="templateTitle">
+        <header class="hero-templates-header">
+          <div>
+            <h3 id="templateTitle">Explore real-world scenarios</h3>
+            <p class="hero-templates-sub">Load curated CDC blueprints to jumpstart your experiments.</p>
+          </div>
+          <button type="button" id="btnOnboarding" class="btn-ghost">How the playground works</button>
+        </header>
+        <div class="template-grid" id="templateGallery"></div>
       </div>
+      <section class="hero-quickstart" aria-labelledby="quickstartTitle">
+        <header class="hero-quickstart-header">
+          <div>
+            <h3 id="quickstartTitle">Quick start</h3>
+            <p class="hero-quickstart-sub">Take the guided path to your first change feed in under a minute.</p>
+          </div>
+        </header>
+        <div class="quickstart-grid">
+          <article id="qsSchema" class="quickstart-card" data-step="schema">
+            <div class="quickstart-card-head">
+              <span class="quickstart-step">Step 1</span>
+              <span class="quickstart-status" aria-live="polite">Pending</span>
+            </div>
+            <h4>Model your schema</h4>
+            <p>Define columns and mark at least one primary key.</p>
+            <button id="btnQuickSchema" type="button" class="btn-ghost">Start modeling</button>
+          </article>
+          <article id="qsRows" class="quickstart-card" data-step="rows">
+            <div class="quickstart-card-head">
+              <span class="quickstart-step">Step 2</span>
+              <span class="quickstart-status" aria-live="polite">Pending</span>
+            </div>
+            <h4>Populate rows</h4>
+            <p>Seed realistic data or insert rows manually.</p>
+            <button id="btnQuickRows" type="button" class="btn-ghost">Seed sample rows</button>
+          </article>
+          <article id="qsEvents" class="quickstart-card" data-step="events">
+            <div class="quickstart-card-head">
+              <span class="quickstart-step">Step 3</span>
+              <span class="quickstart-status" aria-live="polite">Pending</span>
+            </div>
+            <h4>Stream events</h4>
+            <p>Trigger operations and watch the change feed update live.</p>
+            <button id="btnQuickEvents" type="button" class="btn-ghost">Emit my first event</button>
+          </article>
+        </div>
+      </section>
     </section>
 
     <section class="workspace" id="playground">
@@ -176,6 +217,23 @@
             <button id="btnDownloadNdjson" type="button">Download NDJSON</button>
           </div>
           <pre id="eventLog" class="log"></pre>
+          <section class="inspector" id="eventInspector" aria-labelledby="inspectorTitle">
+            <div class="inspector-header">
+              <div>
+                <h3 id="inspectorTitle">Event inspector</h3>
+                <p class="inspector-lead">Peek at before/after payloads, diff fields, and replay to the table.</p>
+              </div>
+              <div class="inspector-controls" role="group" aria-label="Event navigation">
+                <button type="button" id="eventPrev" class="btn-ghost">Previous</button>
+                <button type="button" id="eventNext" class="btn-ghost">Next</button>
+                <button type="button" id="eventReplay">Replay to table</button>
+              </div>
+            </div>
+            <div class="inspector-body">
+              <ul class="inspector-list" id="eventList" role="listbox" aria-label="Filtered change events"></ul>
+              <div class="inspector-detail" id="eventDetail" aria-live="polite"></div>
+            </div>
+          </section>
         </section>
       </div>
     </section>
@@ -185,6 +243,23 @@
     <span>Built for Appwrite Hacktoberfest · Deployed on <strong>Sites</strong></span>
   </footer>
 
+  <div id="onboardingOverlay" class="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" hidden>
+    <div class="onboarding-dialog">
+      <button type="button" class="onboarding-close" id="onboardingClose" aria-label="Close onboarding">x</button>
+      <h2 id="onboardingTitle">Welcome to the CDC Change Feed Playground</h2>
+      <p class="onboarding-lead">Prototype change stream scenarios from your browser and share them with collaborators.</p>
+      <ol class="onboarding-steps">
+        <li><strong>Model</strong> your table: define columns and choose primary keys.</li>
+        <li><strong>Populate</strong> rows: seed realistic data or insert your own samples.</li>
+        <li><strong>Stream</strong> events: fire operations, inspect the envelopes, and export NDJSON.</li>
+      </ol>
+      <div class="onboarding-actions">
+        <button type="button" id="onboardingStart" class="btn-primary">Load the orders template</button>
+        <button type="button" id="onboardingDismiss" class="btn-ghost">Start from scratch</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Appwrite SDK + config -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
   <script>
@@ -193,6 +268,8 @@
       projectId: "68e009780030a983a57d",
       databaseId: "68e028d90039fa4588f5",
       collectionId: "events",
+      scenarioCollectionId: "scenarios",
+      shareBaseUrl: "https://letstalkcdc.appwrite.network/",
       channel: (db, col) => `databases.${db}.collections.${col}.documents`
     };
   </script>
