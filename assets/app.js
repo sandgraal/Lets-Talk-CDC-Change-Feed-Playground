@@ -8,6 +8,8 @@ const STORAGE_KEYS = Object.freeze({
   lastTemplate: "cdc_playground_last_template_v1",
 });
 
+const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
+
 const DEFAULT_SCHEMA = [
   { name: "id", type: "number", pk: true },
   { name: "customer_name", type: "string", pk: false },
@@ -451,12 +453,13 @@ async function saveScenarioRemote(options = {}) {
 
   const snapshot = {
     kind: "scenario",
-    version: 1,
+    version: 2,
     saved_at: new Date().toISOString(),
     schema: clone(state.schema),
     rows: clone(state.rows),
     events: clone(state.events),
     scenarioId: state.scenarioId,
+    comparator: buildComparatorExport(),
   };
 
   const reuseId = state.remoteId || uiState.lastShareId;
@@ -559,6 +562,12 @@ async function maybeHydrateSharedScenario() {
 
     if (state.events.length) selectLastEvent(); else resetEventSelection();
     if (state.scenarioId) localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
+    if (doc.comparator?.preferences) {
+      applyComparatorPreferences(doc.comparator.preferences);
+    }
+    if (doc.comparator?.summary) {
+      renderComparatorFeedback(doc.comparator.summary);
+    }
     uiState.lastShareId = doc.$id;
     save();
     renderSchema();
@@ -587,13 +596,9 @@ async function maybeHydrateSharedScenario() {
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
 const clone  = (x) => JSON.parse(JSON.stringify(x));
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+const comparatorState = {
+  summary: null,
+};
 const save   = () => {
   try {
     localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
@@ -648,6 +653,46 @@ function highlightJson(json = "") {
     }
     return `<span class="${cls}">${match}</span>`;
   });
+}
+
+function loadComparatorPreferences() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(COMPARATOR_PREFS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn("Comparator prefs parse failed", err);
+    return null;
+  }
+}
+
+function applyComparatorPreferences(prefs) {
+  if (typeof window === "undefined") return;
+  try {
+    if (prefs) {
+      window.localStorage.setItem(COMPARATOR_PREFS_KEY, JSON.stringify(prefs));
+    } else {
+      window.localStorage.removeItem(COMPARATOR_PREFS_KEY);
+    }
+    window.dispatchEvent(new CustomEvent("cdc:comparator-preferences-set", { detail: prefs || null }));
+  } catch (err) {
+    console.warn("Comparator prefs apply failed", err);
+  }
+}
+
+function buildComparatorExport() {
+  const preferences = loadComparatorPreferences();
+  let summary = comparatorState.summary;
+  try {
+    summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
+  } catch {
+    summary = null;
+  }
+  return {
+    preferences: preferences || null,
+    summary,
+  };
 }
 
 function emitSparkleTrail(op = "c") {
@@ -948,10 +993,17 @@ function renderComparatorFeedback(detail) {
     panel.hidden = true;
     panel.innerHTML = "";
     panel.removeAttribute("data-live");
+    comparatorState.summary = null;
     return;
   }
 
   const { summary, scenarioLabel, scenarioName, isLive } = detail;
+
+  try {
+    comparatorState.summary = JSON.parse(JSON.stringify(detail));
+  } catch {
+    comparatorState.summary = null;
+  }
 
   const bestLag = summary.bestLag;
   const worstLag = summary.worstLag;
@@ -1763,7 +1815,17 @@ function seedRows() {
 }
 
 function exportScenario() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const payload = {
+    version: 2,
+    exported_at: new Date().toISOString(),
+    schema: clone(state.schema),
+    rows: clone(state.rows),
+    events: clone(state.events),
+    scenarioId: state.scenarioId || null,
+    remoteId: state.remoteId || null,
+    comparator: buildComparatorExport(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "cdc_scenario.json";
@@ -1775,16 +1837,24 @@ function importScenario(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const s = JSON.parse(reader.result);
-      state.schema = s.schema || [];
-      state.rows   = s.rows   || [];
-      state.events = s.events || [];
-      state.scenarioId = s.scenarioId || null;
-      state.remoteId = s.remoteId || null;
+      const payload = JSON.parse(reader.result);
+      const scenarioPayload = payload && payload.schema ? payload : { schema: [], rows: [], events: [] };
+
+      state.schema = scenarioPayload.schema || [];
+      state.rows   = scenarioPayload.rows   || [];
+      state.events = scenarioPayload.events || [];
+      state.scenarioId = scenarioPayload.scenarioId || null;
+      state.remoteId = scenarioPayload.remoteId || null;
       if (state.scenarioId) {
         localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
       }
       if (state.events.length) selectLastEvent(); else resetEventSelection();
+      if (scenarioPayload.comparator?.preferences) {
+        applyComparatorPreferences(scenarioPayload.comparator.preferences);
+      }
+      if (scenarioPayload.comparator?.summary) {
+        renderComparatorFeedback(scenarioPayload.comparator.summary);
+      }
       save(); renderSchema(); renderEditor(); renderTable(); renderJSONLog();
       renderTemplateGallery();
     } catch { alert("Invalid scenario JSON"); }
