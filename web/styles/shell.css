@@ -1,26 +1,26 @@
 .sim-shell {
   margin-top: 2rem;
-  padding: 1.5rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 18px rgba(15, 23, 42, 0.08);
+  padding: 1.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .sim-shell__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .sim-shell__title {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0 0 0.25rem 0;
 }
 
 .sim-shell__actions {
@@ -32,23 +32,137 @@
 
 .sim-shell__actions button,
 .sim-shell__actions select {
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
   border: 1px solid rgba(51, 65, 85, 0.2);
   background: #ffffff;
   font-size: 0.95rem;
   cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.sim-shell__actions button:hover:not([disabled]),
+.sim-shell__actions select:hover {
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
 }
 
 .sim-shell__actions button[disabled] {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+.sim-shell__description {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.sim-shell__summary {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.85), rgba(248, 250, 252, 0.9));
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.sim-shell__summary strong {
+  font-weight: 600;
+}
+
+.sim-shell__method-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.sim-shell__method-chip {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sim-shell__method-chip[aria-pressed="true"] {
+  background: #1f2937;
+  color: #ffffff;
+}
+
+.sim-shell__lane-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.sim-shell__lane-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.sim-shell__lane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.sim-shell__lane-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sim-shell__lane-copy {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.sim-shell__lane-count {
+  font-size: 0.85rem;
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.12);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-weight: 600;
 }
 
 .sim-shell__metrics {
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.95rem;
   color: #1f2937;
+}
+
+.sim-shell__callout {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.sim-shell__callout--warning {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
 }
 
 .sim-shell__event-list {
@@ -63,13 +177,14 @@
 
 .sim-shell__event {
   display: grid;
-  grid-template-columns: 70px 1fr 120px;
+  grid-template-columns: 70px 1fr 110px;
   gap: 0.75rem;
   align-items: center;
   padding: 0.65rem 0.85rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.25);
   font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .sim-shell__event:last-child {
@@ -106,39 +221,14 @@
   color: #b91c1c;
 }
 
-.sim-shell__description {
-  margin: 0;
-  color: #475569;
-  font-size: 0.95rem;
-}
-
 .sim-shell__empty {
   padding: 1rem;
   text-align: center;
   color: #6b7280;
 }
 
-.sim-shell__method-tabs {
-  display: inline-flex;
-  gap: 0.25rem;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.15);
-  padding: 0.25rem;
-}
-
-.sim-shell__method-button {
-  border: none;
-  background: transparent;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: #1f2937;
-}
-
-.sim-shell__method-button[aria-pressed="true"] {
-  background: #1f2937;
-  color: #ffffff;
+.sim-shell__event-target {
+  text-align: right;
 }
 
 .sim-shell__footer {
@@ -148,7 +238,7 @@
 
 @media (max-width: 768px) {
   .sim-shell {
-    padding: 1rem;
+    padding: 1.1rem;
   }
 
   .sim-shell__event {

@@ -5,14 +5,33 @@ import { MetricsStrip } from "./components/MetricsStrip";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import "./styles/shell.css";
 
-type MethodOption = "polling" | "trigger" | "log";
-
 type Metrics = {
   lagMs: number;
   throughput: number;
   deletesPct: number;
   orderingOk: boolean;
   consistent: boolean;
+};
+
+const METHOD_ORDER = ["polling", "trigger", "log"] as const;
+const MIN_LANES = 2;
+const STEP_MS = 100;
+
+type MethodOption = typeof METHOD_ORDER[number];
+
+type LaneMetrics = {
+  method: MethodOption;
+  metrics: Metrics;
+  events: CdcEvent[];
+};
+
+type Summary = {
+  bestLag: LaneMetrics;
+  worstLag: LaneMetrics;
+  lagSpread: number;
+  lowestDeletes: LaneMetrics;
+  highestDeletes: LaneMetrics;
+  orderingIssues: MethodOption[];
 };
 
 const METHOD_LABELS: Record<MethodOption, string> = {
@@ -27,8 +46,6 @@ const METHOD_DESCRIPTIONS: Record<MethodOption, string> = {
   log: "Streams the transaction log for ordered, low-latency change events with minimal source impact.",
 };
 
-const STEP_MS = 100;
-
 function createEngine(method: MethodOption) {
   switch (method) {
     case "polling":
@@ -39,6 +56,13 @@ function createEngine(method: MethodOption) {
     default:
       return new LogEngine();
   }
+}
+
+function emptyEventMap(methods: MethodOption[]) {
+  return methods.reduce<Partial<Record<MethodOption, CdcEvent[]>>>((acc, method) => {
+    acc[method] = [];
+    return acc;
+  }, {});
 }
 
 function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenario, method: MethodOption): Metrics {
@@ -56,7 +80,8 @@ function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenar
     return evt.ts_ms >= prev.ts_ms;
   });
 
-  const consistent = orderingOk && (method === "polling" ? capturedDeletes === totalDeletes : true);
+  const consistent =
+    orderingOk && (method === "polling" ? capturedDeletes === totalDeletes : true);
 
   return {
     lagMs,
@@ -67,17 +92,44 @@ function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenar
   };
 }
 
+function computeSummary(lanes: LaneMetrics[]): Summary | null {
+  if (lanes.length === 0) return null;
+  const lagSorted = [...lanes].sort((a, b) => a.metrics.lagMs - b.metrics.lagMs);
+  const bestLag = lagSorted[0];
+  const worstLag = lagSorted[lagSorted.length - 1];
+  const lagSpread = worstLag.metrics.lagMs - bestLag.metrics.lagMs;
+
+  const deleteSorted = [...lanes].sort((a, b) => a.metrics.deletesPct - b.metrics.deletesPct);
+  const lowestDeletes = deleteSorted[0];
+  const highestDeletes = deleteSorted[deleteSorted.length - 1];
+
+  const orderingIssues = lanes.filter(lane => !lane.metrics.orderingOk).map(lane => lane.method);
+
+  return {
+    bestLag,
+    worstLag,
+    lagSpread,
+    lowestDeletes,
+    highestDeletes,
+    orderingIssues,
+  };
+}
+
 export function App() {
-  const [method, setMethod] = useState<MethodOption>("polling");
   const [scenarioId, setScenarioId] = useState<string>(SCENARIOS[0].name);
-  const [events, setEvents] = useState<CdcEvent[]>([]);
+  const [activeMethods, setActiveMethods] = useState<MethodOption[]>(() => [...METHOD_ORDER]);
+  const [laneEvents, setLaneEvents] = useState<Partial<Record<MethodOption, CdcEvent[]>>>(() =>
+    emptyEventMap([...METHOD_ORDER]),
+  );
   const [clock, setClock] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const scenario = useMemo(() => SCENARIOS.find(s => s.name === scenarioId) ?? SCENARIOS[0], [scenarioId]);
+  const scenario = useMemo(
+    () => SCENARIOS.find(s => s.name === scenarioId) ?? SCENARIOS[0],
+    [scenarioId],
+  );
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const stopLoop = useCallback(() => {
@@ -95,48 +147,63 @@ export function App() {
   }, [stopLoop]);
 
   useEffect(() => {
-    setEvents([]);
+    setLaneEvents(emptyEventMap(activeMethods));
     setClock(0);
     setIsPlaying(false);
-
     stopLoop();
-    unsubscribeRef.current?.();
 
     const runner = new ScenarioRunner();
-    const engine = createEngine(method);
-    const unsubscribe = engine.onEvent(event => {
-      setEvents(prev => [...prev, event]);
+    const unsubscribes: Array<() => void> = [];
+    const engines = activeMethods.map(method => {
+      const engine = createEngine(method);
+      const unsubscribe = engine.onEvent(event => {
+        setLaneEvents(prev => {
+          const next = { ...prev };
+          const existing = next[method] ?? [];
+          next[method] = [...existing, event];
+          return next;
+        });
+      });
+      unsubscribes.push(unsubscribe);
+      return engine;
     });
 
-    runner.attach([engine]);
+    runner.attach(engines);
     runner.load(scenario);
     runner.reset(scenario.seed);
     runner.onTick(now => setClock(now));
 
     runnerRef.current = runner;
-    unsubscribeRef.current = () => {
-      unsubscribe();
-      unsubscribeRef.current = null;
-    };
 
     return () => {
       runner.pause();
       stopLoop();
-      unsubscribeRef.current?.();
+      unsubscribes.forEach(unsub => unsub());
     };
-  }, [method, scenario, stopLoop]);
+  }, [activeMethods, scenario, stopLoop]);
+
+  const toggleMethod = useCallback((method: MethodOption) => {
+    setActiveMethods(prev => {
+      if (prev.includes(method)) {
+        if (prev.length <= MIN_LANES) return prev;
+        return prev.filter(item => item !== method);
+      }
+      const next = [...prev, method];
+      return METHOD_ORDER.filter(item => next.includes(item));
+    });
+  }, []);
 
   const handleStart = useCallback(() => {
     const runner = runnerRef.current;
     if (!runner) return;
 
     runner.reset(scenario.seed);
-    setEvents([]);
+    setLaneEvents(emptyEventMap(activeMethods));
     setClock(0);
     runner.start();
     setIsPlaying(true);
     startLoop();
-  }, [scenario.seed, startLoop]);
+  }, [activeMethods, scenario.seed, startLoop]);
 
   const handlePause = useCallback(() => {
     runnerRef.current?.pause();
@@ -162,14 +229,27 @@ export function App() {
 
   useEffect(() => () => stopLoop(), [stopLoop]);
 
-  const metrics = computeMetrics(events, clock, scenario, method);
+  const laneMetrics: LaneMetrics[] = useMemo(() => {
+    return activeMethods.map(method => {
+      const events = laneEvents[method] ?? [];
+      return {
+        method,
+        events,
+        metrics: computeMetrics(events, clock, scenario, method),
+      };
+    });
+  }, [activeMethods, clock, laneEvents, scenario]);
+
+  const summary = computeSummary(laneMetrics);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
       <header className="sim-shell__header">
         <div>
-          <h2 className="sim-shell__title">CDC Method Preview</h2>
-          <p className="sim-shell__description">Load a canned scenario and watch Polling, Trigger, or Log-based CDC emit events in real time.</p>
+          <h2 className="sim-shell__title">CDC Method Comparator</h2>
+          <p className="sim-shell__description">
+            Load a deterministic scenario and contrast Polling, Trigger, and Log-based CDC side by side.
+          </p>
         </div>
         <div className="sim-shell__actions" role="group" aria-label="Scenario controls">
           <select
@@ -183,16 +263,16 @@ export function App() {
               </option>
             ))}
           </select>
-          <div className="sim-shell__method-tabs" role="group" aria-label="Method selector">
-            {(Object.keys(METHOD_LABELS) as MethodOption[]).map(option => (
+          <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
+            {METHOD_ORDER.map(method => (
               <button
-                key={option}
+                key={method}
                 type="button"
-                className="sim-shell__method-button"
-                aria-pressed={option === method}
-                onClick={() => setMethod(option)}
+                className="sim-shell__method-chip"
+                aria-pressed={activeMethods.includes(method)}
+                onClick={() => toggleMethod(method)}
               >
-                {METHOD_LABELS[option]}
+                {METHOD_LABELS[method]}
               </button>
             ))}
           </div>
@@ -202,8 +282,6 @@ export function App() {
       <p className="sim-shell__description" aria-live="polite">
         <strong>{scenario.label}:</strong> {scenario.description}
       </p>
-
-      <p className="sim-shell__description" aria-live="polite">{METHOD_DESCRIPTIONS[method]}</p>
 
       <div className="sim-shell__actions" role="group" aria-label="Playback controls">
         <button type="button" onClick={handleStart} disabled={isPlaying}>
@@ -217,32 +295,86 @@ export function App() {
         </button>
       </div>
 
-      <div className="sim-shell__metrics">
-        <MetricsStrip {...metrics} />
+      {summary && (
+        <ul className="sim-shell__summary" aria-live="polite">
+          <li>
+            <strong>Lag spread:</strong> {METHOD_LABELS[summary.bestLag.method]} is leading at
+            {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
+            {summary.lagSpread > 0
+              ? ` — ${METHOD_LABELS[summary.worstLag.method]} trails by ${summary.lagSpread.toFixed(0)}ms`
+              : " (no spread)"}
+          </li>
+          <li>
+            <strong>Delete capture:</strong> {METHOD_LABELS[summary.lowestDeletes.method]} is lowest at
+            {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_LABELS[summary.highestDeletes.method]}
+            {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
+          </li>
+          <li>
+            <strong>Ordering:</strong>
+            {summary.orderingIssues.length === 0
+              ? " All methods preserved ordering"
+              : ` Issues: ${summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ")}`}
+          </li>
+        </ul>
+      )}
+
+      <div className="sim-shell__lane-grid">
+        {laneMetrics.map(({ method, metrics, events }) => {
+          const description = METHOD_DESCRIPTIONS[method];
+          const displayEvents = events.length > 12 ? events.slice(-12) : events;
+          return (
+            <article key={method} className="sim-shell__lane-card">
+              <header className="sim-shell__lane-header">
+                <div>
+                  <h3 className="sim-shell__lane-title">{METHOD_LABELS[method]}</h3>
+                  <p className="sim-shell__lane-copy">{description}</p>
+                </div>
+                <span className="sim-shell__lane-count">{events.length} events</span>
+              </header>
+
+              <div className="sim-shell__metrics">
+                <MetricsStrip {...metrics} />
+              </div>
+
+              {method === "polling" && metrics.deletesPct < 100 && (
+                <p className="sim-shell__callout sim-shell__callout--warning">
+                  Hard deletes missed: {metrics.deletesPct.toFixed(0)}% captured.
+                </p>
+              )}
+              {method === "trigger" && (
+                <p className="sim-shell__callout">Adds write latency via trigger execution.</p>
+              )}
+              {method === "log" && (
+                <p className="sim-shell__callout">Reads WAL/Binlog post-commit with strict ordering.</p>
+              )}
+
+              <ul className="sim-shell__event-list" aria-live="polite">
+                {displayEvents.length === 0 ? (
+                  <li className="sim-shell__empty">No events yet.</li>
+                ) : (
+                  displayEvents.map(event => (
+                    <li
+                      key={`${method}-${event.seq}`}
+                      className={`sim-shell__event${event.op === "d" ? " sim-shell__event--delete" : ""}`}
+                    >
+                      <span className="sim-shell__event-op" data-op={event.op}>
+                        {event.op}
+                      </span>
+                      <span>
+                        #{event.seq} · pk={event.pk.id}
+                      </span>
+                      <span className="sim-shell__event-target">ts={event.ts_ms}ms</span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </article>
+          );
+        })}
       </div>
 
-      <ul className="sim-shell__event-list" aria-live="polite">
-        {events.length === 0 ? (
-          <li className="sim-shell__empty">No events yet. Start the simulator to stream the change feed.</li>
-        ) : (
-          events.map(event => (
-            <li key={event.seq} className={`sim-shell__event${event.op === "d" ? " sim-shell__event--delete" : ""}`}>
-              <span className="sim-shell__event-op" data-op={event.op}>
-                {event.op}
-              </span>
-              <span>
-                #{event.seq} · pk={event.pk.id}
-              </span>
-              <span className="sim-shell__event-target">
-                ts={event.ts_ms}ms
-              </span>
-            </li>
-          ))
-        )}
-      </ul>
-
       <footer className="sim-shell__footer">
-        Scenario clock: {clock}ms · {events.length} events emitted
+        Scenario clock: {clock}ms · {laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0)} total events emitted
       </footer>
     </section>
   );
