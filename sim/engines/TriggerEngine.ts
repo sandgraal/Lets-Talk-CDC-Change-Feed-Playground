@@ -16,6 +16,14 @@ export class TriggerEngine extends BaseEngine {
     if (opts.trigger_overhead_ms !== undefined) this.triggerOverheadMs = opts.trigger_overhead_ms;
   }
 
+  reset(seed: number) {
+    super.reset(seed);
+    this.table.clear();
+    this.audit = [];
+    this.extractOffset = 0;
+    this.lastExtract = 0;
+  }
+
   applySourceOp(op: SourceOp) {
     const commitTs = op.t + this.triggerOverheadMs;
 

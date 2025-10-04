@@ -5,11 +5,11 @@ A zero-dependency web app that simulates CDC operations and emits Debezium-style
 ## Run locally
 Open `index.html` in a browser. No build step.
 
-### Simulator bundle
+### Build artefacts
 - Install tooling: `npm install`
-- Build the simulator modules: `npm run build:sim`
-
-The build emits `assets/generated/sim-bundle.js`, which `assets/sim-loader.js` loads on demand so the existing UI can access the TypeScript engines.
+- Build simulator engines: `npm run build:sim` → emits `assets/generated/sim-bundle.js` for `assets/sim-loader.js`
+- Build the React preview shell: `npm run build:web` → emits `assets/generated/ui-shell.js` for `assets/ui-shell-loader.js`
+- Build everything: `npm run build`
 
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).
