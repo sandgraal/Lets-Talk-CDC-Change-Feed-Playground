@@ -19,6 +19,7 @@ const els = {
   downloadNdjson: document.getElementById("btnDownloadNdjson"),
   learningSteps: document.getElementById("learningSteps"),
   learningTip: document.getElementById("learningTip"),
+  schemaStatus: document.getElementById("schemaStatus"),
 };
 
 const learningConfig = [
@@ -77,6 +78,19 @@ const flashButton = (btn, msg) => {
 };
 
 const toNdjson = (events) => events.map(ev => JSON.stringify(ev)).join("\n");
+
+function refreshSchemaStatus(message, tone = "muted") {
+  const el = els.schemaStatus;
+  if (!el) return;
+  const columns = state.schema.length;
+  const defaultMsg = columns === 0
+    ? "Add a column to begin building your table."
+    : `${columns} column${columns === 1 ? "" : "s"} defined. Click a pill to remove.`;
+  el.textContent = message ?? defaultMsg;
+  el.classList.remove("is-error", "is-success");
+  if (tone === "error") el.classList.add("is-error");
+  if (tone === "success") el.classList.add("is-success");
+}
 
 // Debezium-ish envelope
 function buildEvent(op, before, after) {
@@ -293,11 +307,28 @@ async function publishEvent(op, before, after) {
 
 // ---------- Schema ----------
 function addColumn({ name, type, pk }) {
-  if (!name) return;
-  if (state.schema.some(c => c.name === name)) return;
-  state.schema.push({ name, type, pk: !!pk });
-  for (const r of state.rows) if (!(name in r)) r[name] = null;
-  save(); renderSchema(); renderEditor(); renderTable();
+  const input = document.getElementById("colName");
+  const raw = (name ?? "").trim();
+  if (!raw) {
+    refreshSchemaStatus("Column name cannot be empty.", "error");
+    input?.focus();
+    return;
+  }
+
+  const normalized = raw.replace(/\s+/g, "_");
+  if (state.schema.some(c => c.name === normalized)) {
+    refreshSchemaStatus(`Column "${normalized}" already exists.`, "error");
+    input?.focus();
+    return;
+  }
+
+  state.schema.push({ name: normalized, type, pk: !!pk });
+  for (const r of state.rows) if (!(normalized in r)) r[normalized] = null;
+  save();
+  renderSchema();
+  renderEditor();
+  renderTable();
+  refreshSchemaStatus(`Added column "${normalized}".`, "success");
 }
 
 function removeColumn(name) {
@@ -305,7 +336,11 @@ function removeColumn(name) {
   if (idx === -1) return;
   state.schema.splice(idx, 1);
   for (const r of state.rows) delete r[name];
-  save(); renderSchema(); renderEditor(); renderTable();
+  save();
+  renderSchema();
+  renderEditor();
+  renderTable();
+  refreshSchemaStatus(`Removed column "${name}".`, state.schema.length ? "muted" : "success");
 }
 
 function renderSchema() {
@@ -319,6 +354,7 @@ function renderSchema() {
     els.schemaPills.appendChild(pill);
   }
   updateLearning();
+  refreshSchemaStatus();
 }
 
 // ---------- Editor (row inputs) ----------
