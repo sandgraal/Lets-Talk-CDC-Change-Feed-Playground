@@ -815,6 +815,117 @@ function renderJSONLog(precomputed) {
   if (els.eventLog) els.eventLog.innerHTML = highlightJson(payload);
   renderEventInspector(items);
   updateLearning();
+  broadcastComparatorState();
+}
+
+function getEventPayload(event) {
+  return event?.payload ?? event ?? {};
+}
+
+function getEventBefore(event) {
+  const payload = getEventPayload(event);
+  return payload?.before ?? event?.before ?? null;
+}
+
+function getEventAfter(event) {
+  const payload = getEventPayload(event);
+  return payload?.after ?? event?.after ?? null;
+}
+
+function getEventTimestamp(event) {
+  const payload = getEventPayload(event);
+  const value = payload?.ts_ms ?? event?.ts_ms ?? null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolvePrimaryKeyColumn() {
+  const pkCol = state.schema.find(col => col.pk);
+  return pkCol ? pkCol.name : null;
+}
+
+function extractPrimaryKeyValue(event, pkColumn, fallback) {
+  if (!pkColumn) return fallback;
+  if (event?.key && event.key[pkColumn] != null) return event.key[pkColumn];
+  const after = getEventAfter(event);
+  if (after && after[pkColumn] != null) return after[pkColumn];
+  const before = getEventBefore(event);
+  if (before && before[pkColumn] != null) return before[pkColumn];
+  return fallback;
+}
+
+function buildWorkspaceOps() {
+  const pkColumn = resolvePrimaryKeyColumn();
+  const events = state.events ?? [];
+  const baseTs = events.reduce((min, event) => {
+    const op = getOp(event);
+    const ts = getEventTimestamp(event);
+    if (op === "r" || ts == null) return min;
+    return Math.min(min, ts);
+  }, Number.POSITIVE_INFINITY);
+  const hasBase = Number.isFinite(baseTs);
+
+  const ops = [];
+  events.forEach((event, index) => {
+    const op = getOp(event);
+    if (op === "r") return; // snapshots don't become source ops
+
+    const ts = getEventTimestamp(event);
+    const normalizedTs = hasBase && ts != null ? Math.max(0, ts - baseTs) : index * 150;
+
+    const fallbackPk = `${index}`;
+    const pkValue = extractPrimaryKeyValue(event, pkColumn, fallbackPk);
+    const pk = { id: pkValue != null ? String(pkValue) : fallbackPk };
+
+    const after = getEventAfter(event);
+    if (op === "c") {
+      if (!after) return;
+      ops.push({ t: normalizedTs, op: "insert", table: "workspace", pk, after: clone(after) });
+      return;
+    }
+    if (op === "u") {
+      if (!after) return;
+      ops.push({ t: normalizedTs, op: "update", table: "workspace", pk, after: clone(after) });
+      return;
+    }
+    if (op === "d") {
+      ops.push({ t: normalizedTs, op: "delete", table: "workspace", pk });
+    }
+  });
+
+  return ops;
+}
+
+function buildComparatorDetail() {
+  const ops = buildWorkspaceOps();
+  return {
+    schema: clone(state.schema),
+    rows: clone(state.rows),
+    events: clone(state.events),
+    scenario: {
+      name: "workspace-live",
+      label: "Workspace (live)",
+      description: `${state.rows.length} rows · ${ops.length} operations`,
+      seed: 1,
+      ops,
+    },
+  };
+}
+
+function broadcastComparatorState() {
+  if (typeof window === "undefined") return;
+  try {
+    const detail = buildComparatorDetail();
+    window.dispatchEvent(new CustomEvent("cdc:workspace-update", { detail }));
+  } catch (err) {
+    console.warn("Comparator broadcast failed", err);
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("cdc:workspace-request", () => {
+    broadcastComparatorState();
+  });
 }
 
 const OP_METADATA = {
@@ -1822,6 +1933,7 @@ async function main() {
 
   renderTemplateGallery();
   bindUiHandlers();
+  broadcastComparatorState();
   setShareControlsEnabled(false);
 
   try {

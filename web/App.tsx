@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CdcEvent } from "../sim";
+import type { CdcEvent, SourceOp } from "../sim";
 import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine } from "../sim";
 import { MetricsStrip } from "./components/MetricsStrip";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import "./styles/shell.css";
+
+const LIVE_SCENARIO_NAME = "workspace-live" as const;
+
+type WorkspaceBroadcastDetail = {
+  scenario?: {
+    label?: string;
+    description?: string;
+    seed?: number;
+    ops?: SourceOp[];
+  } | null;
+};
 
 type Metrics = {
   lagMs: number;
@@ -150,6 +161,7 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
 }
 
 export function App() {
+  const [liveScenario, setLiveScenario] = useState<ShellScenario | null>(null);
   const [scenarioId, setScenarioId] = useState<string>(SCENARIOS[0].name);
   const [activeMethods, setActiveMethods] = useState<MethodOption[]>(() => [...METHOD_ORDER]);
   const [laneEvents, setLaneEvents] = useState<Partial<Record<MethodOption, CdcEvent[]>>>(() =>
@@ -159,10 +171,72 @@ export function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [methodConfig, setMethodConfig] = useState<MethodConfigMap>(() => cloneConfig(DEFAULT_METHOD_CONFIG));
 
-  const scenario = useMemo(
-    () => SCENARIOS.find(s => s.name === scenarioId) ?? SCENARIOS[0],
-    [scenarioId],
-  );
+  const userSelectedScenarioRef = useRef(false);
+
+  const scenarioOptions = useMemo(() => {
+    const list = [...SCENARIOS];
+    if (liveScenario) {
+      const existingIndex = list.findIndex(option => option.name === liveScenario.name);
+      if (existingIndex >= 0) {
+        list.splice(existingIndex, 1, liveScenario);
+      } else {
+        list.unshift(liveScenario);
+      }
+    }
+    return list;
+  }, [liveScenario]);
+
+  const scenario = useMemo(() => {
+    if (!scenarioOptions.length) return SCENARIOS[0];
+    return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
+  }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    if (!scenarioOptions.length) return;
+    if (!scenarioOptions.some(option => option.name === scenarioId)) {
+      setScenarioId(scenarioOptions[0].name);
+    }
+  }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<WorkspaceBroadcastDetail>;
+      const detail = custom.detail;
+      if (!detail || !detail.scenario) {
+        setLiveScenario(null);
+        return;
+      }
+
+      const ops = Array.isArray(detail.scenario.ops) ? detail.scenario.ops : [];
+      const label = detail.scenario.label ?? "Workspace (live)";
+      const description = detail.scenario.description ?? `${ops.length} operations`;
+      const seed = detail.scenario.seed ?? 1;
+
+      setLiveScenario({
+        name: LIVE_SCENARIO_NAME,
+        label,
+        description,
+        seed,
+        ops,
+      });
+    };
+
+    window.addEventListener("cdc:workspace-update", handler as EventListener);
+    window.dispatchEvent(new CustomEvent("cdc:workspace-request"));
+
+    return () => {
+      window.removeEventListener("cdc:workspace-update", handler as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!liveScenario) return;
+    if (!liveScenario.ops.length) return;
+    if (userSelectedScenarioRef.current) return;
+    setScenarioId(LIVE_SCENARIO_NAME);
+  }, [liveScenario]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -244,6 +318,11 @@ export function App() {
     });
   }, []);
 
+  const handleScenarioSelect = useCallback((value: string) => {
+    userSelectedScenarioRef.current = true;
+    setScenarioId(value);
+  }, []);
+
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -320,9 +399,9 @@ export function App() {
           <select
             aria-label="Scenario"
             value={scenarioId}
-            onChange={event => setScenarioId(event.target.value)}
+            onChange={event => handleScenarioSelect(event.target.value)}
           >
-            {SCENARIOS.map(option => (
+            {scenarioOptions.map(option => (
               <option key={option.name} value={option.name}>
                 {option.label}
               </option>
