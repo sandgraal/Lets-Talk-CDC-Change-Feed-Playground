@@ -368,6 +368,60 @@ export function App() {
     });
   }, [scenarioId, activeMethods, methodConfig]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const summaryDetail = summary
+      ? {
+          lagSpread: summary.lagSpread,
+          bestLag: {
+            method: summary.bestLag.method,
+            label: METHOD_LABELS[summary.bestLag.method],
+            metrics: summary.bestLag.metrics,
+          },
+          worstLag: {
+            method: summary.worstLag.method,
+            label: METHOD_LABELS[summary.worstLag.method],
+            metrics: summary.worstLag.metrics,
+          },
+          lowestDeletes: {
+            method: summary.lowestDeletes.method,
+            label: METHOD_LABELS[summary.lowestDeletes.method],
+            metrics: summary.lowestDeletes.metrics,
+          },
+          highestDeletes: {
+            method: summary.highestDeletes.method,
+            label: METHOD_LABELS[summary.highestDeletes.method],
+            metrics: summary.highestDeletes.metrics,
+          },
+          orderingIssues: summary.orderingIssues.map(method => ({
+            method,
+            label: METHOD_LABELS[method],
+          })),
+        }
+      : null;
+
+    const lanesDetail = laneMetrics.map(({ method, metrics }) => ({
+      method,
+      label: METHOD_LABELS[method],
+      metrics,
+    }));
+
+    window.dispatchEvent(
+      new CustomEvent("cdc:comparator-summary", {
+        detail: {
+          scenarioName: scenario.name,
+          scenarioLabel: scenario.label,
+          scenarioDescription: scenario.description,
+          isLive: scenario.name === LIVE_SCENARIO_NAME,
+          totalEvents,
+          summary: summaryDetail,
+          lanes: lanesDetail,
+        },
+      }),
+    );
+  }, [laneMetrics, scenario, summary, totalEvents]);
+
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -515,6 +569,10 @@ export function App() {
   }, [activeMethods, clock, laneEvents, scenario]);
 
   const summary = computeSummary(laneMetrics);
+  const totalEvents = useMemo(
+    () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
+    [laneMetrics],
+  );
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">

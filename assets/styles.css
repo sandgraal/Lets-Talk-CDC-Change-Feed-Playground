@@ -1001,6 +1001,52 @@ code {
 }
 .filter-actions label { display: inline-flex; align-items: center; gap: 6px; }
 
+.comparator-feedback {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 196, 0.35);
+  background: rgba(24, 36, 64, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--muted-strong);
+  display: grid;
+  gap: 8px;
+}
+
+.comparator-feedback[data-live="true"] {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(37, 99, 235, 0.16);
+  color: #dbeafe;
+}
+
+.comparator-feedback__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.comparator-feedback__meta {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+.comparator-feedback ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.comparator-feedback strong {
+  color: var(--ink);
+}
+
 .sparkle {
   position: fixed;
   width: 8px;

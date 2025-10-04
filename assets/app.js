@@ -251,6 +251,7 @@ const els = {
   includeBefore: document.getElementById("includeBefore"),
   copyNdjson: document.getElementById("btnCopyNdjson"),
   downloadNdjson: document.getElementById("btnDownloadNdjson"),
+  comparatorFeedback: document.getElementById("comparatorFeedback"),
   learningSteps: document.getElementById("learningSteps"),
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
@@ -586,6 +587,13 @@ async function maybeHydrateSharedScenario() {
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
 const clone  = (x) => JSON.parse(JSON.stringify(x));
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 const save   = () => {
   try {
     localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
@@ -808,6 +816,7 @@ function renderJSONLog(precomputed) {
     if (els.eventLog) els.eventLog.textContent = "// no events yet (check filters)";
     renderEventInspector(items);
     updateLearning();
+    broadcastComparatorState();
     return;
   }
 
@@ -926,6 +935,60 @@ if (typeof window !== "undefined") {
   window.addEventListener("cdc:workspace-request", () => {
     broadcastComparatorState();
   });
+  window.addEventListener("cdc:comparator-summary", (event) => {
+    renderComparatorFeedback(event?.detail);
+  });
+}
+
+function renderComparatorFeedback(detail) {
+  const panel = els.comparatorFeedback;
+  if (!panel) return;
+
+  if (!detail || !detail.summary || detail.totalEvents <= 0) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    panel.removeAttribute("data-live");
+    return;
+  }
+
+  const { summary, scenarioLabel, scenarioName, isLive } = detail;
+
+  const bestLag = summary.bestLag;
+  const worstLag = summary.worstLag;
+  const lowestDeletes = summary.lowestDeletes;
+  const highestDeletes = summary.highestDeletes;
+  const orderingIssues = Array.isArray(summary.orderingIssues) ? summary.orderingIssues : [];
+
+  const lagText = bestLag && worstLag
+    ? `${escapeHtml(bestLag.label)} leads at ${Math.round(bestLag.metrics.lagMs)}ms` +
+      (summary.lagSpread > 0
+        ? `; ${escapeHtml(worstLag.label)} trails by ${Math.round(summary.lagSpread)}ms`
+        : "")
+    : "Lag data pending";
+
+  const deleteText = lowestDeletes && highestDeletes
+    ? lowestDeletes.metrics.deletesPct >= 99.5
+      ? `${escapeHtml(highestDeletes.label)} captures all deletes.`
+      : `${escapeHtml(lowestDeletes.label)} captures ${Math.round(lowestDeletes.metrics.deletesPct)}% deletes (best: ${escapeHtml(highestDeletes.label)}).`
+    : "Delete coverage pending.";
+
+  const orderingText = orderingIssues.length
+    ? `Ordering drift in ${orderingIssues.map(item => escapeHtml(item.label)).join(", ")}.`
+    : "Ordering preserved across methods.";
+
+  const title = scenarioLabel || scenarioName || "Comparator insights";
+
+  panel.dataset.live = isLive ? "true" : "false";
+  panel.innerHTML = `
+    <p class="comparator-feedback__title">${escapeHtml(title)}</p>
+    <p class="comparator-feedback__meta">${isLive ? "Live workspace" : "Scenario preview"}</p>
+    <ul>
+      <li><strong>Lag:</strong> ${lagText}</li>
+      <li><strong>Deletes:</strong> ${deleteText}</li>
+      <li><strong>Ordering:</strong> ${orderingText}</li>
+    </ul>
+  `;
+  panel.hidden = false;
 }
 
 const OP_METADATA = {
