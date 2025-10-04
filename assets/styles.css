@@ -633,7 +633,14 @@ select:focus {
   font-size: 13px;
   line-height: 1.45;
   box-shadow: inset 0 0 0 1px rgba(15,28,52,0.35);
+  white-space: pre;
 }
+
+.log .json-key { color: var(--accent); font-weight: 600; }
+.log .json-string { color: #fbcfe8; }
+.log .json-number { color: #7dd3fc; }
+.log .json-boolean { color: #facc15; }
+.log .json-null { color: #f87171; }
 
 .footer {
   padding: 18px clamp(20px, 4vw, 48px) 32px;
