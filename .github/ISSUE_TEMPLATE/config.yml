@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Hacktoberfest Participation Guidelines
+    url: https://hacktoberfest.com/participation/
+    about: Review expectations before starting a contribution.
