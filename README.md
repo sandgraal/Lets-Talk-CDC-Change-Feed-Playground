@@ -13,15 +13,6 @@ Open `index.html` in a browser. No build step.
 ## Contributing
 We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
 
-## Deploy to Appwrite Sites
-Zip the files:
-- `index.html`
-- `assets/styles.css`
-- `assets/app.js`
-
-Upload the zip in Appwrite Console → **Sites** → **Manual upload**.
-The site will be available at `https://letstalkcdc.appwrite.network/`.
-
 ## Roadmap
 - Realtime stream via Appwrite Realtime (broadcast ops to multiple clients).
 - Save/load scenarios in Appwrite Databases (multi-device).
