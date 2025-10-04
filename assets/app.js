@@ -537,36 +537,49 @@ function importScenario(file) {
   reader.readAsText(file);
 }
 
-// ---------- Wire up UI ----------
-async function main() {
-  load();
-  const seeded = ensureDefaultSchema();
-  if (seeded) save();
-  renderSchema(); renderEditor(); renderTable(); renderJSONLog();
-  await initAppwrite();  // enable realtime if configured
+function bindUiHandlers() {
+  const addColBtn = document.getElementById("addCol");
+  if (addColBtn) {
+    addColBtn.onclick = () => {
+      const name = document.getElementById("colName").value.trim();
+      const type = document.getElementById("colType").value;
+      const pk   = document.getElementById("colPK").checked;
+      addColumn({ name, type, pk });
+      document.getElementById("colName").value = "";
+      document.getElementById("colPK").checked = false;
+    };
+  }
 
-  document.getElementById("addCol").onclick = () => {
-    const name = document.getElementById("colName").value.trim();
-    const type = document.getElementById("colType").value;
-    const pk   = document.getElementById("colPK").checked;
-    addColumn({ name, type, pk });
-    document.getElementById("colName").value = "";
-    document.getElementById("colPK").checked = false;
-  };
+  const insertBtn = document.getElementById("opInsert");
+  if (insertBtn) insertBtn.onclick = () => { insertRow(readEditorValues()); clearEditor(); };
 
-  document.getElementById("opInsert").onclick = () => { insertRow(readEditorValues()); clearEditor(); };
-  document.getElementById("opUpdate").onclick = () => { updateRow(readEditorValues()); };
-  document.getElementById("opDelete").onclick = () => { deleteRow(readEditorValues()); };
+  const updateBtn = document.getElementById("opUpdate");
+  if (updateBtn) updateBtn.onclick = () => { updateRow(readEditorValues()); };
+
+  const deleteBtn = document.getElementById("opDelete");
+  if (deleteBtn) deleteBtn.onclick = () => { deleteRow(readEditorValues()); };
+
   if (els.autofillRow) {
     els.autofillRow.onclick = () => { autofillRowAndInsert(); };
   }
 
-  document.getElementById("emitSnapshot").onclick = emitSnapshot;
-  document.getElementById("clearEvents").onclick = () => { state.events = []; save(); renderJSONLog(); };
-  document.getElementById("seedRows").onclick = seedRows;
-  document.getElementById("clearRows").onclick = () => { state.rows = []; save(); renderTable(); };
-  document.getElementById("btnCopyNdjson").onclick = copyNdjson;
-  document.getElementById("btnDownloadNdjson").onclick = downloadNdjson;
+  const emitSnapshotBtn = document.getElementById("emitSnapshot");
+  if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;
+
+  const clearEventsBtn = document.getElementById("clearEvents");
+  if (clearEventsBtn) clearEventsBtn.onclick = () => { state.events = []; save(); renderJSONLog(); };
+
+  const seedRowsBtn = document.getElementById("seedRows");
+  if (seedRowsBtn) seedRowsBtn.onclick = seedRows;
+
+  const clearRowsBtn = document.getElementById("clearRows");
+  if (clearRowsBtn) clearRowsBtn.onclick = () => { state.rows = []; save(); renderTable(); };
+
+  const copyNdjsonBtn = document.getElementById("btnCopyNdjson");
+  if (copyNdjsonBtn) copyNdjsonBtn.onclick = copyNdjson;
+
+  const downloadNdjsonBtn = document.getElementById("btnDownloadNdjson");
+  if (downloadNdjsonBtn) downloadNdjsonBtn.onclick = downloadNdjson;
 
   ["filterC", "filterU", "filterD", "filterR"].forEach(id => {
     const cb = document.getElementById(id);
@@ -586,9 +599,24 @@ async function main() {
     });
   }
 
-  document.getElementById("btnExport").onclick = exportScenario;
-  document.getElementById("importFile").onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
-  document.getElementById("btnReset").onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
+  const exportBtn = document.getElementById("btnExport");
+  if (exportBtn) exportBtn.onclick = exportScenario;
+
+  const importInput = document.getElementById("importFile");
+  if (importInput) importInput.onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
+
+  const resetBtn = document.getElementById("btnReset");
+  if (resetBtn) resetBtn.onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
+}
+
+// ---------- Wire up UI ----------
+async function main() {
+  load();
+  const seeded = ensureDefaultSchema();
+  if (seeded) save();
+  renderSchema(); renderEditor(); renderTable(); renderJSONLog();
+  bindUiHandlers();
+  initAppwrite().catch(err => console.warn("Appwrite init skipped", err));
 }
 main();
 function randomSampleForColumn(col) {
