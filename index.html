@@ -14,50 +14,33 @@
     </div>
     <div class="topbar-actions">
       <span class="badge badge-hacktoberfest">Hacktoberfest 2025</span>
-      <button id="btnExport">Export Scenario</button>
+      <button id="btnExport" type="button">Export Scenario</button>
       <label class="file">
         <input type="file" id="importFile" accept="application/json" />
         <span>Import Scenario</span>
       </label>
-      <button id="btnReset" class="danger">Reset</button>
+      <button id="btnReset" class="danger" type="button">Reset</button>
     </div>
   </header>
 
   <main class="layout">
     <section class="hero" id="overview">
       <div class="hero-copy">
-        <span class="eyebrow">CDC · Realtime · Hacktoberfest</span>
-        <h1>Design, replay, and stream change events with confidence.</h1>
-        <p class="hero-lead">Prototype Debezium-style envelopes, test Appwrite integrations, and share curated scenarios with the Lets Talk CDC community.</p>
+        <span class="eyebrow">Plan · Practice · Share</span>
+        <h1>Prototype change data capture without leaving the browser.</h1>
+        <p class="hero-lead">Create a lightweight schema, act on rows, and watch the resulting change feed update in real time.</p>
         <div class="hero-actions">
-          <a href="#schema" class="btn btn-primary">Build a schema</a>
-          <a href="#change-feed" class="btn btn-ghost">Inspect change feed</a>
-        </div>
-        <div class="hero-metrics">
-          <article class="metric">
-            <span class="metric-label">Realtime ready</span>
-            <span class="metric-value">Appwrite</span>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Event format</span>
-            <span class="metric-value">Debezium</span>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Built for</span>
-            <span class="metric-value">Hacktoberfest</span>
-          </article>
+          <a href="#schema" class="btn btn-primary">Start modeling</a>
+          <a href="#change-feed" class="btn btn-ghost">See the feed</a>
         </div>
       </div>
-      <div class="hero-visual">
-        <div class="hero-card">
-          <h3>Why it matters</h3>
-          <p>Model primary keys, simulate inserts, and broadcast events to prototype resilient CDC pipelines.</p>
-          <ul>
-            <li>Zero build setup</li>
-            <li>Realtime Appwrite hooks</li>
-            <li>Shareable scenarios</li>
-          </ul>
-        </div>
+      <div class="hero-quickstart" aria-labelledby="quickstartTitle">
+        <h3 id="quickstartTitle">Quick start</h3>
+        <ol>
+          <li>Add at least one column and mark a primary key.</li>
+          <li>Seed sample rows or insert your own data.</li>
+          <li>Fire operations and inspect the generated events.</li>
+        </ol>
       </div>
     </section>
 
@@ -74,8 +57,10 @@
             <option value="boolean">boolean</option>
           </select>
           <label class="checkbox"><input type="checkbox" id="colPK" /> PK</label>
-          <button id="addCol">Add Column</button>
+          <button id="addCol" type="button">Add Column</button>
         </div>
+
+        <p class="schema-status" id="schemaStatus" aria-live="polite"></p>
 
         <div class="pill-row" id="schemaPills"></div>
 
@@ -83,9 +68,9 @@
         <p class="card-intro">Craft row-level events by editing values below, then choose an operation.</p>
         <div class="row-editor" id="rowEditor"></div>
         <div class="ops">
-          <button id="opInsert">Insert</button>
-          <button id="opUpdate">Update by PK</button>
-          <button id="opDelete">Delete by PK</button>
+          <button id="opInsert" type="button">Insert</button>
+          <button id="opUpdate" type="button">Update by PK</button>
+          <button id="opDelete" type="button">Delete by PK</button>
         </div>
       </section>
 
@@ -98,8 +83,8 @@
           <tbody></tbody>
         </table>
         <div class="table-actions">
-          <button id="seedRows">Seed sample rows</button>
-          <button id="clearRows">Clear rows</button>
+          <button id="seedRows" type="button">Seed sample rows</button>
+          <button id="clearRows" type="button">Clear rows</button>
         </div>
       </section>
 
@@ -108,8 +93,8 @@
         <h2>Change events</h2>
         <p class="card-intro">Toggle envelopes, filter by operation, or broadcast to Appwrite Realtime for multi-client demos.</p>
         <div class="stream-actions">
-          <button id="emitSnapshot">Emit Snapshot</button>
-          <button id="clearEvents">Clear events</button>
+          <button id="emitSnapshot" type="button">Emit Snapshot</button>
+          <button id="clearEvents" type="button">Clear events</button>
           <label class="checkbox"><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
           <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
         </div>
@@ -120,8 +105,8 @@
           <label class="checkbox"><input type="checkbox" id="filterR" checked /> Snapshots</label>
         </div>
         <div class="export-actions">
-          <button id="btnCopyNdjson">Copy NDJSON</button>
-          <button id="btnDownloadNdjson">Download NDJSON</button>
+          <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
+          <button id="btnDownloadNdjson" type="button">Download NDJSON</button>
         </div>
         <pre id="eventLog" class="log"></pre>
       </section>
