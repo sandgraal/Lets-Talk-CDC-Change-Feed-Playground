@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for helping grow Lets Talk CDC – Change Feed Playground! This project is taking part in Hacktoberfest 2024, so we aim to make the contribution flow predictable and contributor-friendly.
+Thank you for helping grow Lets Talk CDC – Change Feed Playground! This project is taking part in Hacktoberfest 2025, so we aim to make the contribution flow predictable and contributor-friendly.
 
 ## Before You Start
 - Register for Hacktoberfest at [hacktoberfest.com](https://hacktoberfest.com/).
