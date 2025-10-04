@@ -1,0 +1,14 @@
+{
+  "name": "lets-talk-cdc-playground",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:sim": "vite build",
+    "preview:sim": "vite preview",
+    "dev:sim": "vite" 
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.9"
+  }
+}
