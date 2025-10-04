@@ -15,7 +15,35 @@ const els = {
   eventLog: document.getElementById("eventLog"),
   debzWrap: document.getElementById("debzWrap"),
   includeBefore: document.getElementById("includeBefore"),
+  copyNdjson: document.getElementById("btnCopyNdjson"),
+  downloadNdjson: document.getElementById("btnDownloadNdjson"),
+  learningSteps: document.getElementById("learningSteps"),
+  learningTip: document.getElementById("learningTip"),
 };
+
+const learningConfig = [
+  {
+    id: "schema",
+    target: "#schema",
+    tip: "Add at least one column and designate a primary key so updates can locate rows.",
+    completeTip: "Nice foundation. Head to the table to add seed data.",
+    isComplete: () => state.schema.length > 0,
+  },
+  {
+    id: "rows",
+    target: "#table-state",
+    tip: "Seed sample data or insert rows so you have something to mutate.",
+    completeTip: "Table looks good. Trigger some inserts, updates, or deletes next.",
+    isComplete: () => state.rows.length > 0,
+  },
+  {
+    id: "events",
+    target: "#change-feed",
+    tip: "Run inserts, updates, deletes, or emit snapshot to see change events stream in.",
+    completeTip: "Great! Copy or download the NDJSON to share your feed.",
+    isComplete: () => state.events.length > 0,
+  },
+];
 
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
@@ -31,6 +59,18 @@ const load   = () => {
     state.events = s.events || [];
   } catch { /* ignore */ }
 };
+const flashButton = (btn, msg) => {
+  if (!btn) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = msg;
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.disabled = false;
+  }, 1500);
+};
+
+const toNdjson = (events) => events.map(ev => JSON.stringify(ev)).join("\n");
 
 // Debezium-ish envelope
 function buildEvent(op, before, after) {
@@ -76,20 +116,96 @@ function getOp(ev) {
 }
 
 function renderJSONLog() {
-  const allowed = {
-    c: document.getElementById("filterC")?.checked ?? true,
-    u: document.getElementById("filterU")?.checked ?? true,
-    d: document.getElementById("filterD")?.checked ?? true,
-    r: document.getElementById("filterR")?.checked ?? true,
-  };
-
-  const filtered = state.events.filter(ev => allowed[getOp(ev)]);
+  const filtered = filterEvents(state.events);
   const text = filtered.map(ev => JSON.stringify(ev, null, 2)).join("\n");
   els.eventLog.textContent = text || "// no events yet (check filters)";
+  updateLearning();
 }
 
-  const text = filtered.map(e => JSON.stringify(e, null, 2)).join("\n");
-  els.eventLog.textContent = text || "// no events yet (check filters)";
+function updateLearning(activeId) {
+  if (!els.learningSteps) return;
+
+  const buttons = Array.from(els.learningSteps.querySelectorAll("button.learning-step"));
+  let firstIncomplete = null;
+
+  buttons.forEach(btn => {
+    const id = btn.dataset.step;
+    const config = learningConfig.find(step => step.id === id);
+    const complete = config?.isComplete() ?? false;
+    btn.classList.toggle("is-complete", complete);
+
+    const status = btn.querySelector(".step-status");
+    if (status) status.textContent = complete ? "Done" : "Pending";
+
+    if (!complete && firstIncomplete === null) firstIncomplete = id;
+  });
+
+  const activeIdResolved = activeId || firstIncomplete || learningConfig[learningConfig.length - 1]?.id;
+
+  buttons.forEach(btn => {
+    btn.classList.toggle("is-active", btn.dataset.step === activeIdResolved);
+  });
+
+  const activeConfig = learningConfig.find(step => step.id === activeIdResolved);
+  if (activeConfig && els.learningTip) {
+    const isComplete = activeConfig.isComplete();
+    const tip = isComplete && activeConfig.completeTip ? activeConfig.completeTip : activeConfig.tip;
+    els.learningTip.textContent = tip;
+  }
+}
+
+async function copyNdjson() {
+  const filtered = filterEvents(state.events);
+  if (!filtered.length) {
+    flashButton(els.copyNdjson, "No events");
+    return;
+  }
+
+  const ndjson = toNdjson(filtered);
+  try {
+    await navigator.clipboard.writeText(ndjson);
+    flashButton(els.copyNdjson, "Copied!");
+  } catch (err) {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = ndjson;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (ok) {
+        flashButton(els.copyNdjson, "Copied!");
+        return;
+      }
+    } catch {
+      // fall through to failure notification
+    }
+    flashButton(els.copyNdjson, "Failed");
+    console.warn("Copy to clipboard failed", err);
+    alert("Copy failed. You can still select the log text manually.");
+  }
+}
+
+function downloadNdjson() {
+  const filtered = filterEvents(state.events);
+  if (!filtered.length) {
+    flashButton(els.downloadNdjson, "No events");
+    return;
+  }
+
+  const ndjson = toNdjson(filtered) + "\n";
+  const blob = new Blob([ndjson], { type: "application/x-ndjson" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  a.href = url;
+  a.download = `change-events-${stamp}.ndjson`;
+  a.click();
+  URL.revokeObjectURL(url);
+  flashButton(els.downloadNdjson, "Saved!");
 }
 
 
@@ -196,6 +312,7 @@ function renderSchema() {
     pill.onclick = () => removeColumn(c.name);
     els.schemaPills.appendChild(pill);
   }
+  updateLearning();
 }
 
 // ---------- Editor (row inputs) ----------
@@ -246,6 +363,7 @@ function renderTable() {
       td.textContent = r[c.name];
     });
   }
+  updateLearning();
 }
 
 function findByPK(values) {
@@ -364,6 +482,26 @@ async function main() {
   document.getElementById("clearEvents").onclick = () => { state.events = []; save(); renderJSONLog(); };
   document.getElementById("seedRows").onclick = seedRows;
   document.getElementById("clearRows").onclick = () => { state.rows = []; save(); renderTable(); };
+  document.getElementById("btnCopyNdjson").onclick = copyNdjson;
+  document.getElementById("btnDownloadNdjson").onclick = downloadNdjson;
+
+  ["filterC", "filterU", "filterD", "filterR"].forEach(id => {
+    const cb = document.getElementById(id);
+    if (cb) cb.onchange = renderJSONLog;
+  });
+
+  if (els.learningSteps) {
+    els.learningSteps.addEventListener("click", (event) => {
+      const btn = event.target.closest("button.learning-step");
+      if (!btn) return;
+      const targetSel = btn.dataset.target;
+      if (targetSel) {
+        const node = document.querySelector(targetSel);
+        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      updateLearning(btn.dataset.step);
+    });
+  }
 
   document.getElementById("btnExport").onclick = exportScenario;
   document.getElementById("importFile").onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);

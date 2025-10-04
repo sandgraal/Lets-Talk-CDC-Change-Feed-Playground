@@ -291,6 +291,78 @@ button.danger:hover {
 .card h2 { margin: 0; font-size: 22px; }
 .card-intro { margin: 0; color: var(--muted); font-size: 14px; }
 
+.learning-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.learning-step {
+  width: 100%;
+  border: 1px solid rgba(78,116,173,0.35);
+  background: rgba(16,32,59,0.65);
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: var(--ink);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  text-align: left;
+}
+.learning-step:hover { transform: translateY(-1px); border-color: rgba(78,116,173,0.55); }
+.learning-step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.learning-step.is-active {
+  border-color: rgba(58,184,255,0.7);
+  box-shadow: 0 18px 32px -28px rgba(12,50,110,0.9);
+}
+.learning-step.is-complete { border-color: rgba(58,184,255,0.65); }
+.learning-step .step-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(58,184,255,0.2);
+  border: 1px solid rgba(58,184,255,0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.learning-step .step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.learning-step .step-title { font-weight: 600; }
+.learning-step .step-detail { font-size: 13px; color: var(--muted); }
+.learning-step .step-status {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.learning-step.is-complete .step-status { color: var(--accent); }
+
+.learning-tip {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(13,26,52,0.78);
+  border: 1px solid rgba(58,184,255,0.28);
+  color: var(--muted-strong);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .schema { display: flex; gap: 10px; flex-wrap: wrap; }
 .pill-row {
   display: flex;
