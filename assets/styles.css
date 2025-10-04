@@ -219,10 +219,37 @@ button.danger:hover {
   gap: 8px;
 }
 
-.grid {
+.workspace {
   display: grid;
-  gap: clamp(18px, 4vw, 28px);
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: clamp(24px, 4vw, 48px);
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 2.15fr);
+  align-items: start;
+}
+.workspace-panels {
+  display: grid;
+  gap: clamp(18px, 3vw, 28px);
+}
+.sidebar {
+  position: sticky;
+  top: clamp(24px, 6vw, 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: rgba(16, 28, 50, 0.78);
+  border: 1px solid rgba(88, 120, 177, 0.32);
+  box-shadow: 0 16px 32px -28px rgba(12, 22, 38, 0.5);
+}
+.sidebar h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--ink);
+}
+.sidebar-intro {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 .card {
   position: relative;
@@ -249,7 +276,46 @@ button.danger:hover {
   pointer-events: none;
 }
 .card h2 { margin: 0; font-size: 22px; }
+.card h3 { margin: 0; font-size: 18px; }
 .card-intro { margin: 0; color: var(--muted); font-size: 14px; }
+
+.step-card {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.step-card.is-active {
+  border-color: rgba(75,163,255,0.55);
+  box-shadow: 0 22px 44px -28px rgba(32, 64, 160, 0.6);
+  transform: translateY(-2px);
+}
+.step-card-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.step-card-header > div { display: flex; flex-direction: column; gap: 6px; }
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(75,163,255,0.16);
+  border: 1px solid rgba(75,163,255,0.46);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.step-badge-sub {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.step-card-divider {
+  height: 1px;
+  background: rgba(88, 120, 177, 0.28);
+  border-radius: 999px;
+}
 
 .learning-steps {
   list-style: none;
@@ -280,6 +346,7 @@ button.danger:hover {
 .learning-step.is-active {
   border-color: rgba(58,184,255,0.7);
   box-shadow: 0 18px 32px -28px rgba(12,50,110,0.9);
+  background: rgba(18,36,70,0.75);
 }
 .learning-step.is-complete { border-color: rgba(58,184,255,0.65); }
 .learning-step .step-index {
@@ -445,12 +512,15 @@ code {
 
 @media (max-width: 960px) {
   .hero { grid-template-columns: 1fr; }
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
 }
 
 @media (max-width: 720px) {
   .topbar { flex-direction: column; align-items: flex-start; position: static; }
   .topbar-actions { justify-content: flex-start; }
   .layout { width: min(100%, calc(100% - 24px)); padding-top: 36px; }
+  .workspace-panels { gap: 20px; }
 }
 
 @media (max-width: 520px) {

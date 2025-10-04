@@ -44,83 +44,17 @@
       </div>
     </section>
 
-    <div class="grid">
-      <!-- Schema + Row editor -->
-      <section class="card" id="schema">
-        <h2>Design your schema</h2>
-        <p class="card-intro">Add columns, types, and primary keys to shape the dataset your change feed will track.</p>
-        <div class="schema">
-          <input id="colName" placeholder="column name (e.g., id)" />
-          <select id="colType">
-            <option value="string">string</option>
-            <option value="number">number</option>
-            <option value="boolean">boolean</option>
-          </select>
-          <label class="checkbox"><input type="checkbox" id="colPK" /> PK</label>
-          <button id="addCol" type="button">Add Column</button>
-        </div>
-
-        <p class="schema-status" id="schemaStatus" aria-live="polite"></p>
-
-        <div class="pill-row" id="schemaPills"></div>
-
-        <h2>Operate on table</h2>
-        <p class="card-intro">Craft row-level events by editing values below, then choose an operation.</p>
-        <div class="row-editor" id="rowEditor"></div>
-        <div class="ops">
-          <button id="opInsert" type="button">Insert</button>
-          <button id="opUpdate" type="button">Update by PK</button>
-          <button id="opDelete" type="button">Delete by PK</button>
-        </div>
-      </section>
-
-      <!-- Table state -->
-      <section class="card" id="table-state">
-        <h2>Current table</h2>
-        <p class="card-intro">Review the data backing your scenario or populate seed rows to get started quickly.</p>
-        <table id="tbl" class="data-table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-        <div class="table-actions">
-          <button id="seedRows" type="button">Seed sample rows</button>
-          <button id="clearRows" type="button">Clear rows</button>
-        </div>
-      </section>
-
-      <!-- Change feed -->
-      <section class="card" id="change-feed">
-        <h2>Change events</h2>
-        <p class="card-intro">Toggle envelopes, filter by operation, or broadcast to Appwrite Realtime for multi-client demos.</p>
-        <div class="stream-actions">
-          <button id="emitSnapshot" type="button">Emit Snapshot</button>
-          <button id="clearEvents" type="button">Clear events</button>
-          <label class="checkbox"><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
-          <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
-        </div>
-        <div class="filter-actions">
-          <label class="checkbox"><input type="checkbox" id="filterC" checked /> Inserts</label>
-          <label class="checkbox"><input type="checkbox" id="filterU" checked /> Updates</label>
-          <label class="checkbox"><input type="checkbox" id="filterD" checked /> Deletes</label>
-          <label class="checkbox"><input type="checkbox" id="filterR" checked /> Snapshots</label>
-        </div>
-        <div class="export-actions">
-          <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
-          <button id="btnDownloadNdjson" type="button">Download NDJSON</button>
-        </div>
-        <pre id="eventLog" class="log"></pre>
-      </section>
-
-      <section class="card" id="learning-lab">
-        <h2>Learning lab</h2>
-        <p class="card-intro">Move through the CDC workflow one step at a time and use the tips to reinforce what you learn.</p>
+    <section class="workspace" id="playground">
+      <aside class="sidebar" aria-labelledby="learningTitle">
+        <h2 id="learningTitle">Learning path</h2>
+        <p class="sidebar-intro">Work through each step to understand how change data capture scenarios are assembled.</p>
         <ol class="learning-steps" id="learningSteps">
           <li>
             <button type="button" class="learning-step" data-step="schema" data-target="#schema">
               <span class="step-index">1</span>
               <span class="step-body">
                 <span class="step-title">Model your schema</span>
-                <span class="step-detail">Add columns and mark primary keys to describe data shape.</span>
+                <span class="step-detail">Define columns plus primary keys.</span>
               </span>
               <span class="step-status" aria-live="polite">Pending</span>
             </button>
@@ -129,8 +63,8 @@
             <button type="button" class="learning-step" data-step="rows" data-target="#table-state">
               <span class="step-index">2</span>
               <span class="step-body">
-                <span class="step-title">Populate the table</span>
-                <span class="step-detail">Seed sample rows or insert your own records to work with.</span>
+                <span class="step-title">Populate rows</span>
+                <span class="step-detail">Seed or insert data to operate on.</span>
               </span>
               <span class="step-status" aria-live="polite">Pending</span>
             </button>
@@ -139,16 +73,106 @@
             <button type="button" class="learning-step" data-step="events" data-target="#change-feed">
               <span class="step-index">3</span>
               <span class="step-body">
-                <span class="step-title">Emit change events</span>
-                <span class="step-detail">Run inserts, updates, deletes, or snapshots and review the log.</span>
+                <span class="step-title">Inspect events</span>
+                <span class="step-detail">Trigger operations and review the log.</span>
               </span>
               <span class="step-status" aria-live="polite">Pending</span>
             </button>
           </li>
         </ol>
         <div class="learning-tip" id="learningTip">Add at least one column to begin building your scenario.</div>
-      </section>
-    </div>
+      </aside>
+
+      <div class="workspace-panels">
+        <!-- Schema + Row editor -->
+        <section class="card step-card" data-step="schema" id="schema">
+          <header class="step-card-header">
+            <span class="step-badge">Step 1</span>
+            <div>
+              <h2>Model your schema</h2>
+              <p class="card-intro">Add columns, choose types, and mark primary keys so downstream operations know how to locate rows.</p>
+            </div>
+          </header>
+          <div class="schema">
+            <input id="colName" placeholder="column name (e.g., id)" />
+            <select id="colType">
+              <option value="string">string</option>
+              <option value="number">number</option>
+              <option value="boolean">boolean</option>
+            </select>
+            <label class="checkbox"><input type="checkbox" id="colPK" /> PK</label>
+            <button id="addCol" type="button">Add Column</button>
+          </div>
+
+          <p class="schema-status" id="schemaStatus" aria-live="polite"></p>
+
+          <div class="pill-row" id="schemaPills"></div>
+
+          <div class="step-card-divider"></div>
+
+          <header class="step-card-header">
+            <span class="step-badge step-badge-sub">Operate</span>
+            <div>
+              <h3>Edit row values</h3>
+              <p class="card-intro">Provide values for your columns, then choose an operation to emit events.</p>
+            </div>
+          </header>
+          <div class="row-editor" id="rowEditor"></div>
+          <div class="ops">
+            <button id="opInsert" type="button">Insert</button>
+            <button id="opUpdate" type="button">Update by PK</button>
+            <button id="opDelete" type="button">Delete by PK</button>
+          </div>
+        </section>
+
+        <!-- Table state -->
+        <section class="card step-card" data-step="rows" id="table-state">
+          <header class="step-card-header">
+            <span class="step-badge">Step 2</span>
+            <div>
+              <h2>Populate the table</h2>
+              <p class="card-intro">Review current rows, seed realistic data, or clear the table to reset.</p>
+            </div>
+          </header>
+          <table id="tbl" class="data-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+          <div class="table-actions">
+            <button id="seedRows" type="button">Seed sample rows</button>
+            <button id="clearRows" type="button">Clear rows</button>
+          </div>
+        </section>
+
+        <!-- Change feed -->
+        <section class="card step-card" data-step="events" id="change-feed">
+          <header class="step-card-header">
+            <span class="step-badge">Step 3</span>
+            <div>
+              <h2>Inspect change events</h2>
+              <p class="card-intro">Filter operations, include before-images, and export NDJSON to share scenarios.</p>
+            </div>
+          </header>
+          <div class="stream-actions">
+            <button id="emitSnapshot" type="button">Emit Snapshot</button>
+            <button id="clearEvents" type="button">Clear events</button>
+            <label class="checkbox"><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
+            <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
+          </div>
+          <div class="filter-actions">
+            <label class="checkbox"><input type="checkbox" id="filterC" checked /> Inserts</label>
+            <label class="checkbox"><input type="checkbox" id="filterU" checked /> Updates</label>
+            <label class="checkbox"><input type="checkbox" id="filterD" checked /> Deletes</label>
+            <label class="checkbox"><input type="checkbox" id="filterR" checked /> Snapshots</label>
+          </div>
+          <div class="export-actions">
+            <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
+            <button id="btnDownloadNdjson" type="button">Download NDJSON</button>
+          </div>
+          <pre id="eventLog" class="log"></pre>
+        </section>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
