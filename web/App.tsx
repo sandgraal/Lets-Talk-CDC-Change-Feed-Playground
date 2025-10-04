@@ -360,6 +360,39 @@ export function App() {
   }, [liveScenario]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const prefs = (event as CustomEvent<ComparatorPreferences | null>).detail;
+      if (!prefs) {
+        userSelectedScenarioRef.current = false;
+        return;
+      }
+
+      if (prefs.userPinnedScenario != null) {
+        userSelectedScenarioRef.current = Boolean(prefs.userPinnedScenario);
+      }
+
+      if (prefs.activeMethods) {
+        setActiveMethods(sanitizeActiveMethods(prefs.activeMethods));
+      }
+
+      if (prefs.methodConfig) {
+        setMethodConfig(sanitizeMethodConfig(prefs.methodConfig));
+      }
+
+      if (prefs.scenarioId) {
+        setScenarioId(prefs.scenarioId);
+      }
+    };
+
+    window.addEventListener("cdc:comparator-preferences-set", handler as EventListener);
+    return () => {
+      window.removeEventListener("cdc:comparator-preferences-set", handler as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     savePreferences({
       scenarioId,
       activeMethods,
