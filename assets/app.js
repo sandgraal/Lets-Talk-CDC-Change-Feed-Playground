@@ -2,6 +2,12 @@
 // Now with Appwrite Realtime.
 // State is in-memory + localStorage snapshot.
 
+const STORAGE_KEYS = Object.freeze({
+  state: "cdc_playground",
+  onboarding: "cdc_playground_onboarding_v1",
+  lastTemplate: "cdc_playground_last_template_v1",
+});
+
 const DEFAULT_SCHEMA = [
   { name: "id", type: "number", pk: true },
   { name: "customer_name", type: "string", pk: false },
@@ -11,10 +17,229 @@ const DEFAULT_SCHEMA = [
   { name: "region", type: "string", pk: false },
 ];
 
+const SCENARIO_TEMPLATES = Object.freeze([
+  {
+    id: "orders",
+    name: "Omnichannel Orders",
+    description: "Track order lifecycle and fulfillment signals across channels.",
+    highlight: "Focus on status transitions, totals, and fulfillment metadata.",
+    schema: [
+      { name: "order_id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "subtotal", type: "number", pk: false },
+      { name: "shipping_method", type: "string", pk: false },
+      { name: "updated_at", type: "string", pk: false },
+    ],
+    rows: [
+      { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" },
+      { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
+      { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" },
+    ],
+    events: [
+      {
+        payload: {
+          before: null,
+          after: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742472000000
+        },
+        key: { order_id: "ORD-1001" }
+      },
+      {
+        payload: {
+          before: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
+          after: { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742473440000
+        },
+        key: { order_id: "ORD-1001" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742472300000
+        },
+        key: { order_id: "ORD-1002" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742384520000
+        },
+        key: { order_id: "ORD-1003" }
+      },
+      {
+        payload: {
+          before: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
+          after: { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742391000000
+        },
+        key: { order_id: "ORD-1003" }
+      }
+    ]
+  },
+  {
+    id: "payments",
+    name: "Real-time Payments",
+    description: "Model authorization, capture, and decline flows for transactions.",
+    highlight: "Great for demonstrating idempotent updates and risk review.",
+    schema: [
+      { name: "transaction_id", type: "string", pk: true },
+      { name: "account_id", type: "string", pk: false },
+      { name: "payment_method", type: "string", pk: false },
+      { name: "amount", type: "number", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "authorized_at", type: "string", pk: false },
+      { name: "captured_at", type: "string", pk: false },
+    ],
+    rows: [
+      { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" },
+      { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
+      { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
+    ],
+    events: [
+      {
+        payload: {
+          before: null,
+          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742292240000
+        },
+        key: { transaction_id: "PAY-88341" }
+      },
+      {
+        payload: {
+          before: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
+          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742292370000
+        },
+        key: { transaction_id: "PAY-88341" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742478000000
+        },
+        key: { transaction_id: "PAY-88355" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742448660000
+        },
+        key: { transaction_id: "PAY-88377" }
+      },
+      {
+        payload: {
+          before: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
+          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742449200000
+        },
+        key: { transaction_id: "PAY-88377" }
+      }
+    ]
+  },
+  {
+    id: "iot",
+    name: "IoT Telemetry",
+    description: "Capture rolling sensor readings with anomaly flags.",
+    highlight: "Simulate snapshots, drifts, and device alerts in edge pipelines.",
+    schema: [
+      { name: "reading_id", type: "string", pk: true },
+      { name: "device_id", type: "string", pk: false },
+      { name: "temperature_c", type: "number", pk: false },
+      { name: "pressure_kpa", type: "number", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "recorded_at", type: "string", pk: false },
+    ],
+    rows: [
+      { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" },
+      { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
+      { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" },
+    ],
+    events: [
+      {
+        payload: {
+          before: null,
+          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742471400000
+        },
+        key: { reading_id: "READ-301" }
+      },
+      {
+        payload: {
+          before: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
+          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742473200000
+        },
+        key: { reading_id: "READ-301" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742474100000
+        },
+        key: { reading_id: "READ-302" }
+      },
+      {
+        payload: {
+          before: null,
+          after: { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "c",
+          ts_ms: 1742473800000
+        },
+        key: { reading_id: "READ-377" }
+      },
+      {
+        payload: {
+          before: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
+          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 26.3, pressure_kpa: 100.8, status: "alert", recorded_at: "2025-03-20T15:20:00Z" },
+          source: { name: "playground", version: "0.1.0" },
+          op: "u",
+          ts_ms: 1742474400000
+        },
+        key: { reading_id: "READ-302" }
+      }
+    ]
+  }
+]);
+
 const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
   events: [],     // emitted events (local + realtime)
+  scenarioId: null,
+  remoteId: null,
 };
 
 const els = {
@@ -31,6 +256,43 @@ const els = {
   schemaStatus: document.getElementById("schemaStatus"),
   stepCards: Array.from(document.querySelectorAll(".step-card")),
   autofillRow: document.getElementById("btnAutofillRow"),
+  templateGallery: document.getElementById("templateGallery"),
+  onboardingOverlay: document.getElementById("onboardingOverlay"),
+  onboardingButton: document.getElementById("btnOnboarding"),
+  onboardingClose: document.getElementById("onboardingClose"),
+  onboardingDismiss: document.getElementById("onboardingDismiss"),
+  onboardingStart: document.getElementById("onboardingStart"),
+  saveRemote: document.getElementById("btnSaveRemote"),
+  shareLink: document.getElementById("btnShareLink"),
+  quickstartCards: {
+    schema: document.getElementById("qsSchema"),
+    rows: document.getElementById("qsRows"),
+    events: document.getElementById("qsEvents"),
+  },
+  quickstartButtons: {
+    schema: document.getElementById("btnQuickSchema"),
+    rows: document.getElementById("btnQuickRows"),
+    events: document.getElementById("btnQuickEvents"),
+  },
+  inspectorList: document.getElementById("eventList"),
+  inspectorDetail: document.getElementById("eventDetail"),
+  inspectorPrev: document.getElementById("eventPrev"),
+  inspectorNext: document.getElementById("eventNext"),
+  inspectorReplay: document.getElementById("eventReplay"),
+};
+
+const uiState = {
+  selectedEventIndex: null, // index within state.events
+  lastShareId: null,
+  pendingShareId: (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("scenario");
+    } catch {
+      return null;
+    }
+  })()
 };
 
 const learningConfig = [
@@ -57,24 +319,290 @@ const learningConfig = [
   },
 ];
 
+function getTemplateById(id) {
+  if (!id) return null;
+  return SCENARIO_TEMPLATES.find(t => t.id === id) || null;
+}
+
+function renderTemplateGallery() {
+  if (!els.templateGallery) return;
+  els.templateGallery.innerHTML = "";
+
+  SCENARIO_TEMPLATES.forEach(template => {
+    const card = document.createElement("article");
+    card.className = "template-card";
+    if (state.scenarioId === template.id) card.classList.add("is-active");
+
+    const title = document.createElement("h4");
+    title.textContent = template.name;
+
+    const desc = document.createElement("p");
+    desc.textContent = template.description;
+
+    const highlight = document.createElement("p");
+    highlight.className = "template-highlight";
+    highlight.textContent = template.highlight;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    if (state.scenarioId === template.id) {
+      button.textContent = "Active";
+      button.disabled = true;
+    } else {
+      button.textContent = "Use template";
+      button.onclick = () => {
+        applyScenarioTemplate(template);
+      };
+    }
+
+    card.appendChild(title);
+    card.appendChild(desc);
+    card.appendChild(highlight);
+    card.appendChild(button);
+    els.templateGallery.appendChild(card);
+  });
+}
+
+function hideOnboarding(markSeen = false) {
+  if (!els.onboardingOverlay) return;
+  els.onboardingOverlay.hidden = true;
+  if (markSeen) localStorage.setItem(STORAGE_KEYS.onboarding, "seen");
+}
+
+function showOnboarding() {
+  if (!els.onboardingOverlay) return;
+  els.onboardingOverlay.hidden = false;
+}
+
+function maybeShowOnboarding() {
+  if (!els.onboardingOverlay) return;
+  const seen = localStorage.getItem(STORAGE_KEYS.onboarding);
+  if (seen) return;
+  showOnboarding();
+}
+
+function applyScenarioTemplate(template, options = {}) {
+  if (!template) return;
+  state.schema = clone(template.schema || []);
+  state.rows = clone(template.rows || []);
+  state.events = clone(template.events || []);
+  state.scenarioId = template.id;
+  state.remoteId = null;
+
+  localStorage.setItem(STORAGE_KEYS.lastTemplate, template.id);
+  if (options.markSeen !== false) localStorage.setItem(STORAGE_KEYS.onboarding, "seen");
+
+  if (state.events.length) {
+    uiState.selectedEventIndex = state.events.length - 1;
+  } else {
+    uiState.selectedEventIndex = null;
+  }
+
+  save();
+  renderSchema();
+  renderEditor();
+  renderTable();
+  renderJSONLog();
+  renderTemplateGallery();
+
+  const focusStep = options.focusStep || (state.rows.length ? "events" : "rows");
+  updateLearning(focusStep);
+  refreshSchemaStatus(`${template.name} scenario loaded.`, "success");
+  if (options.closeOnboarding) hideOnboarding(true);
+}
+
+function resetEventSelection() {
+  uiState.selectedEventIndex = null;
+}
+
+function selectLastEvent() {
+  if (!state.events.length) {
+    uiState.selectedEventIndex = null;
+  } else {
+    uiState.selectedEventIndex = state.events.length - 1;
+  }
+}
+
+function setShareControlsEnabled(enabled) {
+  const disabled = !enabled;
+  if (els.saveRemote) els.saveRemote.disabled = disabled;
+  if (els.shareLink) els.shareLink.disabled = disabled;
+}
+
+function buildShareUrl(id) {
+  if (!id) return "";
+  const base = (appwrite?.cfg?.shareBaseUrl) || (typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : "");
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}scenario=${encodeURIComponent(id)}`;
+}
+
+async function saveScenarioRemote(options = {}) {
+  if (!appwrite) {
+    refreshSchemaStatus("Connect to Appwrite to save scenarios.", "error");
+    return null;
+  }
+  const { databases, cfg } = appwrite;
+  const collectionId = cfg.scenarioCollectionId;
+  if (!collectionId) {
+    refreshSchemaStatus("Appwrite scenario collection not configured.", "error");
+    return null;
+  }
+
+  const snapshot = {
+    kind: "scenario",
+    version: 1,
+    saved_at: new Date().toISOString(),
+    schema: clone(state.schema),
+    rows: clone(state.rows),
+    events: clone(state.events),
+    scenarioId: state.scenarioId,
+  };
+
+  const reuseId = state.remoteId || uiState.lastShareId;
+  const targetId = reuseId || (window?.Appwrite ? Appwrite.ID.unique() : `${Date.now()}`);
+
+  const persist = async (id, method) => {
+    if (method === "update") {
+      return databases.updateDocument(cfg.databaseId, collectionId, id, snapshot);
+    }
+    return databases.createDocument(cfg.databaseId, collectionId, id, snapshot);
+  };
+
+  try {
+    const doc = await persist(targetId, reuseId ? "update" : "create");
+    state.remoteId = doc.$id;
+    uiState.lastShareId = doc.$id;
+    save();
+    if (!options.silent) flashButton(els.saveRemote, "Saved!");
+    return doc.$id;
+  } catch (err) {
+    console.warn("saveScenarioRemote failed", err?.message || err);
+    if (reuseId) {
+      try {
+        const fallbackId = window?.Appwrite ? Appwrite.ID.unique() : `${Date.now()}-${Math.random()}`;
+        const doc = await persist(fallbackId, "create");
+        state.remoteId = doc.$id;
+        uiState.lastShareId = doc.$id;
+        save();
+        if (!options.silent) flashButton(els.saveRemote, "Saved!");
+        return doc.$id;
+      } catch (err2) {
+        console.warn("saveScenarioRemote fallback failed", err2?.message || err2);
+      }
+    }
+    if (!options.silent) flashButton(els.saveRemote, "Failed");
+    refreshSchemaStatus("Cloud save failed. Check Appwrite configuration.", "error");
+    return null;
+  }
+}
+
+async function copyShareLink() {
+  if (!appwrite) {
+    refreshSchemaStatus("Connect to Appwrite to share scenarios.", "error");
+    return;
+  }
+  const id = uiState.lastShareId || state.remoteId || await saveScenarioRemote({ silent: true });
+  if (!id) {
+    flashButton(els.shareLink, "Failed");
+    return;
+  }
+
+  const url = buildShareUrl(id);
+  try {
+    await navigator.clipboard.writeText(url);
+    flashButton(els.shareLink, "Link copied");
+  } catch (err) {
+    try {
+      const temp = document.createElement("textarea");
+      temp.value = url;
+      temp.setAttribute("readonly", "true");
+      temp.style.position = "absolute";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      temp.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(temp);
+      if (ok) {
+        flashButton(els.shareLink, "Link copied");
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    flashButton(els.shareLink, "Failed");
+    console.warn("copyShareLink failed", err?.message || err);
+  }
+}
+
+async function maybeHydrateSharedScenario() {
+  if (!appwrite) return;
+  if (!uiState.pendingShareId) return;
+  const shareId = uiState.pendingShareId;
+  uiState.pendingShareId = null;
+
+  const { databases, cfg } = appwrite;
+  if (!cfg.scenarioCollectionId) return;
+
+  try {
+    const doc = await databases.getDocument(cfg.databaseId, cfg.scenarioCollectionId, shareId);
+    if (!doc || doc.kind !== "scenario") {
+      refreshSchemaStatus("Shared document is not a scenario payload.", "error");
+      return;
+    }
+
+    state.schema = doc.schema || [];
+    state.rows = doc.rows || [];
+    state.events = doc.events || [];
+    state.scenarioId = doc.scenarioId || null;
+    state.remoteId = doc.$id;
+
+    if (state.events.length) selectLastEvent(); else resetEventSelection();
+    if (state.scenarioId) localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
+    uiState.lastShareId = doc.$id;
+    save();
+    renderSchema();
+    renderEditor();
+    renderTable();
+    renderJSONLog();
+    renderTemplateGallery();
+    refreshSchemaStatus("Scenario loaded from share link.", "success");
+
+    if (typeof window !== "undefined" && window.history?.replaceState) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("scenario");
+        const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash || ""}`;
+        window.history.replaceState({}, document.title, next);
+      } catch {
+        // ignore URL errors
+      }
+    }
+  } catch (err) {
+    console.warn("Fetch shared scenario failed", err?.message || err);
+    refreshSchemaStatus("Unable to load shared scenario. It may have expired.", "error");
+  }
+}
+
 // ---------- Utilities ----------
 const nowTs = () => Date.now();
 const clone  = (x) => JSON.parse(JSON.stringify(x));
 const save   = () => {
   try {
-    localStorage.setItem("cdc_playground", JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
   } catch (err) {
     console.warn("Save to localStorage failed", err?.message || err);
   }
 };
 const load   = () => {
   try {
-    const raw = localStorage.getItem("cdc_playground");
+    const raw = localStorage.getItem(STORAGE_KEYS.state);
     if (!raw) return;
     const s = JSON.parse(raw);
     state.schema = s.schema || [];
     state.rows   = s.rows   || [];
     state.events = s.events || [];
+    state.scenarioId = s.scenarioId || null;
+    state.remoteId = s.remoteId || null;
   } catch { /* ignore */ }
 };
 const flashButton = (btn, msg) => {
@@ -212,6 +740,7 @@ function ensureDefaultSchema() {
   let mutated = false;
   if (!state.schema.length) {
     state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
+    state.scenarioId = "default";
     mutated = true;
   }
   if (!state.rows.length) {
@@ -263,17 +792,335 @@ function getOp(ev) {
   return ev.op ?? ev.payload?.op ?? "u";
 }
 
-function renderJSONLog() {
-  const filtered = filterEvents(state.events);
-  if (!filtered.length) {
-    els.eventLog.textContent = "// no events yet (check filters)";
+function getRenderableEvents() {
+  const allowed = getFilterFlags();
+  const items = [];
+  state.events.forEach((event, index) => {
+    const op = getOp(event);
+    if (allowed[op] ?? true) items.push({ event, index });
+  });
+  return items;
+}
+
+function renderJSONLog(precomputed) {
+  const items = precomputed || getRenderableEvents();
+  if (!items.length) {
+    if (els.eventLog) els.eventLog.textContent = "// no events yet (check filters)";
+    renderEventInspector(items);
     updateLearning();
     return;
   }
 
-  const payload = filtered.map(ev => JSON.stringify(ev, null, 2)).join("\n");
-  els.eventLog.innerHTML = highlightJson(payload);
+  const payload = items.map(({ event }) => JSON.stringify(event, null, 2)).join("\n");
+  if (els.eventLog) els.eventLog.innerHTML = highlightJson(payload);
+  renderEventInspector(items);
   updateLearning();
+}
+
+const OP_METADATA = {
+  c: { label: "Insert", tone: "op-insert" },
+  u: { label: "Update", tone: "op-update" },
+  d: { label: "Delete", tone: "op-delete" },
+  r: { label: "Snapshot", tone: "op-snapshot" },
+};
+
+function normalizeEvent(event) {
+  if (!event) return { before: null, after: null, ts: null, op: "u", key: null, raw: event };
+  const op = getOp(event);
+  const payload = event.payload ?? event;
+  const before = payload.before ?? event.before ?? null;
+  const after = payload.after ?? event.after ?? null;
+  const ts = payload.ts_ms ?? event.ts_ms ?? null;
+  const key = event.key ?? null;
+  return { before, after, ts, op, key, raw: event };
+}
+
+function formatTimestamp(ts) {
+  if (typeof ts !== "number") return "—";
+  try {
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return String(ts);
+    return date.toISOString().replace("T", " ").replace(".000Z", "Z");
+  } catch {
+    return String(ts);
+  }
+}
+
+function describePrimaryKeyValue(normalized) {
+  const pkFields = getPrimaryKeyFields();
+  if (!pkFields.length) {
+    if (normalized.key && typeof normalized.key === "object") {
+      return Object.values(normalized.key).filter(Boolean).join(" · ") || "Key unavailable";
+    }
+    return "No primary key set";
+  }
+  const source = normalized.after ?? normalized.before ?? {};
+  const parts = pkFields.map(name => `${name}: ${source[name] ?? "∅"}`);
+  return parts.join(" · ");
+}
+
+function computeDiffRows(before = {}, after = {}) {
+  const keys = new Set([
+    ...Object.keys(before || {}),
+    ...Object.keys(after || {}),
+  ]);
+  const rows = [];
+  keys.forEach(key => {
+    const prev = before ? before[key] : undefined;
+    const next = after ? after[key] : undefined;
+    let status = "unchanged";
+    const prevDefined = typeof prev !== "undefined";
+    const nextDefined = typeof next !== "undefined";
+    if (!prevDefined && nextDefined) status = "added";
+    else if (prevDefined && !nextDefined) status = "removed";
+    else if (JSON.stringify(prev) !== JSON.stringify(next)) status = "changed";
+    rows.push({ key, before: prev, after: next, status });
+  });
+  rows.sort((a, b) => a.key.localeCompare(b.key));
+  return rows;
+}
+
+function createValueCell(value) {
+  const span = document.createElement("span");
+  span.className = "diff-value";
+  if (typeof value === "undefined") {
+    span.classList.add("is-empty");
+    span.textContent = "—";
+  } else if (value === null) {
+    span.classList.add("is-null");
+    span.textContent = "null";
+  } else if (typeof value === "object") {
+    span.classList.add("is-json");
+    span.textContent = JSON.stringify(value);
+  } else if (typeof value === "boolean") {
+    span.classList.add("is-boolean");
+    span.textContent = value ? "true" : "false";
+  } else {
+    span.textContent = String(value);
+  }
+  return span;
+}
+
+function renderEventInspector(precomputed) {
+  if (!els.inspectorList || !els.inspectorDetail) return;
+
+  const items = precomputed || getRenderableEvents();
+  const listEl = els.inspectorList;
+  const detailEl = els.inspectorDetail;
+  listEl.innerHTML = "";
+  detailEl.innerHTML = "";
+
+  if (!items.length) {
+    const emptyMsg = document.createElement("p");
+    emptyMsg.className = "inspector-empty";
+    emptyMsg.textContent = "No events match the current filters.";
+    detailEl.appendChild(emptyMsg);
+    if (els.inspectorPrev) els.inspectorPrev.disabled = true;
+    if (els.inspectorNext) els.inspectorNext.disabled = true;
+    if (els.inspectorReplay) els.inspectorReplay.disabled = true;
+    return;
+  }
+
+  let activeIdx = items.findIndex(item => item.index === uiState.selectedEventIndex);
+  if (activeIdx === -1) {
+    activeIdx = items.length - 1;
+    uiState.selectedEventIndex = items[activeIdx].index;
+  }
+
+  items.forEach((item, idx) => {
+    const { event } = item;
+    const normalized = normalizeEvent(event);
+    const opMeta = OP_METADATA[normalized.op] || { label: normalized.op.toUpperCase(), tone: "op-generic" };
+
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "inspector-item";
+    if (idx === activeIdx) button.classList.add("is-active");
+
+    const badge = document.createElement("span");
+    badge.className = `inspector-item-op ${opMeta.tone}`;
+    badge.textContent = opMeta.label;
+
+    const keySpan = document.createElement("span");
+    keySpan.className = "inspector-item-key";
+    keySpan.textContent = describePrimaryKeyValue(normalized);
+
+    const tsSpan = document.createElement("span");
+    tsSpan.className = "inspector-item-ts";
+    tsSpan.textContent = formatTimestamp(normalized.ts);
+
+    button.appendChild(badge);
+    button.appendChild(keySpan);
+    button.appendChild(tsSpan);
+    button.onclick = () => {
+      uiState.selectedEventIndex = item.index;
+      renderEventInspector();
+    };
+
+    li.appendChild(button);
+    listEl.appendChild(li);
+  });
+
+  const activeItem = items[activeIdx];
+  const normalized = normalizeEvent(activeItem.event);
+  const opMeta = OP_METADATA[normalized.op] || { label: normalized.op.toUpperCase(), tone: "op-generic" };
+
+  const header = document.createElement("div");
+  header.className = "inspector-detail-header";
+
+  const opBadge = document.createElement("span");
+  opBadge.className = `inspector-detail-op ${opMeta.tone}`;
+  opBadge.textContent = opMeta.label;
+
+  const pkText = document.createElement("p");
+  pkText.className = "inspector-detail-pk";
+  pkText.textContent = describePrimaryKeyValue(normalized);
+
+  const tsText = document.createElement("span");
+  tsText.className = "inspector-detail-ts";
+  tsText.textContent = formatTimestamp(normalized.ts);
+
+  header.appendChild(opBadge);
+  header.appendChild(pkText);
+  header.appendChild(tsText);
+  detailEl.appendChild(header);
+
+  const diffRows = computeDiffRows(normalized.before || {}, normalized.after || {});
+
+  const diffWrap = document.createElement("div");
+  diffWrap.className = "inspector-diff";
+
+  const diffHead = document.createElement("div");
+  diffHead.className = "inspector-diff-row diff-head";
+  const headKey = document.createElement("span"); headKey.textContent = "Field"; diffHead.appendChild(headKey);
+  const headBefore = document.createElement("span"); headBefore.textContent = "Before"; diffHead.appendChild(headBefore);
+  const headAfter = document.createElement("span"); headAfter.textContent = "After"; diffHead.appendChild(headAfter);
+  diffWrap.appendChild(diffHead);
+
+  const pkFields = new Set(getPrimaryKeyFields());
+  diffRows.forEach(row => {
+    const diffRow = document.createElement("div");
+    diffRow.className = `inspector-diff-row diff-${row.status}`;
+    if (pkFields.has(row.key)) diffRow.classList.add("is-pk");
+
+    const keyCell = document.createElement("div");
+    keyCell.className = "diff-key";
+    keyCell.textContent = row.key;
+    if (pkFields.has(row.key)) {
+      const pkBadge = document.createElement("span");
+      pkBadge.className = "diff-tag";
+      pkBadge.textContent = "PK";
+      keyCell.appendChild(pkBadge);
+    }
+
+    const beforeCell = document.createElement("div");
+    beforeCell.className = "diff-before";
+    beforeCell.appendChild(createValueCell(row.before));
+
+    const afterCell = document.createElement("div");
+    afterCell.className = "diff-after";
+    afterCell.appendChild(createValueCell(row.after));
+
+    diffRow.appendChild(keyCell);
+    diffRow.appendChild(beforeCell);
+    diffRow.appendChild(afterCell);
+    diffWrap.appendChild(diffRow);
+  });
+
+  if (!diffRows.length) {
+    const empty = document.createElement("p");
+    empty.className = "inspector-empty";
+    empty.textContent = "No field-level changes.";
+    diffWrap.appendChild(empty);
+  }
+
+  detailEl.appendChild(diffWrap);
+
+  if (els.inspectorPrev) els.inspectorPrev.disabled = activeIdx <= 0;
+  if (els.inspectorNext) els.inspectorNext.disabled = activeIdx >= items.length - 1;
+  if (els.inspectorReplay) els.inspectorReplay.disabled = !items.length;
+
+  const activeButton = listEl.querySelector(".inspector-item.is-active");
+  if (activeButton) activeButton.scrollIntoView({ block: "nearest" });
+}
+
+function stepSelectedEvent(delta) {
+  const items = getRenderableEvents();
+  if (!items.length) return;
+  let activeIdx = items.findIndex(item => item.index === uiState.selectedEventIndex);
+  if (activeIdx === -1) activeIdx = items.length - 1;
+  let targetIdx = activeIdx + delta;
+  targetIdx = Math.max(0, Math.min(items.length - 1, targetIdx));
+  if (targetIdx === activeIdx) return;
+  uiState.selectedEventIndex = items[targetIdx].index;
+  renderEventInspector(items);
+}
+
+function replaySelectedEvent() {
+  const items = getRenderableEvents();
+  if (!items.length) return;
+  const active = items.find(item => item.index === uiState.selectedEventIndex) || items[items.length - 1];
+  replayEventToTable(active.event);
+  renderEventInspector(items);
+}
+
+function replayEventToTable(event) {
+  const normalized = normalizeEvent(event);
+  const op = normalized.op;
+  const before = normalized.before;
+  const after = normalized.after;
+  const reference = after ?? before ?? {};
+
+  if (!getPrimaryKeyFields().length) {
+    refreshSchemaStatus("Assign a primary key before replaying events to the table.", "error");
+    return;
+  }
+
+  const idx = findByPK(reference);
+
+  switch (op) {
+    case "c":
+    case "r": {
+      if (!after) {
+        refreshSchemaStatus("Event is missing an after payload to hydrate.", "error");
+        return;
+      }
+      if (idx === -1) {
+        state.rows.push(clone(after));
+      } else {
+        state.rows[idx] = clone(after);
+      }
+      break;
+    }
+    case "u": {
+      if (!after) {
+        refreshSchemaStatus("Update event missing after payload.", "error");
+        return;
+      }
+      if (idx === -1) {
+        state.rows.push(clone(after));
+      } else {
+        state.rows[idx] = clone(after);
+      }
+      break;
+    }
+    case "d": {
+      if (idx === -1) {
+        refreshSchemaStatus("Row already absent from table.", "muted");
+        break;
+      }
+      state.rows.splice(idx, 1);
+      break;
+    }
+    default:
+      refreshSchemaStatus(`Unsupported operation "${op}" for replay.`, "error");
+      return;
+  }
+
+  save();
+  renderTable();
+  refreshSchemaStatus("Event applied back to the table.", "success");
 }
 
 function updateLearning(activeId) {
@@ -312,6 +1159,42 @@ function updateLearning(activeId) {
     const tip = isComplete && activeConfig.completeTip ? activeConfig.completeTip : activeConfig.tip;
     els.learningTip.textContent = tip;
   }
+
+  updateQuickstart(activeIdResolved);
+}
+
+function updateQuickstart(activeId) {
+  const cards = els.quickstartCards || {};
+  const completion = learningConfig.reduce((acc, step) => {
+    acc[step.id] = step.isComplete();
+    return acc;
+  }, {});
+
+  const resolvedActive = activeId || learningConfig.find(step => !completion[step.id])?.id || "events";
+
+  ["schema", "rows", "events"].forEach(step => {
+    const card = cards[step];
+    if (!card) return;
+    const statusEl = card.querySelector(".quickstart-status");
+    card.classList.remove("is-active", "is-complete");
+
+    if (completion[step]) {
+      card.classList.add("is-complete");
+      if (statusEl) statusEl.textContent = "Done";
+    } else if (step === resolvedActive) {
+      card.classList.add("is-active");
+      if (statusEl) statusEl.textContent = "In progress";
+    } else if (statusEl) {
+      statusEl.textContent = "Pending";
+    }
+
+    const button = card.querySelector("button");
+    if (!button) return;
+    let enabled = true;
+    if (step === "rows" && !completion.schema) enabled = false;
+    if (step === "events" && !completion.rows) enabled = false;
+    button.disabled = !enabled;
+  });
 }
 
 async function copyNdjson() {
@@ -393,6 +1276,7 @@ async function initAppwrite() {
 
     // Normalize payload (supports either JSON or string columns)
     const doc = msg.payload;
+    if (doc?.kind === "scenario") return;
     const norm = {
       ts_ms: doc.ts_ms ?? doc.ts ?? Date.now(),
       op:    doc.op    ?? "u",
@@ -404,6 +1288,7 @@ async function initAppwrite() {
     // De-dup (ignore if we already appended this doc id)
     if (!state.events.some(e => e._docId === norm._docId)) {
       state.events.push(norm);
+      selectLastEvent();
       renderJSONLog();
       save();
     }
@@ -600,6 +1485,7 @@ function insertRow(values) {
   const evt = buildEvent("c", null, after);
   if (docId) evt._docId = docId;
   state.events.push(evt);
+  selectLastEvent();
   publishEvent("c", null, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("c");
@@ -630,6 +1516,7 @@ function updateRow(values) {
   const evt = buildEvent("u", before, after);
   if (docId) evt._docId = docId;
   state.events.push(evt);
+  selectLastEvent();
   publishEvent("u", before, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("u");
@@ -647,6 +1534,7 @@ function deleteRow(values) {
   const evt = buildEvent("d", before, null);
   if (docId) evt._docId = docId;
   state.events.push(evt);
+  selectLastEvent();
   publishEvent("d", before, null, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("d");
@@ -660,6 +1548,7 @@ function emitSnapshot() {
     state.events.push(evt);
     publishEvent("r", null, row, docId);
   }
+  selectLastEvent();
   save(); renderJSONLog();
   emitSparkleTrail("r");
 }
@@ -716,13 +1605,117 @@ function importScenario(file) {
       state.schema = s.schema || [];
       state.rows   = s.rows   || [];
       state.events = s.events || [];
+      state.scenarioId = s.scenarioId || null;
+      state.remoteId = s.remoteId || null;
+      if (state.scenarioId) {
+        localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
+      }
+      if (state.events.length) selectLastEvent(); else resetEventSelection();
       save(); renderSchema(); renderEditor(); renderTable(); renderJSONLog();
+      renderTemplateGallery();
     } catch { alert("Invalid scenario JSON"); }
   };
   reader.readAsText(file);
 }
 
+function quickstartFocusSchema() {
+  const schemaSection = document.getElementById("schema");
+  if (schemaSection) schemaSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  const input = document.getElementById("colName");
+  if (input) {
+    requestAnimationFrame(() => {
+      input.focus({ preventScroll: true });
+      input.select();
+    });
+  }
+  updateLearning("schema");
+}
+
+function quickstartSeedRows() {
+  if (!hasPrimaryKey()) {
+    refreshSchemaStatus("Add a primary key before seeding sample rows.", "error");
+    quickstartFocusSchema();
+    return;
+  }
+  const beforeCount = state.rows.length;
+  seedRows();
+  const seededSomething = state.rows.length > beforeCount;
+  if (seededSomething) {
+    const tableSection = document.getElementById("table-state");
+    tableSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  updateLearning("rows");
+}
+
+function quickstartEmitEvent() {
+  if (!hasPrimaryKey()) {
+    refreshSchemaStatus("Add a primary key and rows before emitting events.", "error");
+    quickstartFocusSchema();
+    return;
+  }
+
+  if (!state.rows.length) {
+    autofillRowAndInsert();
+  } else {
+    emitSnapshot();
+  }
+
+  const eventsSection = document.getElementById("change-feed");
+  eventsSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  updateLearning("events");
+}
+
 function bindUiHandlers() {
+  if (els.onboardingButton) {
+    els.onboardingButton.onclick = () => showOnboarding();
+  }
+  if (els.onboardingClose) {
+    els.onboardingClose.onclick = () => hideOnboarding(true);
+  }
+  if (els.onboardingDismiss) {
+    els.onboardingDismiss.onclick = () => hideOnboarding(true);
+  }
+  if (els.onboardingStart) {
+    els.onboardingStart.onclick = () => {
+      const template = getTemplateById("orders");
+      applyScenarioTemplate(template, { focusStep: "rows", closeOnboarding: true });
+    };
+  }
+  if (els.onboardingOverlay) {
+    els.onboardingOverlay.addEventListener("click", (event) => {
+      if (event.target === els.onboardingOverlay) hideOnboarding(true);
+    });
+  }
+
+  if (els.saveRemote) {
+    els.saveRemote.onclick = () => { saveScenarioRemote(); };
+  }
+  if (els.shareLink) {
+    els.shareLink.onclick = () => { copyShareLink(); };
+  }
+
+  if (els.quickstartButtons) {
+    if (els.quickstartButtons.schema) {
+      els.quickstartButtons.schema.onclick = quickstartFocusSchema;
+    }
+    if (els.quickstartButtons.rows) {
+      els.quickstartButtons.rows.onclick = quickstartSeedRows;
+    }
+    if (els.quickstartButtons.events) {
+      els.quickstartButtons.events.onclick = quickstartEmitEvent;
+    }
+  }
+
+  if (els.inspectorPrev) {
+    els.inspectorPrev.onclick = () => stepSelectedEvent(-1);
+  }
+  if (els.inspectorNext) {
+    els.inspectorNext.onclick = () => stepSelectedEvent(1);
+  }
+  if (els.inspectorReplay) {
+    els.inspectorReplay.onclick = replaySelectedEvent;
+  }
+
   const addColBtn = document.getElementById("addCol");
   if (addColBtn) {
     addColBtn.onclick = () => {
@@ -752,7 +1745,12 @@ function bindUiHandlers() {
   if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;
 
   const clearEventsBtn = document.getElementById("clearEvents");
-  if (clearEventsBtn) clearEventsBtn.onclick = () => { state.events = []; save(); renderJSONLog(); };
+  if (clearEventsBtn) clearEventsBtn.onclick = () => {
+    state.events = [];
+    resetEventSelection();
+    save();
+    renderJSONLog();
+  };
 
   const seedRowsBtn = document.getElementById("seedRows");
   if (seedRowsBtn) seedRowsBtn.onclick = seedRows;
@@ -791,17 +1789,54 @@ function bindUiHandlers() {
   if (importInput) importInput.onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
 
   const resetBtn = document.getElementById("btnReset");
-  if (resetBtn) resetBtn.onclick = () => { localStorage.removeItem("cdc_playground"); location.reload(); };
+  if (resetBtn) resetBtn.onclick = () => {
+    localStorage.removeItem(STORAGE_KEYS.state);
+    localStorage.removeItem(STORAGE_KEYS.lastTemplate);
+    localStorage.removeItem(STORAGE_KEYS.onboarding);
+    location.reload();
+  };
 }
 
 // ---------- Wire up UI ----------
 async function main() {
   load();
+  if (state.events.length) selectLastEvent();
+  let hydratedFromTemplate = false;
+  if (!state.schema.length) {
+    const rememberedId = localStorage.getItem(STORAGE_KEYS.lastTemplate);
+    const remembered = getTemplateById(rememberedId);
+    if (remembered) {
+      applyScenarioTemplate(remembered, { focusStep: "events", markSeen: false });
+      hydratedFromTemplate = true;
+    }
+  }
+
   const seeded = ensureDefaultSchema();
-  if (seeded) save();
-  renderSchema(); renderEditor(); renderTable(); renderJSONLog();
+  if (!hydratedFromTemplate) {
+    if (seeded) save();
+    renderSchema();
+    renderEditor();
+    renderTable();
+    renderJSONLog();
+  }
+
+  renderTemplateGallery();
   bindUiHandlers();
-  initAppwrite().catch(err => console.warn("Appwrite init skipped", err));
+  setShareControlsEnabled(false);
+
+  try {
+    await initAppwrite();
+    if (appwrite?.cfg?.scenarioCollectionId) setShareControlsEnabled(true);
+    await maybeHydrateSharedScenario();
+  } catch (err) {
+    console.warn("Appwrite init skipped", err?.message || err);
+  }
+
+  const shouldShowOnboarding = !localStorage.getItem(STORAGE_KEYS.onboarding)
+    && (state.scenarioId === "default" || !state.schema.length)
+    && state.rows.length === 0
+    && state.events.length === 0;
+  if (shouldShowOnboarding) maybeShowOnboarding();
 }
 main();
 function randomSampleForColumn(col) {
@@ -881,6 +1916,7 @@ function autofillRowAndInsert() {
   const evt = buildEvent("c", null, after);
   if (docId) evt._docId = docId;
   state.events.push(evt);
+  selectLastEvent();
   publishEvent("c", null, after, docId);
 
   save();
