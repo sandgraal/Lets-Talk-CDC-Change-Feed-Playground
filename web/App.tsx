@@ -19,6 +19,26 @@ const STEP_MS = 100;
 
 type MethodOption = typeof METHOD_ORDER[number];
 
+type PollingConfig = {
+  pollIntervalMs: number;
+  includeSoftDeletes: boolean;
+};
+
+type TriggerConfig = {
+  extractIntervalMs: number;
+  triggerOverheadMs: number;
+};
+
+type LogConfig = {
+  fetchIntervalMs: number;
+};
+
+type MethodConfigMap = {
+  polling: PollingConfig;
+  trigger: TriggerConfig;
+  log: LogConfig;
+};
+
 type LaneMetrics = {
   method: MethodOption;
   metrics: Metrics;
@@ -46,6 +66,12 @@ const METHOD_DESCRIPTIONS: Record<MethodOption, string> = {
   log: "Streams the transaction log for ordered, low-latency change events with minimal source impact.",
 };
 
+const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
+  polling: { pollIntervalMs: 500, includeSoftDeletes: false },
+  trigger: { extractIntervalMs: 250, triggerOverheadMs: 8 },
+  log: { fetchIntervalMs: 50 },
+};
+
 function createEngine(method: MethodOption) {
   switch (method) {
     case "polling":
@@ -63,6 +89,14 @@ function emptyEventMap(methods: MethodOption[]) {
     acc[method] = [];
     return acc;
   }, {});
+}
+
+function cloneConfig(config: MethodConfigMap): MethodConfigMap {
+  return {
+    polling: { ...config.polling },
+    trigger: { ...config.trigger },
+    log: { ...config.log },
+  };
 }
 
 function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenario, method: MethodOption): Metrics {
@@ -123,6 +157,7 @@ export function App() {
   );
   const [clock, setClock] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [methodConfig, setMethodConfig] = useState<MethodConfigMap>(() => cloneConfig(DEFAULT_METHOD_CONFIG));
 
   const scenario = useMemo(
     () => SCENARIOS.find(s => s.name === scenarioId) ?? SCENARIOS[0],
@@ -156,6 +191,22 @@ export function App() {
     const unsubscribes: Array<() => void> = [];
     const engines = activeMethods.map(method => {
       const engine = createEngine(method);
+      const config = methodConfig[method];
+      if (method === "polling") {
+        engine.configure({
+          poll_interval_ms: config.pollIntervalMs,
+          include_soft_deletes: config.includeSoftDeletes,
+        });
+      } else if (method === "trigger") {
+        engine.configure({
+          extract_interval_ms: config.extractIntervalMs,
+          trigger_overhead_ms: config.triggerOverheadMs,
+        });
+      } else {
+        engine.configure({
+          fetch_interval_ms: config.fetchIntervalMs,
+        });
+      }
       const unsubscribe = engine.onEvent(event => {
         setLaneEvents(prev => {
           const next = { ...prev };
@@ -180,7 +231,7 @@ export function App() {
       stopLoop();
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [activeMethods, scenario, stopLoop]);
+  }, [activeMethods, scenario, stopLoop, methodConfig]);
 
   const toggleMethod = useCallback((method: MethodOption) => {
     setActiveMethods(prev => {
@@ -191,6 +242,20 @@ export function App() {
       const next = [...prev, method];
       return METHOD_ORDER.filter(item => next.includes(item));
     });
+  }, []);
+
+  const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
+    method: T,
+    key: K,
+    value: MethodConfigMap[T][K],
+  ) => {
+    setMethodConfig(prev => ({
+      ...prev,
+      [method]: {
+        ...prev[method],
+        [key]: value,
+      },
+    }));
   }, []);
 
   const handleStart = useCallback(() => {
@@ -295,6 +360,117 @@ export function App() {
         </button>
       </div>
 
+      <div className="sim-shell__controls" aria-label="Method tuning controls">
+        {METHOD_ORDER.map(method => {
+          const config = methodConfig[method];
+          const active = activeMethods.includes(method);
+
+          if (method === "polling") {
+            return (
+              <fieldset
+                key={method}
+                className="sim-shell__control-card"
+                aria-labelledby={`control-${method}`}
+                data-active={active ? "true" : "false"}
+              >
+                <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+                <p className="sim-shell__control-copy">Adjust poll cadence and whether soft deletes are surfaced.</p>
+                <label className="sim-shell__control-field">
+                  <span>Poll interval (ms)</span>
+                  <input
+                    type="number"
+                    min={50}
+                    step={50}
+                    value={config.pollIntervalMs}
+                    onChange={event =>
+                      updateMethodConfig("polling", "pollIntervalMs", Math.max(50, Number(event.target.value) || 0))
+                    }
+                  />
+                </label>
+                <label className="sim-shell__control-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={config.includeSoftDeletes}
+                    onChange={event => updateMethodConfig("polling", "includeSoftDeletes", event.target.checked)}
+                  />
+                  <span>Include soft delete marker column</span>
+                </label>
+              </fieldset>
+            );
+          }
+
+          if (method === "trigger") {
+            return (
+              <fieldset
+                key={method}
+                className="sim-shell__control-card"
+                aria-labelledby={`control-${method}`}
+                data-active={active ? "true" : "false"}
+              >
+                <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+                <p className="sim-shell__control-copy">Tune audit extractor cadence and per-write trigger overhead.</p>
+                <label className="sim-shell__control-field">
+                  <span>Extractor interval (ms)</span>
+                  <input
+                    type="number"
+                    min={100}
+                    step={50}
+                    value={config.extractIntervalMs}
+                    onChange={event =>
+                      updateMethodConfig(
+                        "trigger",
+                        "extractIntervalMs",
+                        Math.max(50, Number(event.target.value) || 0),
+                      )
+                    }
+                  />
+                </label>
+                <label className="sim-shell__control-field">
+                  <span>Trigger overhead (ms)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={config.triggerOverheadMs}
+                    onChange={event =>
+                      updateMethodConfig(
+                        "trigger",
+                        "triggerOverheadMs",
+                        Math.max(0, Number(event.target.value) || 0),
+                      )
+                    }
+                  />
+                </label>
+              </fieldset>
+            );
+          }
+
+          return (
+            <fieldset
+              key={method}
+              className="sim-shell__control-card"
+              aria-labelledby={`control-${method}`}
+              data-active={active ? "true" : "false"}
+            >
+              <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+              <p className="sim-shell__control-copy">Control how frequently the WAL/Binlog fetcher polls for new records.</p>
+              <label className="sim-shell__control-field">
+                <span>Fetch interval (ms)</span>
+                <input
+                  type="number"
+                  min={10}
+                  step={10}
+                  value={config.fetchIntervalMs}
+                  onChange={event =>
+                    updateMethodConfig("log", "fetchIntervalMs", Math.max(10, Number(event.target.value) || 0))
+                  }
+                />
+              </label>
+            </fieldset>
+          );
+        })}
+      </div>
+
       {summary && (
         <ul className="sim-shell__summary" aria-live="polite">
           <li>
@@ -322,6 +498,7 @@ export function App() {
         {laneMetrics.map(({ method, metrics, events }) => {
           const description = METHOD_DESCRIPTIONS[method];
           const displayEvents = events.length > 12 ? events.slice(-12) : events;
+          const config = methodConfig[method];
           return (
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
@@ -335,6 +512,39 @@ export function App() {
               <div className="sim-shell__metrics">
                 <MetricsStrip {...metrics} />
               </div>
+
+              <dl className="sim-shell__lane-config">
+                {method === "polling" && (
+                  <>
+                    <div>
+                      <dt>Poll interval</dt>
+                      <dd>{config.pollIntervalMs} ms</dd>
+                    </div>
+                    <div>
+                      <dt>Soft deletes</dt>
+                      <dd>{config.includeSoftDeletes ? "included" : "ignored"}</dd>
+                    </div>
+                  </>
+                )}
+                {method === "trigger" && (
+                  <>
+                    <div>
+                      <dt>Extractor interval</dt>
+                      <dd>{config.extractIntervalMs} ms</dd>
+                    </div>
+                    <div>
+                      <dt>Trigger overhead</dt>
+                      <dd>{config.triggerOverheadMs} ms</dd>
+                    </div>
+                  </>
+                )}
+                {method === "log" && (
+                  <div>
+                    <dt>Fetch interval</dt>
+                    <dd>{config.fetchIntervalMs} ms</dd>
+                  </div>
+                )}
+              </dl>
 
               {method === "polling" && metrics.deletesPct < 100 && (
                 <p className="sim-shell__callout sim-shell__callout--warning">

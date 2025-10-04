@@ -13,6 +13,11 @@ Open `index.html` in a browser. No build step.
 
 The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines in parallel to visualise lag, ordering, and delete capture differences.
 
+### Advanced controls
+- Polling: `poll_interval_ms` knob plus optional soft-delete visibility
+- Trigger: extractor cadence and per-write trigger overhead
+- Log: WAL/Binlog fetch interval
+
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).
 - Browse open issues labeled `hacktoberfest`, `good first issue`, or `help wanted` to find a place to jump in.
