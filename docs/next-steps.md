@@ -21,7 +21,7 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
    - ✅ Finalized “honest callouts” and “when to use which” copy blocks and wired them into the comparator UI via `assets/method-copy.js`.
    - ✅ Mirrored the copy updates in supporting docs (method guidance panel + checklist note) so product, docs, and telemetry taxonomies stay in sync.
 5. Timeline performance hardening
-   - Profile comparator timelines with >1k events, document findings, and prototype virtualization if required.
+   - ✅ Profiled comparator timelines with >1k events and added memoized filtering + a 200-event window to keep renders under control.
    - Record the decision and thresholds in the risk register once validated.
 6. Enablement and post-launch cadence
    - Record and publish the Loom walkthrough once guided tour polish ships.
@@ -57,7 +57,7 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 ## Risks to Monitor
 - ✅ Dual-stack divergence mitigated via shared scenario module enforcement and telemetry coverage; kill-switch criteria recorded in `docs/risk-register.md`.
 - ✅ Harness reliability improved with health checks, generator backoff, and documented Make targets.
-- Performance of timeline rendering with >1k events—prototype virtualization approach early. _(open)_
+- ✅ Timeline performance with >1k events now uses memoized filtering + capped event windows; continue monitoring telemetry for larger workloads.
 - ✅ Insight copy alignment tracked through telemetry taxonomy + snapshot exports; publishing gate documented in risk register.
 - ✅ Schema migration risk mitigated by property-test suite (`npm run test:sim`) executed in CI preflight.
 

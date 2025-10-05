@@ -512,6 +512,18 @@
   background: rgba(255, 255, 255, 0.9);
 }
 
+.sim-shell__event--notice {
+  grid-template-columns: 1fr;
+  background: rgba(59, 130, 246, 0.08);
+  color: #1e3a8a;
+  font-style: italic;
+}
+
+.sim-shell__event--notice > span {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
 .sim-shell__event:last-child {
   border-bottom: none;
 }

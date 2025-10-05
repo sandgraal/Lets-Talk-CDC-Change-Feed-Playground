@@ -103,6 +103,8 @@ type MethodCopy = {
 
 const METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
 
+const MAX_TIMELINE_EVENTS = 200;
+
 const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
   polling: { pollIntervalMs: 500, includeSoftDeletes: false },
   trigger: { extractIntervalMs: 250, triggerOverheadMs: 8 },
@@ -325,8 +327,52 @@ export function App() {
   const [eventSearch, setEventSearch] = useState(() => storedPrefs?.eventSearch ?? "");
   const [activeEventOps, setActiveEventOps] = useState<Set<EventOp>>(() => sanitizeEventOps(storedPrefs?.eventOps));
   const [showEventList, setShowEventList] = useState(storedPrefs?.showEventList ?? true);
-  const eventOpsArray = useMemo(() => Array.from(activeEventOps).sort(), [activeEventOps]);
-  const eventOpsSet = useMemo(() => new Set(eventOpsArray), [eventOpsArray]);
+const eventOpsArray = useMemo(() => Array.from(activeEventOps).sort(), [activeEventOps]);
+const eventOpsSet = useMemo(() => new Set(eventOpsArray), [eventOpsArray]);
+const eventSearchCacheRef = useRef(new WeakMap<CdcEvent, string>());
+const eventSearchSignature = useMemo(() => eventSearchTerms.join("|"), [eventSearchTerms]);
+const filteredEventsByMethod = useMemo(() => {
+  const opsSet = new Set(eventOpsArray);
+  const hasOpFilter = opsSet.size < 3;
+  const hasSearch = eventSearchTerms.length > 0;
+  const searchTerms = eventSearchTerms;
+  const cache = eventSearchCacheRef.current;
+
+  const results = new Map<MethodOption, CdcEvent[]>();
+
+  const buildHaystack = (event: CdcEvent) => {
+    const cached = cache.get(event);
+    if (cached) return cached;
+    const pieces: string[] = [
+      String(event.seq ?? ""),
+      event.op,
+      event.pk?.id ?? "",
+      event.table ?? "",
+    ];
+    if (event.after) pieces.push(...Object.values(event.after).map(value => String(value ?? "")));
+    if (event.before) pieces.push(...Object.values(event.before).map(value => String(value ?? "")));
+    const joined = pieces.join(" ").toLowerCase();
+    cache.set(event, joined);
+    return joined;
+  };
+
+  laneMetrics.forEach(({ method, events }) => {
+    if (!hasOpFilter && !hasSearch) {
+      results.set(method, events);
+      return;
+    }
+
+    const filtered = events.filter(event => {
+      if (!opsSet.has(event.op as EventOp)) return false;
+      if (!hasSearch) return true;
+      const haystack = buildHaystack(event);
+      return searchTerms.every(term => haystack.includes(term));
+    });
+    results.set(method, filtered);
+  });
+
+  return results;
+}, [laneMetrics, eventOpsArray, eventSearchSignature, eventSearchTerms]);
   const eventSearchTerms = useMemo(
     () => eventSearch.trim().toLowerCase().split(/\s+/).filter(Boolean),
     [eventSearch],
@@ -1249,27 +1295,13 @@ export function App() {
               callouts.push({ text: copy.callout, tone });
             }
           }
-          const filteredEvents = events.filter(event => {
-            if (!eventOpsSet.has(event.op as EventOp)) return false;
-            if (!eventSearchTerms.length) return true;
-            const haystack = [
-              String(event.seq ?? ""),
-              event.op,
-              event.pk?.id ?? "",
-              (event as any).table ?? "",
-              JSON.stringify(event.after ?? {}),
-              JSON.stringify(event.before ?? {}),
-            ]
-              .join(" ")
-              .toLowerCase();
-            return eventSearchTerms.every(term => haystack.includes(term));
-          });
+          const filteredEvents = filteredEventsByMethod.get(method) ?? events;
+          const filtered =
+            filteredEvents.length !== events.length || eventSearchTerms.length > 0 || eventOpsSet.size < 3;
+          const timelineTruncated = showEventList && filteredEvents.length > MAX_TIMELINE_EVENTS;
           const displayEvents = showEventList
-            ? filteredEvents.length > 12
-              ? filteredEvents.slice(-12)
-              : filteredEvents
+            ? filteredEvents.slice(Math.max(filteredEvents.length - MAX_TIMELINE_EVENTS, 0))
             : [];
-          const filtered = eventSearchTerms.length > 0 || eventOpsSet.size < 3;
           return (
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
@@ -1346,6 +1378,11 @@ export function App() {
 
               {showEventList ? (
                 <ul className="sim-shell__event-list" aria-live="polite">
+                  {timelineTruncated && (
+                    <li className="sim-shell__event sim-shell__event--notice">
+                      <span>Showing latest {MAX_TIMELINE_EVENTS} of {filteredEvents.length} matching events.</span>
+                    </li>
+                  )}
                   {displayEvents.length === 0 ? (
                     <li className="sim-shell__empty">
                       {filtered ? "No events match the current filters." : "No events yet."}
