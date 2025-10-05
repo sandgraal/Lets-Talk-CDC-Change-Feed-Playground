@@ -279,6 +279,7 @@ export function App() {
   const [scenarioId, setScenarioId] = useState<string>(
     () => storedPrefs?.scenarioId ?? SCENARIOS[0].name,
   );
+  const [scenarioFilter, setScenarioFilter] = useState<string>("");
   const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
     () => initialActiveMethods,
   );
@@ -303,8 +304,17 @@ export function App() {
         list.unshift(liveScenario);
       }
     }
-    return list;
-  }, [liveScenario]);
+    if (!scenarioFilter.trim()) return list;
+    const query = scenarioFilter.trim().toLowerCase();
+    return list.filter(option => {
+      if (option.name === LIVE_SCENARIO_NAME) return true;
+      const haystack = [option.label, option.description, option.highlight, option.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [liveScenario, scenarioFilter]);
 
   const scenario = useMemo(() => {
     if (!scenarioOptions.length) return SCENARIOS[0];
@@ -318,6 +328,23 @@ export function App() {
       setScenarioId(scenarioOptions[0].name);
     }
   }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ query?: string }>).detail;
+      const query = detail?.query ?? "";
+      setScenarioFilter(String(query));
+    };
+
+    window.addEventListener("cdc:scenario-filter", handler as EventListener);
+    window.dispatchEvent(new CustomEvent("cdc:scenario-filter-request"));
+
+    return () => {
+      window.removeEventListener("cdc:scenario-filter", handler as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

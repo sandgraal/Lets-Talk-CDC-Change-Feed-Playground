@@ -84,6 +84,7 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         name: "crud-basic",
         label: "CRUD Basic",
         description: "Insert, update, and delete a single customer to highlight delete visibility.",
+        highlight: "Polling misses deletes; triggers and logs keep targets in sync.",
         seed: 42,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
@@ -95,6 +96,7 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         name: "burst-updates",
         label: "Burst Updates",
         description: "Five quick updates to expose lost intermediate writes for polling.",
+        highlight: "Rapid updates test lag and ordering resilience across engines.",
         seed: 7,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },
