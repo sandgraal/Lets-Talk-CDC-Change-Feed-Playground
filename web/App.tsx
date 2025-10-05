@@ -59,11 +59,16 @@ type PartialMethodConfigMap = Partial<{
   log: Partial<LogConfig>;
 }>;
 
+type EventOp = "c" | "u" | "d";
+
 type ComparatorPreferences = {
   scenarioId?: string | null;
   activeMethods?: MethodOption[];
   methodConfig?: PartialMethodConfigMap;
   userPinnedScenario?: boolean;
+  showEventList?: boolean;
+  eventOps?: EventOp[];
+  eventSearch?: string;
 };
 
 type LaneMetrics = {
@@ -151,6 +156,20 @@ function sanitizeActiveMethods(methods: unknown): MethodOption[] {
   return unique.length >= MIN_LANES ? unique : [...METHOD_ORDER];
 }
 
+function sanitizeEventOps(ops: unknown): Set<EventOp> {
+  const defaults: EventOp[] = ["c", "u", "d"];
+  if (!Array.isArray(ops) || ops.length === 0) {
+    return new Set(defaults);
+  }
+  const active: EventOp[] = [];
+  ops.forEach(op => {
+    if (op === "c" || op === "u" || op === "d") {
+      if (!active.includes(op)) active.push(op);
+    }
+  });
+  return active.length ? new Set(active) : new Set(defaults);
+}
+
 function sanitizeMethodConfig(partial?: PartialMethodConfigMap): MethodConfigMap {
   const base = cloneConfig(DEFAULT_METHOD_CONFIG);
   if (!partial) return base;
@@ -209,6 +228,9 @@ function loadPreferences(): ComparatorPreferences | null {
       activeMethods: Array.isArray(parsed.activeMethods) ? parsed.activeMethods : undefined,
       methodConfig: parsed.methodConfig ?? undefined,
       userPinnedScenario: typeof parsed.userPinnedScenario === "boolean" ? parsed.userPinnedScenario : undefined,
+      showEventList: typeof parsed.showEventList === "boolean" ? parsed.showEventList : undefined,
+      eventOps: Array.isArray(parsed.eventOps) ? parsed.eventOps : undefined,
+      eventSearch: typeof parsed.eventSearch === "string" ? parsed.eventSearch : undefined,
     };
   } catch (err) {
     console.warn("Comparator prefs load failed", err);
@@ -302,6 +324,15 @@ export function App() {
     () => initialMethodConfig,
   );
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [eventSearch, setEventSearch] = useState(() => storedPrefs?.eventSearch ?? "");
+  const [activeEventOps, setActiveEventOps] = useState<Set<EventOp>>(() => sanitizeEventOps(storedPrefs?.eventOps));
+  const [showEventList, setShowEventList] = useState(storedPrefs?.showEventList ?? true);
+  const eventOpsArray = useMemo(() => Array.from(activeEventOps).sort(), [activeEventOps]);
+  const eventOpsSet = useMemo(() => new Set(eventOpsArray), [eventOpsArray]);
+  const eventSearchTerms = useMemo(
+    () => eventSearch.trim().toLowerCase().split(/\s+/).filter(Boolean),
+    [eventSearch],
+  );
   const isPlayingRef = useRef(isPlaying);
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
@@ -342,6 +373,18 @@ export function App() {
     const timer = window.setTimeout(() => setSummaryCopied(false), 2000);
     return () => window.clearTimeout(timer);
   }, [summaryCopied]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const timer = window.setTimeout(() => {
+      track("comparator.event.search", {
+        scenario: scenario.name,
+        query: eventSearch,
+        hasQuery: Boolean(eventSearch.trim()),
+      });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [eventSearch, scenario.name]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -459,8 +502,11 @@ export function App() {
       activeMethods,
       methodConfig,
       userPinnedScenario: userSelectedScenarioRef.current,
+      showEventList,
+      eventOps: eventOpsArray,
+      eventSearch,
     });
-  }, [scenarioId, activeMethods, methodConfig]);
+  }, [scenarioId, activeMethods, methodConfig, showEventList, eventOpsArray, eventSearch]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -616,6 +662,42 @@ export function App() {
       return METHOD_ORDER.filter(item => next.includes(item));
     });
   }, []);
+
+  const toggleEventOp = useCallback((op: EventOp) => {
+    setActiveEventOps(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      if (next.has(op)) {
+        if (next.size > 1) {
+          next.delete(op);
+          changed = true;
+        }
+      } else {
+        next.add(op);
+        changed = true;
+      }
+      if (changed) {
+        track("comparator.event.filter", {
+          scenario: scenario.name,
+          op,
+          active: next.has(op),
+        });
+      }
+      return changed ? next : prev;
+    });
+  }, [scenario.name]);
+
+  const handleEventSearchChange = useCallback((value: string) => {
+    setEventSearch(value);
+  }, []);
+
+  const handleToggleEventList = useCallback(() => {
+    setShowEventList(prev => {
+      const next = !prev;
+      track("comparator.panel.layout", { scenario: scenario.name, showEvents: next });
+      return next;
+    });
+  }, [scenario.name]);
 
   const handleScenarioSelect = useCallback((value: string) => {
     userSelectedScenarioRef.current = true;
@@ -966,6 +1048,34 @@ export function App() {
         </p>
       )}
 
+      <div className="sim-shell__event-filters" role="group" aria-label="Event filters">
+        <label className="sim-shell__event-search">
+          <span>Search events</span>
+          <input
+            type="search"
+            value={eventSearch}
+            onChange={event => handleEventSearchChange(event.target.value)}
+            placeholder="Filter by pk, seq, or payload"
+          />
+        </label>
+        <div className="sim-shell__event-ops" role="group" aria-label="Change operations">
+          {(["c", "u", "d"] as EventOp[]).map(op => (
+            <button
+              key={op}
+              type="button"
+              className="sim-shell__event-op"
+              data-active={eventOpsSet.has(op) ? "true" : "false"}
+              onClick={() => toggleEventOp(op)}
+            >
+              {op.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="sim-shell__event-toggle" onClick={handleToggleEventList}>
+          {showEventList ? "Hide timeline" : "Show timeline"}
+        </button>
+      </div>
+
       <div className="sim-shell__actions" role="group" aria-label="Playback controls">
         <button type="button" onClick={handleStart} disabled={isPlaying}>
           Start
@@ -1120,9 +1230,29 @@ export function App() {
       <div className="sim-shell__lane-grid">
         {laneMetrics.map(({ method, metrics, events }) => {
           const description = METHOD_DESCRIPTIONS[method];
-          const displayEvents = events.length > 12 ? events.slice(-12) : events;
           const config = methodConfig[method];
           const diff = laneDiffs.get(method) ?? null;
+          const filteredEvents = events.filter(event => {
+            if (!eventOpsSet.has(event.op as EventOp)) return false;
+            if (!eventSearchTerms.length) return true;
+            const haystack = [
+              String(event.seq ?? ""),
+              event.op,
+              event.pk?.id ?? "",
+              (event as any).table ?? "",
+              JSON.stringify(event.after ?? {}),
+              JSON.stringify(event.before ?? {}),
+            ]
+              .join(" ")
+              .toLowerCase();
+            return eventSearchTerms.every(term => haystack.includes(term));
+          });
+          const displayEvents = showEventList
+            ? filteredEvents.length > 12
+              ? filteredEvents.slice(-12)
+              : filteredEvents
+            : [];
+          const filtered = eventSearchTerms.length > 0 || eventOpsSet.size < 3;
           return (
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
@@ -1130,14 +1260,17 @@ export function App() {
                   <h3 className="sim-shell__lane-title">{METHOD_LABELS[method]}</h3>
                   <p className="sim-shell__lane-copy">{description}</p>
                 </div>
-                <span className="sim-shell__lane-count">{events.length} events</span>
+                <span className="sim-shell__lane-count">
+                  {filteredEvents.length}
+                  {filtered ? ` / ${events.length}` : ""} events
+                </span>
               </header>
 
               <div className="sim-shell__metrics">
                 <MetricsStrip {...metrics} />
               </div>
 
-              <LaneDiffOverlay diff={diff} />
+              <LaneDiffOverlay diff={diff} scenarioName={scenario.name} />
 
               <dl className="sim-shell__lane-config">
                 {method === "polling" && (
@@ -1184,26 +1317,32 @@ export function App() {
                 <p className="sim-shell__callout">Reads WAL/Binlog post-commit with strict ordering.</p>
               )}
 
-              <ul className="sim-shell__event-list" aria-live="polite">
-                {displayEvents.length === 0 ? (
-                  <li className="sim-shell__empty">No events yet.</li>
-                ) : (
-                  displayEvents.map(event => (
-                    <li
-                      key={`${method}-${event.seq}`}
-                      className={`sim-shell__event${event.op === "d" ? " sim-shell__event--delete" : ""}`}
-                    >
-                      <span className="sim-shell__event-op" data-op={event.op}>
-                        {event.op}
-                      </span>
-                      <span>
-                        #{event.seq} · pk={event.pk.id}
-                      </span>
-                      <span className="sim-shell__event-target">ts={event.ts_ms}ms</span>
+              {showEventList ? (
+                <ul className="sim-shell__event-list" aria-live="polite">
+                  {displayEvents.length === 0 ? (
+                    <li className="sim-shell__empty">
+                      {filtered ? "No events match the current filters." : "No events yet."}
                     </li>
-                  ))
-                )}
-              </ul>
+                  ) : (
+                    displayEvents.map(event => (
+                      <li
+                        key={`${method}-${event.seq}`}
+                        className={`sim-shell__event${event.op === "d" ? " sim-shell__event--delete" : ""}`}
+                      >
+                        <span className="sim-shell__event-op" data-op={event.op}>
+                          {event.op}
+                        </span>
+                        <span>
+                          #{event.seq} · pk={event.pk.id}
+                        </span>
+                        <span className="sim-shell__event-target">ts={event.ts_ms}ms</span>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              ) : (
+                <p className="sim-shell__lane-hidden">Timeline hidden. Use “Show timeline” to view recent events.</p>
+              )}
             </article>
           );
         })}

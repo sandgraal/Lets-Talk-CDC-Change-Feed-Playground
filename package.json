@@ -7,13 +7,16 @@
     "build:sim": "vite build --mode sim",
     "build:web": "vite build --mode web",
     "dev:sim": "vite --mode sim",
-    "dev:web": "vite --mode web",
+    "dev:web": "npm-run-all2 build:sim dev:web:serve",
+    "dev:web:serve": "vite --mode web",
+    "dev:all": "npm-run-all2 --parallel dev:sim dev:web:serve",
     "preview:sim": "vite preview --mode sim",
     "preview:web": "vite preview --mode web",
     "test:sim": "node sim/tests/property-tests.mjs",
     "ci:preflight": "npm run build:sim && npm run build:web && npm run test:sim",
     "prepare:scenario": "node harness/scripts/prepare-scenario.mjs",
-    "snapshot:scenarios": "node harness/scripts/snapshot-scenarios.mjs"
+    "snapshot:scenarios": "node harness/scripts/snapshot-scenarios.mjs",
+    "ladle": "ladle dev"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -21,8 +24,10 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.8",
+    "@ladle/react": "^4.0.1",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "npm-run-all2": "^6.1.2",
     "typescript": "^5.4.5",
     "vite": "^5.2.9"
   }

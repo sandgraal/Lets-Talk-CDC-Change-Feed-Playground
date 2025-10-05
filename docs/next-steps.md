@@ -37,21 +37,21 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 - ✅ Schema migration risk mitigated by property-test suite (`npm run test:sim`) executed in CI preflight.
 
 ## React Comparator Polish
-- Add inline diff gutters for each lane so users can scan insertions/deletions without expanding full event payloads.
-- Introduce event search + quick filters (CRUD type, table, CDC marker) to make large traces navigable in workshops.
-- Persist comparator panel layout (collapsed JSON vs. timeline) in share links so teammates see the intended view.
-- Validate responsive breakpoints down to 1024px and capture follow-up tasks for a future tablet narrative.
+- ✅ Inline diff gutters ship with lane overlays that surface missing/extra/order issues and lag hotspots.
+- ✅ Global event search + CRUD quick filters trim per-lane timelines; telemetry records usage for guided tours.
+- ✅ Timeline visibility persists via comparator preferences (`showEventList`), so shared links honour author intent.
+- ✅ Responsive tweaks validated down to 1024px (tablet refinements tracked separately in polish backlog).
 
 ## Developer Experience
-- Wire `npm run dev:web` to reuse the simulator build artefact and fail fast when bundles drift.
-- Add Storybook (or Ladle) stories for comparator primitives so product and docs writers can prototype copy in isolation.
-- Capture architecture decisions in lightweight ADRs, especially around state container and scenario schema choices.
-- Publish a contributor quickstart in `docs/dev-onboarding.md` outlining required tools, scripts, and common failure modes.
+- ✅ `npm run dev:web` now seeds a fresh simulator build, and `npm run dev:all` runs sim + shell dev servers in parallel.
+- ✅ Ladle stories live under `web/stories/`—`npm run ladle` opens the MetricsStrip playground for copy/design review.
+- ✅ ADR-001 captures the decision to keep the lightweight emitter/state approach for this release.
+- ✅ Contributor quickstart documented in `docs/dev-onboarding.md`.
 
 ## Documentation & Enablement
-- Extend the README with a “choosing a scenario” matrix linking poll vs. trigger vs. log narratives.
-- Record a short Loom walkthrough once the guided tour lands so stakeholders can review without a local checkout.
-- Schedule a docs/content review gate ahead of the first workshop to ensure UI strings and external messaging match.
+- ✅ README now includes a scenario matrix mapping narratives to template highlights.
+- 🚧 Loom walkthrough plan captured in `docs/enablement/loom-plan.md`; recording to follow after guided tour polish.
+- ✅ Content review gate/checklist published in `docs/content-review-checklist.md` and linked from the risk register.
 
 ## QA & Automation
 - Promote the existing playwright smoke to cover comparator preview, tag filtering, and summary copy actions across browsers.
