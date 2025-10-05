@@ -182,7 +182,26 @@ function assertNonDecreasing(events, method) {
   }
 }
 
-const seeds = Array.from({ length: 24 }, (_, index) => index + 11);
+const seedsPath = path.resolve(__dirname, "seeds.json");
+let seeds = [];
+try {
+  const raw = fs.readFileSync(seedsPath, "utf8");
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed) && parsed.length) {
+    seeds = parsed.map(Number).filter(Number.isFinite);
+  }
+} catch (err) {
+  console.warn("[property-tests] Failed to load seeds.json", err?.message || err);
+}
+
+if (!seeds.length) {
+  seeds = Array.from({ length: 24 }, (_, index) => index + 11);
+}
+
+const envSeeds = process.env.SIM_SEEDS;
+if (envSeeds) {
+  seeds = envSeeds.split(",").map(value => Number(value.trim())).filter(Number.isFinite);
+}
 const failures = [];
 
 for (const seed of seeds) {

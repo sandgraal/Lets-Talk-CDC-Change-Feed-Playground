@@ -13,7 +13,9 @@ Open `index.html` in a browser. No build step.
 
 ### Verification
 - Property-based invariants: `npm run test:sim` (requires a fresh `npm run build:sim` bundle)
-- Full preflight mirror: `npm run ci:preflight` (runs sim/web builds and the invariant suite—identical to the GitHub Actions workflow)
+- Playwright smoke (CI enforced): `PLAYWRIGHT_DISABLE=0 npm run test:e2e`
+- Harness HTML snapshot: `npm run test:harness-report`
+- Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
 
 ### Harness
 - Prepare a shared scenario: `npm run prepare:scenario -- orders`
