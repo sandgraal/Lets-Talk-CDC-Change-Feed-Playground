@@ -57,6 +57,11 @@
   font-size: 0.95rem;
 }
 
+.sim-shell__description--highlight {
+  color: #1d4ed8;
+  font-style: italic;
+}
+
 .sim-shell__summary {
   margin: 0;
   padding: 1rem 1.25rem;
@@ -98,6 +103,30 @@
 .sim-shell__method-chip[aria-pressed="true"] {
   background: #1f2937;
   color: #ffffff;
+}
+
+.sim-shell__actions--scenario {
+  gap: 0.5rem;
+}
+
+.sim-shell__scenario-sync {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sim-shell__scenario-sync:hover:not([disabled]) {
+  background: rgba(37, 99, 235, 0.2);
+  color: #1e3a8a;
+}
+
+.sim-shell__scenario-sync[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .sim-shell__controls {

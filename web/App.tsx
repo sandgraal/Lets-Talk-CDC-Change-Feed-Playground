@@ -616,7 +616,7 @@ export function App() {
             Load a deterministic scenario and contrast Polling, Trigger, and Log-based CDC side by side.
           </p>
         </div>
-        <div className="sim-shell__actions" role="group" aria-label="Scenario controls">
+        <div className="sim-shell__actions sim-shell__actions--scenario" role="group" aria-label="Scenario controls">
           <select
             aria-label="Scenario"
             value={scenarioId}
@@ -628,6 +628,21 @@ export function App() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            className="sim-shell__scenario-sync"
+            onClick={() => {
+              if (scenario.name === LIVE_SCENARIO_NAME) return;
+              window.dispatchEvent(
+                new CustomEvent("cdc:apply-scenario-template", {
+                  detail: { id: scenario.name },
+                }),
+              );
+            }}
+            disabled={scenario.name === LIVE_SCENARIO_NAME}
+          >
+            Load in workspace
+          </button>
           <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
             {METHOD_ORDER.map(method => (
               <button
@@ -647,6 +662,11 @@ export function App() {
       <p className="sim-shell__description" aria-live="polite">
         <strong>{scenario.label}:</strong> {scenario.description}
       </p>
+      {scenario.highlight && (
+        <p className="sim-shell__description sim-shell__description--highlight" aria-live="polite">
+          {scenario.highlight}
+        </p>
+      )}
 
       <div className="sim-shell__actions" role="group" aria-label="Playback controls">
         <button type="button" onClick={handleStart} disabled={isPlaying}>
