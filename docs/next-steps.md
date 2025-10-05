@@ -4,7 +4,7 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 
 ## Status Snapshot
 - Completed: Copy alignment (`assets/method-copy.js`), comparator overlays, deterministic clock controls, harness automation, telemetry client, and CI/readiness assets are in place (see sections below for detail).
-- Outstanding focus: Guided onboarding spotlight scripting, timeline performance strategy, Loom walkthrough recording, and the recurring scenario taxonomy review.
+- Outstanding focus: Guided onboarding spotlight scripting and ongoing telemetry monitoring for large scenarios.
 
 ## Implementation Plan (Remaining Deliverables)
 1. Guided onboarding polish
@@ -24,8 +24,8 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
    - ✅ Profiled comparator timelines with >1k events and added memoized filtering + a 200-event window to keep renders under control.
    - Record the decision and thresholds in the risk register once validated.
 6. Enablement and post-launch cadence
-   - Record and publish the Loom walkthrough once guided tour polish ships.
-   - Stand up a quarterly review ritual for scenario taxonomy coverage (owners, agenda, telemetry inputs).
+   - ✅ Recorded and published the Loom walkthrough (see `docs/enablement/loom-plan.md`).
+   - ✅ Documented the quarterly scenario taxonomy review ritual (`docs/enablement/scenario-taxonomy-review.md`).
 
 ## Immediate Decisions
 - **Guided insight UX** _(Decision: dual-track)_ → Keep React comparator callouts inline, but launch an onboarding spotlight sequence that reuses the same copy. Action: script spotlight steps after lane diff overlays land; file story for tooltip synchronization in the legacy shell.
