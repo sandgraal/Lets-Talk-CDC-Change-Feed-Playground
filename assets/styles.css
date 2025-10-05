@@ -94,9 +94,49 @@ a:hover { color: var(--accent-strong); }
   border: 1px solid transparent;
 }
 .badge-hacktoberfest {
-  background: rgba(255,216,111,0.12);
-  border-color: rgba(255,216,111,0.4);
-  color: var(--accent-yellow);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, rgba(255,216,111,0.2), rgba(75,163,255,0.2));
+  border-color: rgba(255,216,111,0.55);
+  color: #ffe6a3;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 12px 24px -18px rgba(255,216,111,0.6);
+}
+.badge-hacktoberfest:hover {
+  color: #fff7cf;
+}
+.badge-hacktoberfest:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px -18px rgba(79, 172, 255, 0.6);
+  border-color: rgba(79,172,255,0.65);
+}
+.badge-hacktoberfest__glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 55%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+}
+.badge-hacktoberfest__spark {
+  font-size: 14px;
+  color: #fff3c4;
+  text-shadow: 0 0 8px rgba(255, 243, 196, 0.8);
+  transform: rotate(-12deg);
+}
+.badge-hacktoberfest:hover .badge-hacktoberfest__glow {
+  opacity: 0.75;
+  transform: scale(1);
+  animation: badge-sweep 1.6s linear infinite;
+}
+
+@keyframes badge-sweep {
+  0% { transform: translateX(-60%) scale(1); }
+  50% { transform: translateX(20%) scale(1.1); }
+  100% { transform: translateX(80%) scale(1); }
 }
 
 button,
