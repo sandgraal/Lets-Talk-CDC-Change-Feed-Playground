@@ -35,6 +35,16 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Lane diff overlays surface missing/extra/out-of-order operations and lag hotspots per method so insights link to exact events
 - Telemetry client (`window.telemetry`) buffers activation/funnel events locally so tours and tests can assert on adoption flows
 
+### Scenario matrix
+
+| Scenario | Use it when… | Highlights |
+| --- | --- | --- |
+| Omnichannel Orders | Walking through status transitions and fulfilment edge cases | Mix of inserts/updates with delete coverage; great for lag comparisons |
+| Real-time Payments | Demonstrating idempotent updates or risk review flows | Trigger overhead tuning + delete capture expectations |
+| IoT Telemetry | Showing rolling measurements with anomaly flags | Highlights soft-delete vs. log consistency and clock controls |
+| CRUD Basic | Teaching delete visibility basics | Minimal ops for first-time comparator demos |
+| Burst Updates | Stressing lag/ordering behaviour under rapid updates | Highlights polling gaps and diff overlays |
+
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).
 - Browse open issues labeled `hacktoberfest`, `good first issue`, or `help wanted` to find a place to jump in.

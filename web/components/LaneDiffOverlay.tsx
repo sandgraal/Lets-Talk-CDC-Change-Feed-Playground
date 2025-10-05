@@ -3,6 +3,7 @@ import { track } from "../telemetry";
 
 type LaneDiffOverlayProps = {
   diff: LaneDiffResult | null;
+  scenarioName: string;
 };
 
 function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
@@ -20,7 +21,7 @@ function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
   return `Out-of-order ${op} pk=${pk} (expected ${expectedIndex ?? "?"} before actual ${actualIndex ?? "?"})`;
 }
 
-export function LaneDiffOverlay({ diff }: LaneDiffOverlayProps) {
+export function LaneDiffOverlay({ diff, scenarioName }: LaneDiffOverlayProps) {
   if (!diff) return null;
 
   const { totals, issues, lag } = diff;
@@ -71,6 +72,7 @@ export function LaneDiffOverlay({ diff }: LaneDiffOverlayProps) {
                 method: diff.method,
                 issues: diff.issues.length,
                 maxLag: diff.lag.max,
+                scenario: scenarioName,
               });
             }
           }}

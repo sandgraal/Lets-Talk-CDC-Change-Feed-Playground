@@ -17,6 +17,7 @@
   "include": [
     "sim/**/*.ts",
     "web/**/*.ts",
-    "web/**/*.tsx"
+    "web/**/*.tsx",
+    "web/stories/**/*.tsx"
   ]
 }
