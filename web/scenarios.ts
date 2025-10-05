@@ -1,9 +1,56 @@
 import sharedScenarios from "../assets/shared-scenarios.js";
-import type { Scenario } from "../sim";
+import type { Scenario, SourceOp } from "../sim";
 
 export interface ShellScenario extends Scenario {
   label: string;
   description: string;
+  highlight?: string;
+}
+
+function deriveOpsFromEvents(raw: any): Scenario["ops"] {
+  if (!raw || !Array.isArray(raw.events)) return [];
+  const pkField = raw.schema?.find((col: any) => col?.pk)?.name || "id";
+  const table = raw.table || raw.id || "table";
+
+  const ops = raw.events
+    .map((event: any, index: number) => {
+      const payload = event?.payload ?? event;
+      if (!payload) return null;
+      const opCode = payload.op ?? event?.op;
+      const ts = Number(payload.ts_ms ?? event?.ts_ms);
+      const after = payload.after ?? event?.after ?? null;
+      const before = payload.before ?? event?.before ?? null;
+      const keyData = event?.key ?? null;
+
+      const pkValue =
+        (keyData && Object.values(keyData)[0]) ??
+        (after && after[pkField]) ??
+        (before && before[pkField]);
+
+      const pk = { id: pkValue != null ? String(pkValue) : String(index) };
+
+      const base = {
+        t: Number.isFinite(ts) ? ts : index * 200,
+        table,
+        pk,
+      } as SourceOp;
+
+      if (opCode === "c") {
+        if (!after) return null;
+        return { ...base, op: "insert", after };
+      }
+      if (opCode === "u") {
+        if (!after) return null;
+        return { ...base, op: "update", after };
+      }
+      if (opCode === "d") {
+        return { ...base, op: "delete" };
+      }
+      return null;
+    })
+    .filter((op: SourceOp | null): op is SourceOp => Boolean(op));
+
+  return ops;
 }
 
 function normalizeScenario(raw: any): ShellScenario | null {
@@ -12,6 +59,7 @@ function normalizeScenario(raw: any): ShellScenario | null {
     name: raw.id || raw.name || "scenario",
     label: raw.label || raw.name || "Scenario",
     description: raw.description || "",
+    highlight: raw.highlight,
     seed: typeof raw.seed === "number" ? raw.seed : 1,
     ops: raw.ops,
   };
@@ -19,7 +67,13 @@ function normalizeScenario(raw: any): ShellScenario | null {
 
 const mapped = Array.isArray(sharedScenarios)
   ? sharedScenarios
-      .map(normalizeScenario)
+      .map((scenario: any) => {
+        const base = { ...scenario };
+        if (!Array.isArray(base.ops) || base.ops.length === 0) {
+          base.ops = deriveOpsFromEvents(base);
+        }
+        return normalizeScenario(base);
+      })
       .filter((scenario): scenario is ShellScenario => Boolean(scenario))
   : [];
 
