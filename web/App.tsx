@@ -2,6 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CdcEvent, SourceOp, LaneDiffResult } from "../sim";
 import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine, diffLane } from "../sim";
 import { EventBus, MetricsStore, type MetricsSnapshot } from "../src";
+
+type FeatureFlagKey =
+  | "ff_event_bus"
+  | "ff_pause_resume"
+  | "ff_query_slider"
+  | "ff_event_log"
+  | "ff_crud_fix";
+
+type FeatureFlagApi = {
+  has?: (flag: string) => boolean;
+  all?: () => string[];
+};
+
+declare global {
+  interface Window {
+    cdcFeatureFlags?: FeatureFlagApi;
+    APPWRITE_CFG?: {
+      featureFlags?: string[];
+    };
+  }
+}
 import { MetricsStrip } from "./components/MetricsStrip";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
@@ -142,6 +163,20 @@ const METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
 
 const MAX_TIMELINE_EVENTS = 200;
 const MAX_EVENT_LOG_ROWS = 2000;
+
+function readFeatureFlags(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  const api = window.cdcFeatureFlags as FeatureFlagApi | undefined;
+  const initial = api?.all?.();
+  if (Array.isArray(initial) && initial.length) {
+    return new Set(initial.map(String));
+  }
+  const cfg = window.APPWRITE_CFG?.featureFlags;
+  if (Array.isArray(cfg) && cfg.length) {
+    return new Set(cfg.map(String));
+  }
+  return new Set();
+}
 
 const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
   polling: { pollIntervalMs: 500, includeSoftDeletes: false },
@@ -395,6 +430,7 @@ export function App() {
   const [eventLogTable, setEventLogTable] = useState<string | null>(storedPrefs?.eventLogTable ?? null);
   const [eventLogTxn, setEventLogTxn] = useState<string>(storedPrefs?.eventLogTxn ?? "");
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
+  const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
   const updateLaneSnapshot = useCallback(
     (method: MethodOption, options?: { lastOffset?: number }) => {
@@ -413,6 +449,26 @@ export function App() {
     },
     [],
   );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string[] | undefined>).detail;
+      const list = Array.isArray(detail) ? detail : [];
+      setFeatureFlags(new Set(list.map(String)));
+    };
+    window.addEventListener("cdc:feature-flags", handler as EventListener);
+    return () => {
+      window.removeEventListener("cdc:feature-flags", handler as EventListener);
+    };
+  }, []);
+  const hasFeatureFlag = useCallback(
+    (flag: FeatureFlagKey) => (featureFlags.size === 0 ? true : featureFlags.has(flag)),
+    [featureFlags],
+  );
+  const eventBusEnabled = hasFeatureFlag("ff_event_bus");
+  const pauseResumeEnabled = hasFeatureFlag("ff_pause_resume");
+  const querySliderEnabled = hasFeatureFlag("ff_query_slider");
+  const eventLogEnabled = hasFeatureFlag("ff_event_log");
   const eventOpsArray = useMemo(() => Array.from(activeEventOps).sort(), [activeEventOps]);
   const eventOpsSet = useMemo(() => new Set(eventOpsArray), [eventOpsArray]);
   const eventSearchTerms = useMemo(
@@ -1158,6 +1214,7 @@ export function App() {
   }, [stopLoop, scenario.name]);
 
   const handleToggleConsumer = useCallback(() => {
+    if (!pauseResumeEnabled) return;
     setIsConsumerPaused(prev => {
       const next = !prev;
       track("comparator.consumer.toggle", { scenario: scenario.name, paused: next });
@@ -1166,7 +1223,7 @@ export function App() {
       }
       return next;
     });
-  }, [drainQueues, scenario.name]);
+  }, [drainQueues, pauseResumeEnabled, scenario.name]);
 
   const handleStep = useCallback(
     (deltaMs = STEP_MS) => {
@@ -1324,8 +1381,11 @@ export function App() {
   );
 
   const aggregateEventBusTotals = useMemo(
-    () =>
-      activeMethods.reduce(
+    () => {
+      if (!eventBusEnabled) {
+        return { produced: 0, consumed: 0, backlog: 0 };
+      }
+      return activeMethods.reduce(
         (acc, method) => {
           const summary = laneRuntimeSummaries.get(method);
           if (!summary) return acc;
@@ -1335,8 +1395,9 @@ export function App() {
           return acc;
         },
         { produced: 0, consumed: 0, backlog: 0 },
-      ),
-    [activeMethods, laneRuntimeSummaries],
+      );
+    },
+    [activeMethods, laneRuntimeSummaries, eventBusEnabled],
   );
 
   const summary = computeSummary(laneMetrics);
@@ -1489,6 +1550,7 @@ export function App() {
         </button>
       </div>
 
+      {eventLogEnabled && (
       <section className="sim-shell__event-log" aria-label="Event log">
         <header className="sim-shell__event-log-header">
           <div>
@@ -1609,6 +1671,7 @@ export function App() {
           </p>
         )}
       </section>
+      )}
 
       <div
         className="sim-shell__actions"
@@ -1625,9 +1688,12 @@ export function App() {
         <button type="button" onClick={() => handleStep()}>
           Step +{STEP_MS}ms
         </button>
-        <button type="button" onClick={handleToggleConsumer} className="sim-shell__consumer-toggle">
-          {isConsumerPaused ? `Resume apply (${totalBacklog} queued)` : `Pause apply (${totalBacklog} queued)`}
-        </button>
+        {pauseResumeEnabled && (
+          <button type="button" onClick={handleToggleConsumer} className="sim-shell__consumer-toggle">
+            {isConsumerPaused ? "Resume apply" : "Pause apply"}
+            {eventBusEnabled ? ` (${totalBacklog} queued)` : ""}
+          </button>
+        )}
       </div>
 
       <div className="sim-shell__controls" aria-label="Method tuning controls">
@@ -1645,24 +1711,45 @@ export function App() {
               >
                 <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
                 <p className="sim-shell__control-copy">Adjust poll cadence and whether soft deletes are surfaced.</p>
-                <label className="sim-shell__control-field">
-                  <span>Poll interval ({(config.pollIntervalMs / 1000).toFixed(1)}s)</span>
-                  <input
-                    type="range"
-                    min={500}
-                    max={10000}
-                    step={100}
-                    value={config.pollIntervalMs}
-                    onChange={event =>
-                      updateMethodConfig(
-                        "polling",
-                        "pollIntervalMs",
-                        Math.min(10000, Math.max(500, Number(event.target.value) || 500)),
-                      )
-                    }
-                  />
-                </label>
-                <p className="sim-shell__control-hint">⏱️ Polling every {(config.pollIntervalMs / 1000).toFixed(1)}s</p>
+                {querySliderEnabled ? (
+                  <>
+                    <label className="sim-shell__control-field">
+                      <span>Poll interval ({(config.pollIntervalMs / 1000).toFixed(1)}s)</span>
+                      <input
+                        type="range"
+                        min={500}
+                        max={10000}
+                        step={100}
+                        value={config.pollIntervalMs}
+                        onChange={event =>
+                          updateMethodConfig(
+                            "polling",
+                            "pollIntervalMs",
+                            Math.min(10000, Math.max(500, Number(event.target.value) || 500)),
+                          )
+                        }
+                      />
+                    </label>
+                    <p className="sim-shell__control-hint">⏱️ Polling every {(config.pollIntervalMs / 1000).toFixed(1)}s</p>
+                  </>
+                ) : (
+                  <label className="sim-shell__control-field">
+                    <span>Poll interval (ms)</span>
+                    <input
+                      type="number"
+                      min={100}
+                      step={100}
+                      value={config.pollIntervalMs}
+                      onChange={event =>
+                        updateMethodConfig(
+                          "polling",
+                          "pollIntervalMs",
+                          Math.min(10000, Math.max(100, Number(event.target.value) || 500)),
+                        )
+                      }
+                    />
+                  </label>
+                )}
                 <label className="sim-shell__control-checkbox">
                   <input
                     type="checkbox"
@@ -1825,27 +1912,29 @@ export function App() {
 
               <LaneDiffOverlay diff={diff} scenarioName={scenario.name} />
 
-              <section className="sim-shell__lane-bus" aria-label={`${copy.label} event bus`}>
-                <header>
-                  <h4>Event Bus</h4>
-                  <span>{runtime?.topic ?? `cdc.${method}`}</span>
-                </header>
-                <p>
-                  Backlog <strong>{runtimeSummary?.backlog ?? 0}</strong>
-                  {isConsumerPaused ? " (apply paused)" : ""} · Last offset {runtimeSummary?.lastOffset ?? -1}
-                </p>
-                <p>
-                  Produced {runtimeSummary?.produced ?? 0} · Consumed {runtimeSummary?.consumed ?? 0}
-                </p>
-                <p>
-                  Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
-                </p>
-                {method === "polling" && (
-                  <p className="sim-shell__lane-bus-warning">
-                    Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
+              {eventBusEnabled && (
+                <section className="sim-shell__lane-bus" aria-label={`${copy.label} event bus`}>
+                  <header>
+                    <h4>Event Bus</h4>
+                    <span>{runtime?.topic ?? `cdc.${method}`}</span>
+                  </header>
+                  <p>
+                    Backlog <strong>{runtimeSummary?.backlog ?? 0}</strong>
+                    {isConsumerPaused ? " (apply paused)" : ""} · Last offset {runtimeSummary?.lastOffset ?? -1}
                   </p>
-                )}
-              </section>
+                  <p>
+                    Produced {runtimeSummary?.produced ?? 0} · Consumed {runtimeSummary?.consumed ?? 0}
+                  </p>
+                  <p>
+                    Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
+                  </p>
+                  {method === "polling" && (
+                    <p className="sim-shell__lane-bus-warning">
+                      Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
+                    </p>
+                  )}
+                </section>
+              )}
 
               <dl className="sim-shell__lane-config">
                 {method === "polling" && (

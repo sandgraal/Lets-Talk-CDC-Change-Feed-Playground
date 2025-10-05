@@ -190,7 +190,28 @@ const uiState = {
 
 let toastHost = null;
 
+function featureFlagApi() {
+  if (typeof window === "undefined") return undefined;
+  return window.cdcFeatureFlags;
+}
+
+function hasFeatureFlag(flag) {
+  const api = featureFlagApi();
+  if (!api) return true;
+  const all = api.all?.();
+  if (Array.isArray(all) && all.length > 0) {
+    if (typeof api.has === "function") return Boolean(api.has(flag));
+    return all.map(String).includes(flag);
+  }
+  return true;
+}
+
+function hasCrudFixFlag() {
+  return hasFeatureFlag("ff_crud_fix");
+}
+
 function ensureToastHost() {
+  if (!hasCrudFixFlag()) return;
   if (toastHost || typeof document === "undefined") return;
   toastHost = document.createElement("div");
   toastHost.id = "toastStack";
@@ -199,6 +220,7 @@ function ensureToastHost() {
 }
 
 function pushToast(message, tone = "info", options = {}) {
+  if (!hasCrudFixFlag()) return;
   ensureToastHost();
   if (!toastHost) return;
   const { timeout = 4000 } = options;
@@ -2414,6 +2436,7 @@ function findByPK(values) {
 
 // ---------- Operations (now publish to Appwrite too) ----------
 function setCrudButtonsDisabled(disabled) {
+  if (!hasCrudFixFlag()) return;
   ["opInsert", "opUpdate", "opDelete"].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.disabled = disabled;
@@ -2421,6 +2444,15 @@ function setCrudButtonsDisabled(disabled) {
 }
 
 async function runOperation(name, fn) {
+  if (!hasCrudFixFlag()) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.error(`Operation ${name} failed`, err);
+      pushErrorToast(`Unable to ${name}. Check console for details.`);
+      return false;
+    }
+  }
   if (uiState.pendingOperation) {
     pushToast("Another operation is in flight. Please wait.", "warning", { timeout: 2000 });
     return false;
