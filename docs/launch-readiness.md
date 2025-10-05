@@ -10,6 +10,14 @@ Each gate requires:
 - Harness verifier PASS against shared fixtures (`make status`).
 - Documentation updates reviewed via `docs/content-review-checklist.md`.
 
+### Rollout calendar
+| Week | Audience | Flag state | Owner | Success signals |
+| --- | --- | --- | --- | --- |
+| Week 1 | Internal team accounts | `comparator_v2` forced **on** | Eng Enablement | Comparator smoke telemetry ≥ 5 sessions, no blocker bugs |
+| Week 2 | Design partners (beta cohort) | `comparator_v2` on for allowlist | PM + Solutions | ≥ 70% tour completion, < 10% opt-out requests |
+| Week 3 | General availability | `comparator_v2` default **on**, opt-out supported via support macro | PMM | GA announcement published, support queue clear |
+| Week 4 | Post-launch review | Flag remains on; opt-out available on request | PM + Eng | Retention and telemetry goals met; decision on flag retirement |
+
 ## Communications
 - Changelog entry drafted in `docs/enablement/loom-plan.md` outline; publish alongside Loom walkthrough.
 - Support macro template added to `docs/enablement/support-macros.md` (see below).

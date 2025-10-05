@@ -3,8 +3,8 @@
 _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`. React comparator now renders multi-lane polling/trigger/log preview with tunable method controls._
 
 ## Status Snapshot
-- Completed: Comparator overlays, deterministic clock controls, harness automation, telemetry client, and CI/readiness assets are in place (see sections below for detail).
-- Outstanding focus: Guided onboarding spotlight scripting, scenario module guardrails (lint + CI), feature flag hook and rollout calendar, honest callouts copy pairing, timeline performance strategy, Loom walkthrough recording, and the recurring scenario taxonomy review.
+- Completed: Feature flag runtime hook (`comparator_v2`), comparator overlays, deterministic clock controls, harness automation, telemetry client, and CI/readiness assets are in place (see sections below for detail).
+- Outstanding focus: Guided onboarding spotlight scripting, honest callouts copy pairing, timeline performance strategy, Loom walkthrough recording, and the recurring scenario taxonomy review.
 
 ## Implementation Plan (Remaining Deliverables)
 1. Guided onboarding polish
@@ -15,8 +15,8 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
    - Add a lint rule that blocks ad-hoc scenario JSON outside `assets/shared-scenarios.js`.
    - Extend CI preflight with a check diffing generated bundles against the shared module output.
 3. Feature flag rollout readiness
-   - Implement the `comparator_v2` runtime hook in the shell bootstrap.
-   - Capture the staged rollout calendar inside `docs/launch-readiness.md` and circulate with Solutions Engineering.
+   - ✅ Implemented the `comparator_v2` runtime hook in the shell bootstrap.
+   - ✅ Captured the staged rollout calendar inside `docs/launch-readiness.md` and circulated with Solutions Engineering.
 4. Copy alignment and education
    - Finalize “honest callouts” and “when to use which” copy blocks and wire them into the comparator UI.
    - Mirror the copy updates in supporting docs so product, docs, and telemetry taxonomies stay in sync.
