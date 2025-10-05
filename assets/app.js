@@ -262,6 +262,42 @@ const GUIDED_TOUR_STEPS = [
 
 let activeTour = null;
 
+function isComparatorFlagEnabled() {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean(window.cdcFeatureFlags?.has?.("comparator_v2"));
+  } catch {
+    return false;
+  }
+}
+
+function renderComparatorFlagState(enabled) {
+  const panel = document.getElementById("sim-shell-preview");
+  if (!panel) return;
+  panel.dataset.comparatorEnabled = enabled ? "true" : "false";
+
+  const noteClass = "comparator-flag-note";
+  let note = panel.querySelector(`.${noteClass}`);
+  const root = document.getElementById("simShellRoot");
+
+  if (!enabled) {
+    if (!note) {
+      note = document.createElement("p");
+      note.className = noteClass;
+      panel.insertBefore(note, panel.querySelector("#simShellRoot"));
+    }
+    note.textContent = "Comparator preview disabled. Enable the comparator_v2 flag to load the CDC Method Comparator.";
+    if (root && root.children.length === 0) {
+      root.innerHTML = "<p class=\"sim-shell__placeholder\">Comparator preview is currently disabled.</p>";
+    }
+  } else if (note) {
+    note.remove();
+    if (root && /Comparator preview is currently disabled/.test(root.textContent || "")) {
+      root.innerHTML = "<p>Preparing simulator preview…</p>";
+    }
+  }
+}
+
 function getTemplateById(id) {
   if (!id) return null;
   return SCENARIO_TEMPLATES.find(t => t.id === id) || null;
@@ -2717,6 +2753,13 @@ async function main() {
 
   renderTemplateGallery();
   bindUiHandlers();
+  renderComparatorFlagState(isComparatorFlagEnabled());
+  if (typeof window !== "undefined") {
+    window.addEventListener("cdc:feature-flags", event => {
+      const detail = Array.isArray(event.detail) ? event.detail : [];
+      renderComparatorFlagState(detail.includes("comparator_v2"));
+    });
+  }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter } }));
   }
