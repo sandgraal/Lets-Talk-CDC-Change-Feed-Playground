@@ -540,6 +540,12 @@ function applyScenarioTemplate(template, options = {}) {
   const focusStep = options.focusStep || (state.rows.length ? "events" : "rows");
   updateLearning(focusStep);
   refreshSchemaStatus(`${template.name} scenario loaded.`, "success");
+  trackEvent("workspace.scenario.template_loaded", {
+    templateId: template.id,
+    rows: state.rows.length,
+    ops: state.events.length,
+    tags: template.tags || [],
+  });
   if (options.closeOnboarding) hideOnboarding(true);
 }
 
@@ -644,6 +650,12 @@ async function copyShareLink() {
   try {
     await navigator.clipboard.writeText(url);
     flashButton(els.shareLink, "Link copied");
+    trackEvent("workspace.share.generated", {
+      shareId: id,
+      url,
+      events: state.events.length,
+      rows: state.rows.length,
+    });
   } catch (err) {
     try {
       const temp = document.createElement("textarea");
@@ -657,6 +669,13 @@ async function copyShareLink() {
       document.body.removeChild(temp);
       if (ok) {
         flashButton(els.shareLink, "Link copied");
+        trackEvent("workspace.share.generated", {
+          shareId: id,
+          url,
+          events: state.events.length,
+          rows: state.rows.length,
+          fallback: true,
+        });
         return;
       }
     } catch {
@@ -712,6 +731,12 @@ async function maybeHydrateSharedScenario() {
     renderJSONLog();
     renderTemplateGallery();
     refreshSchemaStatus("Scenario loaded from share link.", "success");
+    trackEvent("workspace.scenario.imported", {
+      source: "share",
+      rows: state.rows.length,
+      events: state.events.length,
+      scenarioId: state.scenarioId,
+    });
 
     if (typeof window !== "undefined" && window.history?.replaceState) {
       try {
@@ -745,6 +770,18 @@ const save   = () => {
     console.warn("Save to localStorage failed", err?.message || err);
   }
 };
+
+function trackEvent(event, payload = {}, context = {}) {
+  try {
+    if (typeof window === "undefined") return;
+    const client = window.telemetry;
+    if (client && typeof client.track === "function") {
+      client.track(event, payload, context);
+    }
+  } catch (err) {
+    console.warn("Telemetry track failed", err?.message || err);
+  }
+}
 const load   = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.state);
@@ -1230,6 +1267,13 @@ function renderComparatorFeedback(detail) {
     : "Ordering preserved across methods.";
 
   const title = scenarioLabel || scenarioName || "Comparator insights";
+
+  trackEvent("comparator.summary.received", {
+    scenario: scenarioName,
+    label: scenarioLabel,
+    totalEvents: detail.totalEvents,
+    isLive,
+  });
 
   panel.dataset.live = isLive ? "true" : "false";
   panel.innerHTML = `
@@ -2053,6 +2097,11 @@ function exportScenario() {
   a.download = "cdc_scenario.json";
   a.click();
   URL.revokeObjectURL(a.href);
+  trackEvent("workspace.scenario.exported", {
+    rows: payload.rows.length,
+    events: payload.events.length,
+    hasComparator: Boolean(payload.comparator?.summary),
+  });
 }
 
 function downloadScenarioTemplate(template) {
@@ -2105,6 +2154,11 @@ function importScenario(file) {
       }
       save(); renderSchema(); renderEditor(); renderTable(); renderJSONLog();
       renderTemplateGallery();
+      trackEvent("workspace.scenario.imported", {
+        rows: state.rows.length,
+        events: state.events.length,
+        scenarioId: state.scenarioId,
+      });
     } catch { alert("Invalid scenario JSON"); }
   };
   reader.readAsText(file);

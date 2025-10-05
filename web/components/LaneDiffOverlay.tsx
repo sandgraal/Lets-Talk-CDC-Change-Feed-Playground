@@ -1,4 +1,5 @@
 import type { LaneDiffResult } from "../../sim";
+import { track } from "../telemetry";
 
 type LaneDiffOverlayProps = {
   diff: LaneDiffResult | null;
@@ -62,7 +63,18 @@ export function LaneDiffOverlay({ diff }: LaneDiffOverlayProps) {
       </div>
 
       {(surfaceIssues.length > 0 || lag.samples.length > 0) && (
-        <details className="sim-shell__lane-diff-details">
+        <details
+          className="sim-shell__lane-diff-details"
+          onToggle={event => {
+            if ((event.target as HTMLDetailsElement).open) {
+              track("comparator.diff.opened", {
+                method: diff.method,
+                issues: diff.issues.length,
+                maxLag: diff.lag.max,
+              });
+            }
+          }}
+        >
           <summary>Diff details</summary>
           {surfaceIssues.length > 0 && (
             <ul className="sim-shell__lane-diff-list">

@@ -1,0 +1,163 @@
+{
+  "id": "payments",
+  "name": "Real-time Payments",
+  "description": "Model authorization, capture, and decline flows for transactions.",
+  "tags": [
+    "payments",
+    "idempotency",
+    "risk"
+  ],
+  "schema": [
+    {
+      "name": "transaction_id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "account_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "payment_method",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "authorized_at",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "captured_at",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "transaction_id": "PAY-88341",
+      "account_id": "ACC-0937",
+      "payment_method": "card",
+      "amount": 72.4,
+      "status": "captured",
+      "authorized_at": "2025-03-18T10:04:00Z",
+      "captured_at": "2025-03-18T10:06:10Z"
+    },
+    {
+      "transaction_id": "PAY-88355",
+      "account_id": "ACC-4201",
+      "payment_method": "wallet",
+      "amount": 15,
+      "status": "authorized",
+      "authorized_at": "2025-03-20T16:20:00Z",
+      "captured_at": null
+    },
+    {
+      "transaction_id": "PAY-88377",
+      "account_id": "ACC-0937",
+      "payment_method": "card",
+      "amount": 420,
+      "status": "declined",
+      "authorized_at": "2025-03-20T08:11:00Z",
+      "captured_at": null
+    }
+  ],
+  "ops": [
+    {
+      "t": 0,
+      "op": "insert",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-88341"
+      },
+      "after": {
+        "transaction_id": "PAY-88341",
+        "account_id": "ACC-0937",
+        "payment_method": "card",
+        "amount": 72.4,
+        "status": "authorized",
+        "authorized_at": "2025-03-18T10:04:00Z",
+        "captured_at": null
+      }
+    },
+    {
+      "t": 120,
+      "op": "update",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-88341"
+      },
+      "after": {
+        "transaction_id": "PAY-88341",
+        "account_id": "ACC-0937",
+        "payment_method": "card",
+        "amount": 72.4,
+        "status": "captured",
+        "authorized_at": "2025-03-18T10:04:00Z",
+        "captured_at": "2025-03-18T10:06:10Z"
+      }
+    },
+    {
+      "t": 200,
+      "op": "insert",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-88355"
+      },
+      "after": {
+        "transaction_id": "PAY-88355",
+        "account_id": "ACC-4201",
+        "payment_method": "wallet",
+        "amount": 15,
+        "status": "authorized",
+        "authorized_at": "2025-03-20T16:20:00Z",
+        "captured_at": null
+      }
+    },
+    {
+      "t": 240,
+      "op": "insert",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-88377"
+      },
+      "after": {
+        "transaction_id": "PAY-88377",
+        "account_id": "ACC-0937",
+        "payment_method": "card",
+        "amount": 420,
+        "status": "pending_review",
+        "authorized_at": "2025-03-20T08:11:00Z",
+        "captured_at": null
+      }
+    },
+    {
+      "t": 300,
+      "op": "update",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-88377"
+      },
+      "after": {
+        "transaction_id": "PAY-88377",
+        "account_id": "ACC-0937",
+        "payment_method": "card",
+        "amount": 420,
+        "status": "declined",
+        "authorized_at": "2025-03-20T08:11:00Z",
+        "captured_at": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "id": "orders",
+  "name": "Omnichannel Orders",
+  "description": "Track order lifecycle and fulfillment signals across channels.",
+  "tags": [
+    "orders",
+    "caching",
+    "omnichannel"
+  ],
+  "schema": [
+    {
+      "name": "order_id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "subtotal",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "shipping_method",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "updated_at",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "order_id": "ORD-1001",
+      "customer_id": "C-204",
+      "status": "processing",
+      "subtotal": 184.5,
+      "shipping_method": "Expedited",
+      "updated_at": "2025-03-20T15:04:00Z"
+    },
+    {
+      "order_id": "ORD-1002",
+      "customer_id": "C-412",
+      "status": "packed",
+      "subtotal": 92.1,
+      "shipping_method": "Standard",
+      "updated_at": "2025-03-20T14:45:00Z"
+    },
+    {
+      "order_id": "ORD-1003",
+      "customer_id": "C-102",
+      "status": "cancelled",
+      "subtotal": 248,
+      "shipping_method": "Store Pickup",
+      "updated_at": "2025-03-19T21:10:00Z"
+    }
+  ],
+  "ops": [
+    {
+      "t": 0,
+      "op": "insert",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-1001"
+      },
+      "after": {
+        "order_id": "ORD-1001",
+        "customer_id": "C-204",
+        "status": "pending",
+        "subtotal": 184.5,
+        "shipping_method": "Expedited",
+        "updated_at": "2025-03-20T14:40:00Z"
+      }
+    },
+    {
+      "t": 200,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-1001"
+      },
+      "after": {
+        "order_id": "ORD-1001",
+        "customer_id": "C-204",
+        "status": "processing",
+        "subtotal": 184.5,
+        "shipping_method": "Expedited",
+        "updated_at": "2025-03-20T15:04:00Z"
+      }
+    },
+    {
+      "t": 150,
+      "op": "insert",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-1002"
+      },
+      "after": {
+        "order_id": "ORD-1002",
+        "customer_id": "C-412",
+        "status": "packed",
+        "subtotal": 92.1,
+        "shipping_method": "Standard",
+        "updated_at": "2025-03-20T14:45:00Z"
+      }
+    },
+    {
+      "t": 250,
+      "op": "insert",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-1003"
+      },
+      "after": {
+        "order_id": "ORD-1003",
+        "customer_id": "C-102",
+        "status": "pending",
+        "subtotal": 248,
+        "shipping_method": "Store Pickup",
+        "updated_at": "2025-03-19T19:42:00Z"
+      }
+    },
+    {
+      "t": 360,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-1003"
+      },
+      "after": {
+        "order_id": "ORD-1003",
+        "customer_id": "C-102",
+        "status": "cancelled",
+        "subtotal": 248,
+        "shipping_method": "Store Pickup",
+        "updated_at": "2025-03-19T21:10:00Z"
+      }
+    }
+  ]
+}

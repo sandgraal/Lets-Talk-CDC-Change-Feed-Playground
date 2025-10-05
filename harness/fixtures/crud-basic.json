@@ -2,6 +2,11 @@
   "id": "crud-basic",
   "name": "CRUD Basic",
   "description": "Insert, update, and delete a single customer to highlight delete visibility.",
+  "tags": [
+    "crud",
+    "polling",
+    "basics"
+  ],
   "ops": [
     {
       "t": 100,

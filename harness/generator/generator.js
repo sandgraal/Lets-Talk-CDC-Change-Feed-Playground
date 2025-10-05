@@ -1,8 +1,16 @@
 import pg from "pg";
 import fs from "fs";
+import path from "path";
 
-const scenarioPath = process.env.SCENARIO || "./scenario.json";
+const scenarioPath = process.env.SCENARIO_PATH || process.env.SCENARIO || path.resolve(process.cwd(), "../scenario.json");
+if (!fs.existsSync(scenarioPath)) {
+  console.error(`Scenario file not found at ${scenarioPath}`);
+  process.exit(1);
+}
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));
+scenario.ops = Array.isArray(scenario.ops)
+  ? [...scenario.ops].sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
+  : [];
 
 const client = new pg.Client({
   host: process.env.PGHOST || "localhost",
@@ -11,7 +19,21 @@ const client = new pg.Client({
   database: process.env.PGDATABASE || "demo",
 });
 
-await client.connect();
+const MAX_RETRIES = Number(process.env.CONNECT_RETRIES || 20);
+for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  try {
+    await client.connect();
+    break;
+  } catch (err) {
+    if (attempt === MAX_RETRIES) {
+      console.error("Failed to connect to Postgres", err?.message || err);
+      process.exit(1);
+    }
+    const backoff = Math.min(5000, attempt * 250);
+    console.log(`Postgres unavailable (attempt ${attempt}). Retrying in ${backoff}ms`);
+    await new Promise(resolve => setTimeout(resolve, backoff));
+  }
+}
 
 const start = Date.now();
 
@@ -42,4 +64,5 @@ for (const op of scenario.ops) {
 }
 
 await client.end();
-console.log("scenario complete");
+console.log(`scenario '${scenario.id || "custom"}' complete: ${scenario.ops.length} ops`);
+process.exit(0);
