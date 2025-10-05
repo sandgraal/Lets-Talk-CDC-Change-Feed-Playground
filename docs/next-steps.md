@@ -3,17 +3,17 @@
 _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`. React comparator now renders multi-lane polling/trigger/log preview with tunable method controls._
 
 ## Status Snapshot
-- Completed: Comparator overlays, deterministic clock controls, harness automation, telemetry client, and CI/readiness assets are in place (see sections below for detail).
-- Outstanding focus: Guided onboarding spotlight scripting, scenario module guardrails (lint + CI), feature flag hook and rollout calendar, honest callouts copy pairing, timeline performance strategy, Loom walkthrough recording, and the recurring scenario taxonomy review.
+- Completed: Guided workspace→comparator spotlight, scenario guardrails, comparator overlays, deterministic clock controls, harness automation, telemetry client, and CI/readiness assets are in place (see sections below for detail).
+- Outstanding focus: Guided tour tooltip-sync story for the legacy shell, feature flag hook and rollout calendar, honest callouts copy pairing, timeline performance strategy, Loom walkthrough recording, and the recurring scenario taxonomy review.
 
 ## Implementation Plan (Remaining Deliverables)
 1. Guided onboarding polish
-   - Script the dual-track spotlight sequence that reuses comparator callouts.
-   - File and prioritize the tooltip synchronization story for the legacy shell.
-   - Align guided tour milestones with telemetry events (`tour_started` / `tour_completed`).
+   - ✅ Scripted the dual-track spotlight sequence that reuses comparator callouts.
+   - ☐ File and prioritize the tooltip synchronization story for the legacy shell.
+   - ✅ Aligned guided tour milestones with telemetry events (`tour.started` / `tour.completed` / `tour.dismissed`).
 2. Scenario source-of-truth guardrails
-   - Add a lint rule that blocks ad-hoc scenario JSON outside `assets/shared-scenarios.js`.
-   - Extend CI preflight with a check diffing generated bundles against the shared module output.
+   - ✅ Added a lint rule that blocks ad-hoc scenario JSON outside `assets/shared-scenarios.js`.
+   - ✅ Extended CI preflight with a check diffing generated bundles against the shared module output.
 3. Feature flag rollout readiness
    - Implement the `comparator_v2` runtime hook in the shell bootstrap.
    - Capture the staged rollout calendar inside `docs/launch-readiness.md` and circulate with Solutions Engineering.

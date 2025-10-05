@@ -41,6 +41,9 @@
     "comparator.summary.copied": { question: "activation" },
     "comparator.diff.opened": { question: "funnel_drop" },
     "comparator.clock.control": { question: "funnel_drop" },
+    "tour.started": { question: "funnel_drop" },
+    "tour.completed": { question: "activation" },
+    "tour.dismissed": { question: "funnel_drop" },
     "workspace.share.generated": { question: "share_collaboration" },
     "workspace.scenario.imported": { question: "scenario_completeness" },
     "telemetry.flush": { question: "activation" }

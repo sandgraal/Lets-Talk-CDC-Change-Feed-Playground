@@ -1076,7 +1076,12 @@ export function App() {
         </button>
       </div>
 
-      <div className="sim-shell__actions" role="group" aria-label="Playback controls">
+      <div
+        className="sim-shell__actions"
+        role="group"
+        aria-label="Playback controls"
+        data-tour-target="comparator-actions"
+      >
         <button type="button" onClick={handleStart} disabled={isPlaying}>
           Start
         </button>
@@ -1227,11 +1232,29 @@ export function App() {
         </div>
       )}
 
-      <div className="sim-shell__lane-grid">
-        {laneMetrics.map(({ method, metrics, events }) => {
+      <div className="sim-shell__lane-grid" data-tour-target="comparator-lanes">
+        {laneMetrics.map(({ method, metrics, events }, laneIndex) => {
           const description = METHOD_DESCRIPTIONS[method];
           const config = methodConfig[method];
           const diff = laneDiffs.get(method) ?? null;
+          const isPrimaryLane = laneIndex === 0;
+          const callouts: Array<{ text: string; tone: "warning" | "info" }> = [];
+
+          if (method === "polling" && metrics.deletesPct < 100) {
+            callouts.push({
+              text: `Hard deletes missed: ${metrics.deletesPct.toFixed(0)}% captured.`,
+              tone: "warning",
+            });
+          }
+
+          if (method === "trigger") {
+            callouts.push({ text: "Adds write latency via trigger execution.", tone: "info" });
+          }
+
+          if (method === "log") {
+            callouts.push({ text: "Reads WAL/Binlog post-commit with strict ordering.", tone: "info" });
+          }
+
           const filteredEvents = events.filter(event => {
             if (!eventOpsSet.has(event.op as EventOp)) return false;
             if (!eventSearchTerms.length) return true;
@@ -1266,7 +1289,10 @@ export function App() {
                 </span>
               </header>
 
-              <div className="sim-shell__metrics">
+              <div
+                className="sim-shell__metrics"
+                data-tour-target={isPrimaryLane ? "comparator-metrics" : undefined}
+              >
                 <MetricsStrip {...metrics} />
               </div>
 
@@ -1305,16 +1331,18 @@ export function App() {
                 )}
               </dl>
 
-              {method === "polling" && metrics.deletesPct < 100 && (
-                <p className="sim-shell__callout sim-shell__callout--warning">
-                  Hard deletes missed: {metrics.deletesPct.toFixed(0)}% captured.
-                </p>
-              )}
-              {method === "trigger" && (
-                <p className="sim-shell__callout">Adds write latency via trigger execution.</p>
-              )}
-              {method === "log" && (
-                <p className="sim-shell__callout">Reads WAL/Binlog post-commit with strict ordering.</p>
+              {callouts.length > 0 && (
+                <div className="sim-shell__callouts">
+                  {callouts.map((callout, calloutIndex) => (
+                    <p
+                      key={`${method}-callout-${calloutIndex}`}
+                      className={`sim-shell__callout${callout.tone === "warning" ? " sim-shell__callout--warning" : ""}`}
+                      data-tour-target={isPrimaryLane && calloutIndex === 0 ? "comparator-callouts" : undefined}
+                    >
+                      {callout.text}
+                    </p>
+                  ))}
+                </div>
               )}
 
               {showEventList ? (

@@ -147,6 +147,7 @@ const els = {
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
+  guidedTourButton: document.getElementById("btnGuidedTour"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
   quickstartCards: {
@@ -206,6 +207,60 @@ const learningConfig = [
     isComplete: () => state.events.length > 0,
   },
 ];
+
+const TOUR_DEFAULT_TIMEOUT = 4500;
+const TOUR_COMPARATOR_TIMEOUT = 7000;
+const GUIDED_TOUR_STEPS = [
+  {
+    id: "workspace-schema",
+    selector: "#schema",
+    title: "Model your schema",
+    description: "Add at least one column and mark a primary key so downstream mutations can locate rows.",
+  },
+  {
+    id: "workspace-rows",
+    selector: "#table-state",
+    title: "Populate rows",
+    description: "Seed sample data or enter your own records before you start emitting CDC events.",
+  },
+  {
+    id: "workspace-events",
+    selector: "#change-feed",
+    title: "Stream events",
+    description: "Trigger inserts, updates, and deletes here—then pivot to the comparator to see how each method behaves.",
+  },
+  {
+    id: "comparator-callouts",
+    selector: '[data-tour-target="comparator-callouts"]',
+    title: "Honest method callouts",
+    timeout: TOUR_COMPARATOR_TIMEOUT,
+    getDescription: element => {
+      const text = element?.textContent ? element.textContent.trim() : "";
+      if (text) {
+        return `${text} These callouts are reused in the spotlight so the comparator and workspace stay in sync.`;
+      }
+      return "Each comparator lane surfaces trade-off copy so the spotlight can reference the exact same language.";
+    },
+  },
+  {
+    id: "comparator-metrics",
+    selector: '[data-tour-target="comparator-metrics"]',
+    title: "Compare lane metrics",
+    timeout: TOUR_COMPARATOR_TIMEOUT,
+    description:
+      "Lag, throughput, delete capture, ordering, and consistency update live. Use the diff overlay just below to see missing, extra, and out-of-order operations.",
+  },
+  {
+    id: "comparator-actions",
+    selector: '[data-tour-target="comparator-actions"]',
+    title: "Drive the deterministic clock",
+    timeout: TOUR_COMPARATOR_TIMEOUT,
+    description:
+      "Start, pause, or step the timeline. The deterministic clock (`cdcComparatorClock`) powers this spotlight and any guided replay you script.",
+  },
+];
+
+let activeTour = null;
 
 function getTemplateById(id) {
   if (!id) return null;
@@ -1179,6 +1234,254 @@ function broadcastComparatorState() {
   }
 }
 
+function waitForElement(selector, timeout = TOUR_DEFAULT_TIMEOUT) {
+  return new Promise(resolve => {
+    const existing = document.querySelector(selector);
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+
+    let done = false;
+    const observer = new MutationObserver(() => {
+      const candidate = document.querySelector(selector);
+      if (candidate) {
+        done = true;
+        observer.disconnect();
+        window.clearTimeout(timerId);
+        resolve(candidate);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    const timerId = window.setTimeout(() => {
+      if (!done) {
+        observer.disconnect();
+        resolve(null);
+      }
+    }, timeout);
+  });
+}
+
+function createTourUi() {
+  const scrim = document.createElement("div");
+  scrim.className = "tour-scrim";
+  scrim.setAttribute("aria-hidden", "true");
+
+  const panel = document.createElement("div");
+  panel.className = "tour-panel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("tabindex", "-1");
+  panel.setAttribute("aria-live", "polite");
+  panel.innerHTML = `
+    <div class="tour-panel__header">
+      <span class="tour-panel__step" aria-live="polite"></span>
+      <button type="button" class="tour-panel__close" aria-label="Exit walkthrough">×</button>
+    </div>
+    <h3 class="tour-panel__title"></h3>
+    <p class="tour-panel__body"></p>
+    <div class="tour-panel__controls">
+      <button type="button" class="tour-panel__prev btn-ghost">Back</button>
+      <button type="button" class="tour-panel__next btn-primary">Next</button>
+    </div>
+  `;
+
+  return {
+    scrim,
+    panel,
+    stepLabel: panel.querySelector(".tour-panel__step"),
+    title: panel.querySelector(".tour-panel__title"),
+    body: panel.querySelector(".tour-panel__body"),
+    nextBtn: panel.querySelector(".tour-panel__next"),
+    prevBtn: panel.querySelector(".tour-panel__prev"),
+    closeBtn: panel.querySelector(".tour-panel__close"),
+  };
+}
+
+function clearTourHighlight() {
+  if (activeTour?.highlightEl) {
+    activeTour.highlightEl.classList.remove("tour-highlight");
+    activeTour.highlightEl.removeAttribute("data-tour-active");
+    activeTour.highlightEl = null;
+  }
+}
+
+function updateTourUi(stepIndex, step, placeholderDescription = "") {
+  if (!activeTour?.ui) return;
+  const { ui, steps } = activeTour;
+  if (!ui.stepLabel || !ui.title || !ui.body) return;
+  ui.stepLabel.textContent = `Step ${stepIndex + 1} of ${steps.length}`;
+  ui.title.textContent = step?.title ?? "";
+  if (typeof step?.description === "string") {
+    ui.body.textContent = step.description;
+  } else {
+    ui.body.textContent = placeholderDescription;
+  }
+  if (ui.prevBtn) ui.prevBtn.disabled = stepIndex === 0;
+  if (ui.nextBtn) ui.nextBtn.textContent = stepIndex === steps.length - 1 ? "Finish" : "Next";
+}
+
+function showTourStep(stepIndex) {
+  if (!activeTour) return;
+  const step = activeTour.steps[stepIndex];
+  if (!step) {
+    stopGuidedTour("missing-step");
+    return;
+  }
+
+  updateTourUi(stepIndex, step);
+
+  const timeout = typeof step.timeout === "number" ? step.timeout : TOUR_DEFAULT_TIMEOUT;
+  const token = Symbol("tour-step");
+  activeTour.pendingToken = token;
+  waitForElement(step.selector, timeout)
+    .then(element => {
+      if (!activeTour || activeTour.pendingToken !== token) return;
+
+      if (!element) {
+        handleTourNext();
+        return;
+      }
+
+      clearTourHighlight();
+      element.classList.add("tour-highlight");
+      element.setAttribute("data-tour-active", "true");
+      activeTour.highlightEl = element;
+
+      try {
+        element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      } catch {
+        /* ignore */
+      }
+
+      const description = typeof step.getDescription === "function"
+        ? step.getDescription(element)
+        : step.description || "";
+
+      if (activeTour?.ui?.body) {
+        activeTour.ui.body.textContent = description;
+      }
+      if (activeTour?.ui?.panel) {
+        activeTour.ui.panel.focus({ preventScroll: true });
+      }
+    })
+    .catch(() => {
+      if (!activeTour) return;
+      handleTourNext();
+    });
+}
+
+function handleTourNext() {
+  if (!activeTour) return;
+  const nextIndex = activeTour.index + 1;
+  if (nextIndex >= activeTour.steps.length) {
+    finishTour(true, "completed");
+    return;
+  }
+  activeTour.index = nextIndex;
+  showTourStep(nextIndex);
+}
+
+function handleTourPrev() {
+  if (!activeTour) return;
+  const prevIndex = Math.max(0, activeTour.index - 1);
+  activeTour.index = prevIndex;
+  showTourStep(prevIndex);
+}
+
+function handleTourClose() {
+  stopGuidedTour("close");
+}
+
+function handleTourKeydown(event) {
+  if (!activeTour) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    stopGuidedTour("escape");
+    return;
+  }
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    handleTourNext();
+    return;
+  }
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    handleTourPrev();
+  }
+}
+
+function finishTour(completed, reason) {
+  if (!activeTour) return;
+  clearTourHighlight();
+  const { ui, startedAt, steps, index, keydownHandler } = activeTour;
+
+  if (ui) {
+    if (ui.nextBtn) ui.nextBtn.removeEventListener("click", handleTourNext);
+    if (ui.prevBtn) ui.prevBtn.removeEventListener("click", handleTourPrev);
+    if (ui.closeBtn) ui.closeBtn.removeEventListener("click", handleTourClose);
+    ui.panel?.remove();
+    ui.scrim?.remove();
+  }
+
+  document.removeEventListener("keydown", keydownHandler);
+  document.body.classList.remove("tour-active");
+
+  const durationMs = Date.now() - startedAt;
+  if (completed) {
+    trackEvent("tour.completed", { totalSteps: steps.length, durationMs });
+  } else {
+    trackEvent("tour.dismissed", {
+      totalSteps: steps.length,
+      durationMs,
+      step: Math.min(index + 1, steps.length),
+      reason,
+    });
+  }
+
+  activeTour = null;
+}
+
+function stopGuidedTour(reason = "manual") {
+  finishTour(false, reason);
+}
+
+function startGuidedTour() {
+  if (activeTour) return;
+  const ui = createTourUi();
+  document.body.appendChild(ui.scrim);
+  document.body.appendChild(ui.panel);
+  document.body.classList.add("tour-active");
+
+  const keydownHandler = event => handleTourKeydown(event);
+
+  if (ui.nextBtn) ui.nextBtn.addEventListener("click", handleTourNext);
+  if (ui.prevBtn) ui.prevBtn.addEventListener("click", handleTourPrev);
+  if (ui.closeBtn) ui.closeBtn.addEventListener("click", handleTourClose);
+
+  document.addEventListener("keydown", keydownHandler);
+
+  activeTour = {
+    steps: GUIDED_TOUR_STEPS,
+    index: 0,
+    startedAt: Date.now(),
+    highlightEl: null,
+    ui,
+    pendingToken: null,
+    keydownHandler,
+  };
+
+  trackEvent("tour.started", {
+    totalSteps: GUIDED_TOUR_STEPS.length,
+    source: "workspace+comparator",
+  });
+
+  if (ui.panel) ui.panel.focus({ preventScroll: true });
+  showTourStep(0);
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("cdc:workspace-request", () => {
     broadcastComparatorState();
@@ -1202,6 +1505,7 @@ if (typeof window !== "undefined") {
     const template = detail?.id ? getTemplateById(detail.id) : detail;
     if (template) openScenarioPreview(template);
   });
+  window.addEventListener("cdc:start-guided-tour", () => startGuidedTour());
 
   if (!window.cdcComparatorClock) {
     window.cdcComparatorClock = {
@@ -1211,6 +1515,10 @@ if (typeof window !== "undefined") {
       seek: (timeMs, stepMs) => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "seek", timeMs, stepMs } })),
       reset: () => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "reset" } })),
     };
+  }
+
+  if (typeof window.startGuidedTour !== "function") {
+    window.startGuidedTour = startGuidedTour;
   }
 }
 
@@ -2214,6 +2522,9 @@ function quickstartEmitEvent() {
 function bindUiHandlers() {
   if (els.onboardingButton) {
     els.onboardingButton.onclick = () => showOnboarding();
+  }
+  if (els.guidedTourButton) {
+    els.guidedTourButton.onclick = () => startGuidedTour();
   }
   if (els.onboardingClose) {
     els.onboardingClose.onclick = () => hideOnboarding(true);
