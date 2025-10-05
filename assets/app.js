@@ -626,12 +626,18 @@ function deriveOpsFromEvents(events) {
 function hideOnboarding(markSeen = false) {
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = true;
+  document.body.classList.remove("is-onboarding");
   if (markSeen) localStorage.setItem(STORAGE_KEYS.onboarding, "seen");
 }
 
 function showOnboarding() {
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = false;
+  document.body.classList.add("is-onboarding");
+  const dialog = els.onboardingOverlay.querySelector(".onboarding-dialog");
+  if (dialog && typeof dialog.focus === "function") {
+    dialog.focus({ preventScroll: true });
+  }
 }
 
 function maybeShowOnboarding() {
@@ -2703,8 +2709,15 @@ function bindUiHandlers() {
   }
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && els.scenarioPreviewModal && !els.scenarioPreviewModal.hidden) {
+    if (event.key !== "Escape") return;
+    if (els.scenarioPreviewModal && !els.scenarioPreviewModal.hidden) {
       closeScenarioPreview();
+      event.stopPropagation();
+      return;
+    }
+    if (els.onboardingOverlay && !els.onboardingOverlay.hidden) {
+      hideOnboarding(true);
+      event.stopPropagation();
     }
   });
 

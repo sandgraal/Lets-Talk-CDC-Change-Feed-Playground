@@ -1145,7 +1145,7 @@ select:focus {
   align-items: center;
   justify-content: center;
   padding: clamp(24px, 7vw, 80px);
-  z-index: 99;
+  z-index: 12000;
 }
 .onboarding[hidden] { display: none; }
 .onboarding-dialog {
@@ -1187,6 +1187,10 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+body.is-onboarding {
+  overflow: hidden;
 }
 
 .footer {
