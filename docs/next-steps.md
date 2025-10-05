@@ -3,11 +3,11 @@
 _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm run build:web` → `assets/generated/ui-shell.js`. React comparator now renders multi-lane polling/trigger/log preview with tunable method controls._
 
 ## Immediate Decisions
-- **Guided insight UX**: decide how comparator callouts integrate with onboarding/tooltips now that insights surface in the legacy UI.
-- **Persisting control state**: determine how method tuning persists across exports/shares (extend payload schema vs. runtime defaults).
-- **State container**: confirm whether we stay with lightweight emitters or introduce Zustand/RxJS before guided tour scripting.
-- **Scenario source of truth**: converge scenario definitions (legacy templates, React comparator, harness) on one module to prevent drift.
-- **Feature flag posture**: decide what slices stay behind runtime toggles so we can merge React comparator work without blocking release cadence.
+- **Guided insight UX** _(Decision: dual-track)_ → Keep React comparator callouts inline, but launch an onboarding spotlight sequence that reuses the same copy. Action: script spotlight steps after lane diff overlays land; file story for tooltip synchronization in the legacy shell.
+- **Persisting control state** _(Decision: extend payload)_ → Export/share payloads now include method tuning and active method set. Action: add schema bump to export contracts and schedule consumer migration comms with solutions engineering.
+- **State container** _(Decision: stay lightweight)_ → Continue with event emitter + React state for this release. Action: document revisit trigger tied to guided tour scripting; add ADR noting criteria that would push us to Zustand/RxJS.
+- **Scenario source of truth** _(Decision: shared module)_ → `assets/shared-scenarios.js` owns canonical templates; React + legacy import from `web/scenarios.ts`. Action: enforce lint rule to block local scenario JSON, and add CI check ensuring generated bundles match shared module.
+- **Feature flag posture** _(Decision: launch behind `comparator_v2`)_ → Ship comparator enhancements gated via runtime flag with staged rollout (internal → beta → GA). Action: implement flag hook in shell bootstrap and draft the rollout calendar captured in Launch Readiness.
 
 ## Near-Term Build Goals
 1. Persist workspace scenarios + advanced controls into export/import/share flows, including comparator insight snapshots.
