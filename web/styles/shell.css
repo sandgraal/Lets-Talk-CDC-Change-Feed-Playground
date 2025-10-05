@@ -71,6 +71,20 @@
   color: #1f2937;
   font-size: 0.85rem;
 }
+.sim-shell__tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.sim-shell__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
 
 .sim-shell__summary {
   margin: 0;
@@ -78,15 +92,33 @@
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: linear-gradient(135deg, rgba(239, 246, 255, 0.85), rgba(248, 250, 252, 0.9));
-  list-style: none;
-  display: grid;
-  gap: 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   font-size: 0.95rem;
   color: #1f2937;
 }
-
+.sim-shell__summary ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.5rem;
+}
 .sim-shell__summary strong {
   font-weight: 600;
+}
+.sim-shell__summary-copy {
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  align-self: flex-start;
+}
+.sim-shell__summary-copy:hover {
+  background: rgba(37, 99, 235, 0.2);
 }
 
 .sim-shell__method-toggle {
@@ -376,4 +408,15 @@
 }
 .sim-shell__scenario-download:hover {
   background: rgba(148, 163, 184, 0.2);
+}
+.sim-shell__scenario-preview {
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+}
+.sim-shell__scenario-preview:hover {
+  background: rgba(37, 99, 235, 0.26);
 }

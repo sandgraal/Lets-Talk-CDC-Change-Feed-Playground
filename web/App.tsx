@@ -280,6 +280,7 @@ export function App() {
     () => storedPrefs?.scenarioId ?? SCENARIOS[0].name,
   );
   const [scenarioFilter, setScenarioFilter] = useState<string>("");
+  const [scenarioTags, setScenarioTags] = useState<string[]>([]);
   const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
     () => initialActiveMethods,
   );
@@ -291,6 +292,7 @@ export function App() {
   const [methodConfig, setMethodConfig] = useState<MethodConfigMap>(
     () => initialMethodConfig,
   );
+  const [summaryCopied, setSummaryCopied] = useState(false);
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
@@ -304,22 +306,32 @@ export function App() {
         list.unshift(liveScenario);
       }
     }
-    if (!scenarioFilter.trim()) return list;
     const query = scenarioFilter.trim().toLowerCase();
     return list.filter(option => {
       if (option.name === LIVE_SCENARIO_NAME) return true;
-      const haystack = [option.label, option.description, option.highlight, option.name]
+      if (scenarioTags.length) {
+        const optionTags = option.tags || [];
+        if (!scenarioTags.every(tag => optionTags.includes(tag))) return false;
+      }
+      if (!query) return true;
+      const haystack = [option.label, option.description, option.highlight, option.name, (option.tags || []).join(" ")]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(query);
     });
-  }, [liveScenario, scenarioFilter]);
+  }, [liveScenario, scenarioFilter, scenarioTags]);
 
   const scenario = useMemo(() => {
     if (!scenarioOptions.length) return SCENARIOS[0];
     return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
   }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    if (!summaryCopied) return;
+    const timer = window.setTimeout(() => setSummaryCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [summaryCopied]);
 
   useEffect(() => {
     if (!scenarioOptions.length) return;
@@ -328,14 +340,22 @@ export function App() {
       setScenarioId(scenarioOptions[0].name);
     }
   }, [scenarioId, scenarioOptions]);
+  useEffect(() => {
+    if (!summaryCopied) return;
+    const timer = window.setTimeout(() => setSummaryCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [summaryCopied]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ query?: string }>).detail;
+      const detail = (event as CustomEvent<{ query?: string; tags?: string[] }>).detail;
       const query = detail?.query ?? "";
+      const tags = Array.isArray(detail?.tags) ? detail.tags.map(String) : [];
       setScenarioFilter(String(query));
+      setScenarioTags(tags);
     };
 
     window.addEventListener("cdc:scenario-filter", handler as EventListener);
@@ -477,10 +497,12 @@ export function App() {
           totalEvents,
           summary: summaryDetail,
           lanes: lanesDetail,
+          analytics,
+          tags: scenarioTags,
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents]);
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -584,6 +606,33 @@ export function App() {
     URL.revokeObjectURL(link.href);
   }, []);
 
+  const handleScenarioPreview = useCallback((target: ShellScenario) => {
+    window.dispatchEvent(
+      new CustomEvent("cdc:preview-scenario", {
+        detail: target,
+      }),
+    );
+  }, []);
+
+  const handleCopySummary = useCallback(() => {
+    if (!summary) return;
+    const parts: string[] = [];
+    parts.push(`${scenario.label}: ${scenario.description}`);
+    parts.push(`Methods: ${activeMethods.map(method => METHOD_LABELS[method]).join(", ")}`);
+    if (summary.bestLag) {
+      parts.push(`Fastest ${METHOD_LABELS[summary.bestLag.method]} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
+    }
+    if (summary.lagSpread > 0) {
+      parts.push(`${METHOD_LABELS[summary.worstLag.method]} trails by ${Math.round(summary.lagSpread)}ms`);
+    }
+    parts.push(`Lowest delete capture: ${METHOD_LABELS[summary.lowestDeletes.method]} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
+    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ") : "All lanes aligned"}`);
+    if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
+    navigator.clipboard
+      .writeText(parts.join('\n'))
+      .then(() => setSummaryCopied(true))
+      .catch(() => setSummaryCopied(false));
+  }, [summary, scenario, activeMethods]);
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -650,6 +699,26 @@ export function App() {
     () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
     [laneMetrics],
   );
+  const analytics = useMemo(() => {
+    return laneMetrics.map(({ method, events }) => {
+      let inserts = 0;
+      let updates = 0;
+      let deletes = 0;
+      events.forEach(evt => {
+        if (evt.op === 'c') inserts += 1;
+        else if (evt.op === 'u') updates += 1;
+        else if (evt.op === 'd') deletes += 1;
+      });
+      return {
+        method,
+        label: METHOD_LABELS[method],
+        total: events.length,
+        inserts,
+        updates,
+        deletes,
+      };
+    });
+  }, [laneMetrics]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
@@ -695,6 +764,13 @@ export function App() {
             >
               Download JSON
             </button>
+            <button
+              type="button"
+              className="sim-shell__scenario-preview"
+              onClick={() => handleScenarioPreview(scenario)}
+            >
+              Preview
+            </button>
           </div>
           <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
             {METHOD_ORDER.map(method => (
@@ -720,6 +796,13 @@ export function App() {
           {scenario.highlight}
         </p>
       )}
+      {scenario.tags?.length ? (
+        <div className="sim-shell__tag-row" aria-label="Scenario tags">
+          {scenario.tags.map(tag => (
+            <span key={tag} className="sim-shell__tag-chip">#{tag}</span>
+          ))}
+        </div>
+      ) : null}
       {scenario.stats && (
         <p className="sim-shell__description sim-shell__description--meta" aria-live="polite">
           {scenario.stats.rows} rows · {scenario.stats.ops} ops
@@ -850,26 +933,31 @@ export function App() {
       </div>
 
       {summary && (
-        <ul className="sim-shell__summary" aria-live="polite">
-          <li>
-            <strong>Lag spread:</strong> {METHOD_LABELS[summary.bestLag.method]} is leading at
-            {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
-            {summary.lagSpread > 0
-              ? ` — ${METHOD_LABELS[summary.worstLag.method]} trails by ${summary.lagSpread.toFixed(0)}ms`
-              : " (no spread)"}
-          </li>
-          <li>
-            <strong>Delete capture:</strong> {METHOD_LABELS[summary.lowestDeletes.method]} is lowest at
-            {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_LABELS[summary.highestDeletes.method]}
-            {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
-          </li>
-          <li>
-            <strong>Ordering:</strong>
-            {summary.orderingIssues.length === 0
-              ? " All methods preserved ordering"
-              : ` Issues: ${summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ")}`}
-          </li>
-        </ul>
+        <div className="sim-shell__summary" aria-live="polite">
+          <ul>
+            <li>
+              <strong>Lag spread:</strong> {METHOD_LABELS[summary.bestLag.method]} is leading at
+              {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
+              {summary.lagSpread > 0
+                ? ` — ${METHOD_LABELS[summary.worstLag.method]} trails by ${summary.lagSpread.toFixed(0)}ms`
+                : " (no spread)"}
+            </li>
+            <li>
+              <strong>Delete capture:</strong> {METHOD_LABELS[summary.lowestDeletes.method]} is lowest at
+              {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_LABELS[summary.highestDeletes.method]}
+              {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
+            </li>
+            <li>
+              <strong>Ordering:</strong>
+              {summary.orderingIssues.length === 0
+                ? " All methods preserved ordering"
+                : ` Issues: ${summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ")}`}
+            </li>
+          </ul>
+          <button type="button" className="sim-shell__summary-copy" onClick={handleCopySummary}>
+            {summaryCopied ? "Copied" : "Copy summary"}
+          </button>
+        </div>
       )}
 
       <div className="sim-shell__lane-grid">

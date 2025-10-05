@@ -126,6 +126,16 @@ const els = {
   downloadNdjson: document.getElementById("btnDownloadNdjson"),
   comparatorFeedback: document.getElementById("comparatorFeedback"),
   scenarioFilter: document.getElementById("scenarioFilter"),
+  templateTagBar: document.getElementById("templateTagBar"),
+  scenarioPreviewModal: document.getElementById("scenarioPreviewModal"),
+  scenarioPreviewClose: document.getElementById("scenarioPreviewClose"),
+  scenarioPreviewTitle: document.getElementById("scenarioPreviewTitle"),
+  scenarioPreviewDescription: document.getElementById("scenarioPreviewDescription"),
+  scenarioPreviewTags: document.getElementById("scenarioPreviewTags"),
+  scenarioPreviewRows: document.getElementById("scenarioPreviewRows"),
+  scenarioPreviewOps: document.getElementById("scenarioPreviewOps"),
+  scenarioPreviewLoad: document.getElementById("scenarioPreviewLoad"),
+  scenarioPreviewDownload: document.getElementById("scenarioPreviewDownload"),
   learningSteps: document.getElementById("learningSteps"),
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
@@ -160,6 +170,8 @@ const uiState = {
   selectedEventIndex: null, // index within state.events
   lastShareId: null,
   scenarioFilter: "",
+  scenarioTags: [],
+  previewTemplate: null,
   pendingShareId: (() => {
     if (typeof window === "undefined") return null;
     try {
@@ -207,14 +219,21 @@ function renderTemplateGallery() {
     els.scenarioFilter.value = uiState.scenarioFilter;
   }
 
+  const allTags = Array.from(new Set(
+    SCENARIO_TEMPLATES.flatMap(template => template.tags || [])
+  )).sort((a, b) => a.localeCompare(b));
+  renderTemplateTags(allTags);
+
   const filter = (uiState.scenarioFilter || "").trim().toLowerCase();
   const templates = SCENARIO_TEMPLATES.filter(template => {
+    if (!matchesTagFilters(template)) return false;
     if (!filter) return true;
     const haystack = [
       template.name,
       template.description,
       template.highlight,
       template.id,
+      (template.tags || []).join(" "),
     ]
       .filter(Boolean)
       .join(" ")
@@ -241,10 +260,23 @@ function renderTemplateGallery() {
     const desc = document.createElement("p");
     desc.textContent = template.description;
 
-     const meta = document.createElement("p");
-     meta.className = "template-meta";
-     const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
-     meta.textContent = `${template.rows?.length ?? 0} rows · ${opsCount} ops`;
+    const meta = document.createElement("p");
+    meta.className = "template-meta";
+    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+    meta.textContent = `${template.rows?.length ?? 0} rows · ${opsCount} ops`;
+
+    const tagRow = document.createElement("div");
+    tagRow.className = "template-chip-row";
+    (template.tags || []).forEach(tag => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "template-chip";
+      const active = uiState.scenarioTags.includes(tag);
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
+      chip.textContent = `#${tag}`;
+      chip.onclick = () => toggleScenarioTag(tag);
+      tagRow.appendChild(chip);
+    });
 
     const button = document.createElement("button");
     button.type = "button";
@@ -258,6 +290,18 @@ function renderTemplateGallery() {
       };
     }
 
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.className = "btn-ghost template-preview";
+    previewBtn.textContent = "Preview";
+    previewBtn.onclick = () => openScenarioPreview(template);
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "btn-ghost template-download";
+    downloadBtn.textContent = "Download JSON";
+    downloadBtn.onclick = () => downloadScenarioTemplate(template);
+
     card.appendChild(title);
     card.appendChild(desc);
     card.appendChild(meta);
@@ -267,15 +311,188 @@ function renderTemplateGallery() {
       highlight.textContent = template.highlight;
       card.appendChild(highlight);
     }
-    const downloadBtn = document.createElement("button");
-    downloadBtn.type = "button";
-    downloadBtn.className = "btn-ghost template-download";
-    downloadBtn.textContent = "Download JSON";
-    downloadBtn.onclick = () => downloadScenarioTemplate(template);
-    card.appendChild(button);
-    card.appendChild(downloadBtn);
+    if (tagRow.childElementCount) {
+      card.appendChild(tagRow);
+    }
+    const actions = document.createElement("div");
+    actions.className = "template-actions";
+    actions.appendChild(button);
+    actions.appendChild(previewBtn);
+    actions.appendChild(downloadBtn);
+    card.appendChild(actions);
     els.templateGallery.appendChild(card);
   });
+}
+
+function matchesTagFilters(template) {
+  if (!uiState.scenarioTags.length) return true;
+  if (!Array.isArray(template.tags) || !template.tags.length) return false;
+  return uiState.scenarioTags.every(tag => template.tags.includes(tag));
+}
+
+function renderTemplateTags(allTags) {
+  if (!els.templateTagBar) return;
+  els.templateTagBar.innerHTML = "";
+  if (!allTags.length) return;
+
+  allTags.forEach(tag => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "template-tag";
+    const active = uiState.scenarioTags.includes(tag);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.textContent = `#${tag}`;
+    btn.onclick = () => toggleScenarioTag(tag);
+    els.templateTagBar.appendChild(btn);
+  });
+
+  if (uiState.scenarioTags.length) {
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "template-tag template-tag--clear";
+    clear.textContent = "Clear tags";
+    clear.onclick = () => {
+      uiState.scenarioTags = [];
+      saveTemplateTags(uiState.scenarioTags);
+      renderTemplateGallery();
+      window.dispatchEvent(new CustomEvent("cdc:scenario-filter", {
+        detail: { query: uiState.scenarioFilter, tags: uiState.scenarioTags },
+      }));
+    };
+    els.templateTagBar.appendChild(clear);
+  }
+}
+
+function toggleScenarioTag(tag) {
+  const idx = uiState.scenarioTags.indexOf(tag);
+  if (idx === -1) {
+    uiState.scenarioTags.push(tag);
+  } else {
+    uiState.scenarioTags.splice(idx, 1);
+  }
+  saveTemplateTags(uiState.scenarioTags);
+  renderTemplateGallery();
+  window.dispatchEvent(new CustomEvent("cdc:scenario-filter", {
+    detail: { query: uiState.scenarioFilter, tags: uiState.scenarioTags },
+  }));
+}
+
+function openScenarioPreview(template) {
+  if (!els.scenarioPreviewModal) return;
+  uiState.previewTemplate = template;
+  if (els.scenarioPreviewTitle) {
+    els.scenarioPreviewTitle.textContent = template.label || template.name || "Scenario preview";
+  }
+  if (els.scenarioPreviewDescription) {
+    els.scenarioPreviewDescription.textContent = template.description || "";
+  }
+  renderPreviewTags(template.tags || []);
+  renderPreviewRows(template.rows || [], template.schema || []);
+  const ops = Array.isArray(template.ops) && template.ops.length
+    ? template.ops
+    : deriveOpsFromEvents(template.events || []);
+  renderPreviewOps(ops);
+  els.scenarioPreviewModal.hidden = false;
+}
+
+function closeScenarioPreview() {
+  if (!els.scenarioPreviewModal) return;
+  els.scenarioPreviewModal.hidden = true;
+  uiState.previewTemplate = null;
+}
+
+function renderPreviewTags(tags) {
+  if (!els.scenarioPreviewTags) return;
+  els.scenarioPreviewTags.innerHTML = "";
+  tags.forEach(tag => {
+    const chip = document.createElement("span");
+    chip.className = "template-chip";
+    chip.textContent = `#${tag}`;
+    els.scenarioPreviewTags.appendChild(chip);
+  });
+}
+
+function renderPreviewRows(rows, schema) {
+  if (!els.scenarioPreviewRows) return;
+  const table = els.scenarioPreviewRows;
+  table.innerHTML = "";
+  if (!schema.length || !rows.length) {
+    const caption = document.createElement("caption");
+    caption.textContent = rows.length ? "Schema unavailable" : "No seed rows";
+    table.appendChild(caption);
+    return;
+  }
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  schema.forEach(col => {
+    const th = document.createElement("th");
+    th.textContent = `${col.name} (${col.type || "any"})`;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+
+  const tbody = document.createElement("tbody");
+  rows.slice(0, 5).forEach(row => {
+    const tr = document.createElement("tr");
+    schema.forEach(col => {
+      const td = document.createElement("td");
+      td.textContent = row[col.name];
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+}
+
+function renderPreviewOps(ops) {
+  if (!els.scenarioPreviewOps) return;
+  const list = els.scenarioPreviewOps;
+  list.innerHTML = "";
+  if (!ops.length) {
+    const li = document.createElement("li");
+    li.textContent = "No operations defined.";
+    list.appendChild(li);
+    return;
+  }
+  ops.slice(0, 10).forEach(op => {
+    const li = document.createElement("li");
+    const verb = op.op === "insert" ? "Insert" : op.op === "update" ? "Update" : "Delete";
+    li.textContent = `${verb} ${op.table || "table"}#${op.pk?.id ?? "?"}`;
+    list.appendChild(li);
+  });
+}
+
+function deriveOpsFromEvents(events) {
+  if (!Array.isArray(events)) return [];
+  return events.map((event, index) => {
+    const payload = event?.payload ?? event;
+    if (!payload) return null;
+    const after = payload.after ?? event?.after ?? null;
+    const before = payload.before ?? event?.before ?? null;
+    const keyData = event?.key ?? {};
+    const pkCandidate = keyData.id ?? keyData.order_id ?? keyData.orderId;
+    const fallback = (after && Object.values(after)[0]) || (before && Object.values(before)[0]) || index;
+    const pk = { id: String(pkCandidate ?? fallback ?? index) };
+    const table = payload.table || event?.table || "table";
+    const base = {
+      t: Number(payload.ts_ms ?? event?.ts_ms ?? index * 200),
+      table,
+      pk,
+    };
+    if (payload.op === "c") {
+      return after ? { ...base, op: "insert", after } : null;
+    }
+    if (payload.op === "u") {
+      return after ? { ...base, op: "update", after } : null;
+    }
+    if (payload.op === "d") {
+      return { ...base, op: "delete" };
+    }
+    return null;
+  }).filter(Boolean);
 }
 
 function hideOnboarding(markSeen = false) {
@@ -919,7 +1136,12 @@ if (typeof window !== "undefined") {
     }
   });
   window.addEventListener("cdc:scenario-filter-request", () => {
-    window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter } }));
+    window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter, tags: uiState.scenarioTags } }));
+  });
+  window.addEventListener("cdc:preview-scenario", (event) => {
+    const detail = event?.detail;
+    const template = detail?.id ? getTemplateById(detail.id) : detail;
+    if (template) openScenarioPreview(template);
   });
 }
 
@@ -1952,6 +2174,32 @@ function bindUiHandlers() {
       window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: value } }));
     });
   }
+
+  if (els.scenarioPreviewClose) {
+    els.scenarioPreviewClose.onclick = () => closeScenarioPreview();
+  }
+  if (els.scenarioPreviewModal) {
+    els.scenarioPreviewModal.addEventListener("click", (event) => {
+      if (event.target === els.scenarioPreviewModal) closeScenarioPreview();
+    });
+  }
+  if (els.scenarioPreviewLoad) {
+    els.scenarioPreviewLoad.onclick = () => {
+      if (uiState.previewTemplate) applyScenarioTemplate(uiState.previewTemplate, { focusStep: "events" });
+      closeScenarioPreview();
+    };
+  }
+  if (els.scenarioPreviewDownload) {
+    els.scenarioPreviewDownload.onclick = () => {
+      if (uiState.previewTemplate) downloadScenarioTemplate(uiState.previewTemplate);
+    };
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && els.scenarioPreviewModal && !els.scenarioPreviewModal.hidden) {
+      closeScenarioPreview();
+    }
+  });
 
   const emitSnapshotBtn = document.getElementById("emitSnapshot");
   if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;

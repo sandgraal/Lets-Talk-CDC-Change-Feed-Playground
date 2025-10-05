@@ -5,6 +5,7 @@ const defaultScenarios = [
     label: "Omnichannel Orders",
     description: "Track order lifecycle and fulfillment signals across channels.",
     highlight: "Focus on status transitions, totals, and fulfillment metadata.",
+    tags: ["orders", "caching", "omnichannel"],
     table: "orders",
     schema: [
       { name: "order_id", type: "string", pk: true },
@@ -85,6 +86,7 @@ const defaultScenarios = [
     label: "Real-time Payments",
     description: "Model authorization, capture, and decline flows for transactions.",
     highlight: "Great for demonstrating idempotent updates and risk review.",
+    tags: ["payments", "idempotency", "risk"],
     table: "payments",
     schema: [
       { name: "transaction_id", type: "string", pk: true },
@@ -166,6 +168,7 @@ const defaultScenarios = [
     label: "IoT Telemetry",
     description: "Capture rolling sensor readings with anomaly flags.",
     highlight: "Simulate snapshots, drifts, and device alerts in edge pipelines.",
+    tags: ["iot", "telemetry", "anomaly"],
     table: "telemetry",
     schema: [
       { name: "reading_id", type: "string", pk: true },
@@ -245,6 +248,7 @@ const defaultScenarios = [
     name: "CRUD Basic",
     label: "CRUD Basic",
     description: "Insert, update, and delete a single customer to highlight delete visibility.",
+    tags: ["crud", "polling", "basics"],
     seed: 42,
     ops: [
       { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
@@ -257,6 +261,7 @@ const defaultScenarios = [
     name: "Burst Updates",
     label: "Burst Updates",
     description: "Five quick updates to expose lost intermediate writes for polling.",
+    tags: ["throughput", "polling", "lag"],
     seed: 7,
     ops: [
       { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },

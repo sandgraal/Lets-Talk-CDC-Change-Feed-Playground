@@ -10,6 +10,7 @@ export interface ShellScenario extends Scenario {
     ops: number;
   };
   table?: string;
+  tags?: string[];
 }
 
 function deriveOpsFromEvents(raw: any): Scenario["ops"] {
@@ -70,6 +71,7 @@ function normalizeScenario(raw: any): ShellScenario | null {
       ops: Array.isArray(raw.ops) ? raw.ops.length : 0,
     },
     table: raw.table,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
     seed: typeof raw.seed === "number" ? raw.seed : 1,
     ops: raw.ops,
   };
@@ -96,6 +98,7 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         description: "Insert, update, and delete a single customer to highlight delete visibility.",
         highlight: "Polling misses deletes; triggers and logs keep targets in sync.",
         stats: { rows: 1, ops: 3 },
+        tags: ["crud", "polling", "basics"],
         seed: 42,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
@@ -109,6 +112,7 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         description: "Five quick updates to expose lost intermediate writes for polling.",
         highlight: "Rapid updates test lag and ordering resilience across engines.",
         stats: { rows: 1, ops: 6 },
+        tags: ["throughput", "polling", "lag"],
         seed: 7,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },
