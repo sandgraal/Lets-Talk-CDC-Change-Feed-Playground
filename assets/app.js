@@ -103,6 +103,7 @@ const SCENARIO_TEMPLATES = Object.freeze(
       schema: template.schema,
       rows: template.rows,
       events: template.events || [],
+      ops: template.ops || [],
     }))
 );
 
@@ -240,6 +241,11 @@ function renderTemplateGallery() {
     const desc = document.createElement("p");
     desc.textContent = template.description;
 
+     const meta = document.createElement("p");
+     meta.className = "template-meta";
+     const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+     meta.textContent = `${template.rows?.length ?? 0} rows · ${opsCount} ops`;
+
     const button = document.createElement("button");
     button.type = "button";
     if (state.scenarioId === template.id) {
@@ -254,13 +260,20 @@ function renderTemplateGallery() {
 
     card.appendChild(title);
     card.appendChild(desc);
+    card.appendChild(meta);
     if (template.highlight) {
       const highlight = document.createElement("p");
       highlight.className = "template-highlight";
       highlight.textContent = template.highlight;
       card.appendChild(highlight);
     }
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "btn-ghost template-download";
+    downloadBtn.textContent = "Download JSON";
+    downloadBtn.onclick = () => downloadScenarioTemplate(template);
     card.appendChild(button);
+    card.appendChild(downloadBtn);
     els.templateGallery.appendChild(card);
   });
 }
@@ -1754,6 +1767,25 @@ function exportScenario() {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "cdc_scenario.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadScenarioTemplate(template) {
+  const payload = {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    highlight: template.highlight,
+    schema: template.schema,
+    rows: template.rows,
+    events: template.events,
+    ops: template.ops,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${template.id || template.name || "scenario"}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
