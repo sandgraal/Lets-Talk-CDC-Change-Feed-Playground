@@ -340,6 +340,12 @@ export function App() {
       setScenarioId(scenarioOptions[0].name);
     }
   }, [scenarioId, scenarioOptions]);
+  useEffect(() => {
+    if (!summaryCopied) return;
+    const timer = window.setTimeout(() => setSummaryCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [summaryCopied]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -491,11 +497,12 @@ export function App() {
           totalEvents,
           summary: summaryDetail,
           lanes: lanesDetail,
+          analytics,
           tags: scenarioTags,
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents, scenarioTags]);
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -618,7 +625,7 @@ export function App() {
     if (summary.lagSpread > 0) {
       parts.push(`${METHOD_LABELS[summary.worstLag.method]} trails by ${Math.round(summary.lagSpread)}ms`);
     }
-    parts.push(`Delete capture low: ${METHOD_LABELS[summary.lowestDeletes.method]} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
+    parts.push(`Lowest delete capture: ${METHOD_LABELS[summary.lowestDeletes.method]} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
     parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ") : "All lanes aligned"}`);
     if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
     navigator.clipboard
@@ -692,6 +699,26 @@ export function App() {
     () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
     [laneMetrics],
   );
+  const analytics = useMemo(() => {
+    return laneMetrics.map(({ method, events }) => {
+      let inserts = 0;
+      let updates = 0;
+      let deletes = 0;
+      events.forEach(evt => {
+        if (evt.op === 'c') inserts += 1;
+        else if (evt.op === 'u') updates += 1;
+        else if (evt.op === 'd') deletes += 1;
+      });
+      return {
+        method,
+        label: METHOD_LABELS[method],
+        total: events.length,
+        inserts,
+        updates,
+        deletes,
+      };
+    });
+  }, [laneMetrics]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
