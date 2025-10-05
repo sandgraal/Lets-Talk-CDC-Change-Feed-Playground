@@ -852,6 +852,14 @@ if (typeof window !== "undefined") {
   window.addEventListener("cdc:comparator-summary", (event) => {
     renderComparatorFeedback(event?.detail);
   });
+  window.addEventListener("cdc:apply-scenario-template", (event) => {
+    const templateId = event?.detail?.id;
+    if (!templateId) return;
+    const template = getTemplateById(templateId);
+    if (template) {
+      applyScenarioTemplate(template, { focusStep: "events" });
+    }
+  });
 }
 
 function renderComparatorFeedback(detail) {
