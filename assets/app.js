@@ -182,8 +182,49 @@ const uiState = {
     } catch {
       return null;
     }
-  })()
+  })(),
+  editorDraft: {},
+  editorTouched: {},
+  pendingOperation: null,
 };
+
+let toastHost = null;
+
+function ensureToastHost() {
+  if (toastHost || typeof document === "undefined") return;
+  toastHost = document.createElement("div");
+  toastHost.id = "toastStack";
+  toastHost.className = "toast-stack";
+  document.body.appendChild(toastHost);
+}
+
+function pushToast(message, tone = "info", options = {}) {
+  ensureToastHost();
+  if (!toastHost) return;
+  const { timeout = 4000 } = options;
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${tone}`;
+  toast.setAttribute("role", "status");
+  toast.textContent = message;
+
+  const dismiss = () => {
+    toast.classList.add("toast--leaving");
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+  };
+
+  toast.addEventListener("click", dismiss);
+  toastHost.appendChild(toast);
+
+  if (timeout > 0) {
+    setTimeout(dismiss, timeout);
+  }
+}
+
+function pushErrorToast(message, options = {}) {
+  pushToast(message, "error", options);
+}
 
 const learningConfig = [
   {
@@ -1111,7 +1152,7 @@ function ensurePrimaryKeyValues(values) {
   const pks = getPrimaryKeyFields();
   const missing = pks.filter(name => values[name] === null || typeof values[name] === "undefined");
   if (!missing.length) return true;
-  alert(`Provide values for primary key column${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}.`);
+  pushErrorToast(`Provide values for primary key column${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}.`);
   return false;
 }
 
@@ -2115,7 +2156,7 @@ async function copyNdjson() {
     }
     flashButton(els.copyNdjson, "Failed");
     console.warn("Copy to clipboard failed", err);
-    alert("Copy failed. You can still select the log text manually.");
+    pushErrorToast("Copy failed. You can still select the log text manually.");
   }
 }
 
@@ -2215,6 +2256,7 @@ async function publishEvent(op, before, after, docId) {
       await databases.createDocument(cfg.databaseId, cfg.collectionId, documentId, docBodyStr);
     } catch (e2) {
       console.warn("publishEvent failed (JSON and string modes)", e2);
+      pushErrorToast("Failed to persist event to Appwrite. Event kept local.");
     }
   }
 }
@@ -2274,63 +2316,71 @@ function renderSchema() {
 }
 
 // ---------- Editor (row inputs) ----------
+function syncEditorDraftWithSchema() {
+  const columns = state.schema.map(col => col.name);
+  for (const name of columns) {
+    if (!(name in uiState.editorDraft)) uiState.editorDraft[name] = "";
+    if (!(name in uiState.editorTouched)) uiState.editorTouched[name] = false;
+  }
+  Object.keys(uiState.editorDraft).forEach(name => {
+    if (!columns.includes(name)) {
+      delete uiState.editorDraft[name];
+      delete uiState.editorTouched[name];
+    }
+  });
+}
+
 function renderEditor() {
+  syncEditorDraftWithSchema();
   els.rowEditor.innerHTML = "";
   for (const c of state.schema) {
     const wrap = document.createElement("div");
     const inp  = document.createElement("input");
     inp.placeholder = `${c.name}`;
     inp.dataset.col = c.name;
-    inp.dataset.touched = "false";
-    inp.addEventListener("input", () => {
-      inp.dataset.touched = "true";
+    inp.value = uiState.editorDraft[c.name] ?? "";
+    inp.addEventListener("input", (event) => {
+      uiState.editorDraft[c.name] = event.target.value;
+      uiState.editorTouched[c.name] = true;
     });
     wrap.appendChild(inp);
     els.rowEditor.appendChild(wrap);
   }
 }
 
+function parseDraftValue(raw, type) {
+  if (raw == null || raw === "") return null;
+  if (type === "number") {
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : null;
+  }
+  if (type === "boolean" || type === "bool") {
+    const normalized = String(raw).trim().toLowerCase();
+    if (["true", "1", "yes", "y"].includes(normalized)) return true;
+    if (["false", "0", "no", "n"].includes(normalized)) return false;
+    return null;
+  }
+  return raw;
+}
+
 function readEditorValues() {
-  const obj = {};
+  const values = {};
   const touched = {};
-  els.rowEditor.querySelectorAll("input").forEach(inp => {
-    const col  = inp.dataset.col;
-    const type = state.schema.find(c => c.name === col)?.type || "string";
-    let val = inp.value;
-    if (type === "number") {
-      if (val === "") {
-        val = null;
-      } else {
-        const num = Number(val);
-        val = Number.isNaN(num) ? null : num;
-      }
-    }
-    if (type === "boolean") {
-      if (val === "") {
-        val = null;
-      } else {
-        const normalized = val.toLowerCase();
-        if (normalized === "true" || normalized === "1") {
-          val = true;
-        } else if (normalized === "false" || normalized === "0") {
-          val = false;
-        } else {
-          val = null;
-        }
-      }
-    }
-    obj[col] = val === "" ? null : val;
-    touched[col] = inp.dataset.touched === "true";
+  state.schema.forEach(col => {
+    const raw = uiState.editorDraft[col.name] ?? "";
+    values[col.name] = parseDraftValue(raw, col.type || "string");
+    touched[col.name] = !!uiState.editorTouched[col.name];
   });
-  Object.defineProperty(obj, "__touched", { value: touched, enumerable: false });
-  return obj;
+  Object.defineProperty(values, "__touched", { value: touched, enumerable: false });
+  return values;
 }
 
 function clearEditor() {
-  els.rowEditor.querySelectorAll("input").forEach(i => {
-    i.value = "";
-    i.dataset.touched = "false";
+  Object.keys(uiState.editorDraft).forEach(key => {
+    uiState.editorDraft[key] = "";
+    uiState.editorTouched[key] = false;
   });
+  renderEditor();
 }
 
 // ---------- Table ----------
@@ -2363,9 +2413,36 @@ function findByPK(values) {
 }
 
 // ---------- Operations (now publish to Appwrite too) ----------
-function insertRow(values) {
-  if (!demandPrimaryKey("inserting rows")) return;
-  if (!ensurePrimaryKeyValues(values)) return;
+function setCrudButtonsDisabled(disabled) {
+  ["opInsert", "opUpdate", "opDelete"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = disabled;
+  });
+}
+
+async function runOperation(name, fn) {
+  if (uiState.pendingOperation) {
+    pushToast("Another operation is in flight. Please wait.", "warning", { timeout: 2000 });
+    return false;
+  }
+  uiState.pendingOperation = name;
+  setCrudButtonsDisabled(true);
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`Operation ${name} failed`, err);
+    const message = err && err.message ? err.message : `Unable to ${name}. Check console for details.`;
+    pushErrorToast(message);
+    return false;
+  } finally {
+    uiState.pendingOperation = null;
+    setCrudButtonsDisabled(false);
+  }
+}
+
+async function insertRow(values) {
+  if (!demandPrimaryKey("inserting rows")) return false;
+  if (!ensurePrimaryKeyValues(values)) return false;
   const after = clone(values);
   state.rows.push(after);
   const docId = nextDocumentId();
@@ -2373,17 +2450,22 @@ function insertRow(values) {
   if (docId) evt._docId = docId;
   state.events.push(evt);
   selectLastEvent();
-  publishEvent("c", null, after, docId);
+  await publishEvent("c", null, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("c");
+  pushToast("Row inserted and event emitted.", "success", { timeout: 2500 });
+  return true;
 }
 
-function updateRow(values) {
-  if (!demandPrimaryKey("updating rows")) return;
-  if (!ensurePrimaryKeyValues(values)) return;
+async function updateRow(values) {
+  if (!demandPrimaryKey("updating rows")) return false;
+  if (!ensurePrimaryKeyValues(values)) return false;
   const touched = values.__touched || {};
   const idx = findByPK(values);
-  if (idx === -1) return alert("Row with matching primary key not found.");
+  if (idx === -1) {
+    pushErrorToast("Row with matching primary key not found.");
+    return false;
+  }
   const before = clone(state.rows[idx]);
   const after  = clone(before);
   let mutated = false;
@@ -2394,8 +2476,8 @@ function updateRow(values) {
     mutated = true;
   });
   if (!mutated) {
-    alert("No fields were changed.");
-    return;
+    pushErrorToast("No fields were changed before update.");
+    return false;
   }
   state.rows[idx] = after;
 
@@ -2404,16 +2486,21 @@ function updateRow(values) {
   if (docId) evt._docId = docId;
   state.events.push(evt);
   selectLastEvent();
-  publishEvent("u", before, after, docId);
+  await publishEvent("u", before, after, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("u");
+  pushToast("Row updated and event emitted.", "success", { timeout: 2500 });
+  return true;
 }
 
-function deleteRow(values) {
-  if (!demandPrimaryKey("deleting rows")) return;
-  if (!ensurePrimaryKeyValues(values)) return;
+async function deleteRow(values) {
+  if (!demandPrimaryKey("deleting rows")) return false;
+  if (!ensurePrimaryKeyValues(values)) return false;
   const idx = findByPK(values);
-  if (idx === -1) return alert("Row with matching primary key not found.");
+  if (idx === -1) {
+    pushErrorToast("Row with matching primary key not found.");
+    return false;
+  }
   const before = clone(state.rows[idx]);
   state.rows.splice(idx, 1);
 
@@ -2422,9 +2509,11 @@ function deleteRow(values) {
   if (docId) evt._docId = docId;
   state.events.push(evt);
   selectLastEvent();
-  publishEvent("d", before, null, docId);
+  await publishEvent("d", before, null, docId);
   save(); renderTable(); renderJSONLog();
   emitSparkleTrail("d");
+  pushToast("Row deleted and tombstone emitted.", "success", { timeout: 2500 });
+  return true;
 }
 
 function emitSnapshot() {
@@ -2554,7 +2643,9 @@ function importScenario(file) {
         events: state.events.length,
         scenarioId: state.scenarioId,
       });
-    } catch { alert("Invalid scenario JSON"); }
+    } catch {
+      pushErrorToast("Invalid scenario JSON");
+    }
   };
   reader.readAsText(file);
 }
@@ -2673,13 +2764,23 @@ function bindUiHandlers() {
   }
 
   const insertBtn = document.getElementById("opInsert");
-  if (insertBtn) insertBtn.onclick = () => { insertRow(readEditorValues()); clearEditor(); };
+  if (insertBtn) insertBtn.onclick = async () => {
+    const values = readEditorValues();
+    const inserted = await runOperation("insert row", () => insertRow(values));
+    if (inserted) clearEditor();
+  };
 
   const updateBtn = document.getElementById("opUpdate");
-  if (updateBtn) updateBtn.onclick = () => { updateRow(readEditorValues()); };
+  if (updateBtn) updateBtn.onclick = async () => {
+    const values = readEditorValues();
+    await runOperation("update row", () => updateRow(values));
+  };
 
   const deleteBtn = document.getElementById("opDelete");
-  if (deleteBtn) deleteBtn.onclick = () => { deleteRow(readEditorValues()); };
+  if (deleteBtn) deleteBtn.onclick = async () => {
+    const values = readEditorValues();
+    await runOperation("delete row", () => deleteRow(values));
+  };
 
   if (els.autofillRow) {
     els.autofillRow.onclick = () => { autofillRowAndInsert(); };
@@ -2787,6 +2888,7 @@ function bindUiHandlers() {
 
 // ---------- Wire up UI ----------
 async function main() {
+  ensureToastHost();
   load();
   loadTemplateFilter();
   if (state.events.length) selectLastEvent();
@@ -2908,10 +3010,11 @@ function autofillRowAndInsert() {
   const sample = generateSampleRow();
 
   // reflect values in the editor for transparency
-  els.rowEditor.querySelectorAll("input").forEach(inp => {
-    const colName = inp.dataset.col;
-    if (colName in sample) inp.value = sample[colName];
+  Object.keys(sample).forEach(colName => {
+    uiState.editorDraft[colName] = sample[colName] == null ? "" : String(sample[colName]);
+    uiState.editorTouched[colName] = true;
   });
+  renderEditor();
 
   // mutate table state + log event
   const after = clone(sample);
