@@ -638,6 +638,14 @@ function showOnboarding() {
   if (dialog && typeof dialog.focus === "function") {
     dialog.focus({ preventScroll: true });
   }
+
+  if (els.onboardingClose) {
+    const label = els.onboardingClose.getAttribute("aria-label") || "Close onboarding";
+    els.onboardingClose.setAttribute(
+      "data-tooltip",
+      `${label}. Press Esc to dismiss.`
+    );
+  }
 }
 
 function maybeShowOnboarding() {

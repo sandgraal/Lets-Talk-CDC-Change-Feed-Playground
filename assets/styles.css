@@ -1193,6 +1193,36 @@ body.is-onboarding {
   overflow: hidden;
 }
 
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+}
+
+.tooltip-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-9999px, -9999px);
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.45);
+  font-size: 0.75rem;
+  max-width: 260px;
+  pointer-events: none;
+  z-index: 14000;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.tooltip-bubble.tooltip-active {
+  opacity: 1;
+}
+
 .footer {
   padding: 18px clamp(20px, 4vw, 48px) 32px;
   color: var(--muted);

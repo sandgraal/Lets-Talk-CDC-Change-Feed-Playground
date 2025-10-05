@@ -9,7 +9,7 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 ## Implementation Plan (Remaining Deliverables)
 1. Guided onboarding polish
    - ✅ Scripted the dual-track spotlight sequence that reuses comparator callouts.
-   - ☐ File and prioritize the tooltip synchronization story for the legacy shell.
+   - ✅ Synced legacy shell tooltips with comparator copy and added overlay focus/ESC handling.
    - ✅ Aligned guided tour milestones with telemetry events (`tour.started` / `tour.completed` / `tour.dismissed`).
 2. Scenario source-of-truth guardrails
    - ✅ Added a lint rule that blocks ad-hoc scenario JSON outside `assets/shared-scenarios.js`.

@@ -1327,34 +1327,34 @@ const filteredEventsByMethod = useMemo(() => {
               <dl className="sim-shell__lane-config">
                 {method === "polling" && (
                   <>
-                    <div>
-                      <dt>Poll interval</dt>
-                      <dd>{config.pollIntervalMs} ms</dd>
-                    </div>
-                    <div>
-                      <dt>Soft deletes</dt>
-                      <dd>{config.includeSoftDeletes ? "included" : "ignored"}</dd>
-                    </div>
-                  </>
-                )}
-                {method === "trigger" && (
-                  <>
-                    <div>
-                      <dt>Extractor interval</dt>
-                      <dd>{config.extractIntervalMs} ms</dd>
-                    </div>
-                    <div>
-                      <dt>Trigger overhead</dt>
-                      <dd>{config.triggerOverheadMs} ms</dd>
-                    </div>
-                  </>
-                )}
-                {method === "log" && (
                   <div>
-                    <dt>Fetch interval</dt>
-                    <dd>{config.fetchIntervalMs} ms</dd>
+                    <dt>Poll interval</dt>
+                    <dd data-tooltip="Lower intervals reduce lag but increase source load.">{config.pollIntervalMs} ms</dd>
                   </div>
-                )}
+                  <div>
+                    <dt>Soft deletes</dt>
+                    <dd data-tooltip="Include soft delete markers to surface tombstones." >{config.includeSoftDeletes ? "included" : "ignored"}</dd>
+                  </div>
+                </>
+              )}
+              {method === "trigger" && (
+                <>
+                  <div>
+                    <dt>Extractor interval</dt>
+                    <dd data-tooltip="Longer intervals lower reader load but add latency.">{config.extractIntervalMs} ms</dd>
+                  </div>
+                  <div>
+                    <dt>Trigger overhead</dt>
+                    <dd data-tooltip="Injected synchronous latency per source write.">{config.triggerOverheadMs} ms</dd>
+                  </div>
+                </>
+              )}
+              {method === "log" && (
+                <div>
+                  <dt>Fetch interval</dt>
+                  <dd data-tooltip="Shorter intervals decrease lag but use more resources.">{config.fetchIntervalMs} ms</dd>
+                </div>
+              )}
               </dl>
 
               {callouts.length > 0 && (
