@@ -5,6 +5,11 @@ export interface ShellScenario extends Scenario {
   label: string;
   description: string;
   highlight?: string;
+  stats?: {
+    rows: number;
+    ops: number;
+  };
+  table?: string;
 }
 
 function deriveOpsFromEvents(raw: any): Scenario["ops"] {
@@ -60,6 +65,11 @@ function normalizeScenario(raw: any): ShellScenario | null {
     label: raw.label || raw.name || "Scenario",
     description: raw.description || "",
     highlight: raw.highlight,
+    stats: {
+      rows: Array.isArray(raw.rows) ? raw.rows.length : 0,
+      ops: Array.isArray(raw.ops) ? raw.ops.length : 0,
+    },
+    table: raw.table,
     seed: typeof raw.seed === "number" ? raw.seed : 1,
     ops: raw.ops,
   };
@@ -84,6 +94,8 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         name: "crud-basic",
         label: "CRUD Basic",
         description: "Insert, update, and delete a single customer to highlight delete visibility.",
+        highlight: "Polling misses deletes; triggers and logs keep targets in sync.",
+        stats: { rows: 1, ops: 3 },
         seed: 42,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
@@ -95,6 +107,8 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         name: "burst-updates",
         label: "Burst Updates",
         description: "Five quick updates to expose lost intermediate writes for polling.",
+        highlight: "Rapid updates test lag and ordering resilience across engines.",
+        stats: { rows: 1, ops: 6 },
         seed: 7,
         ops: [
           { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },

@@ -279,6 +279,7 @@ export function App() {
   const [scenarioId, setScenarioId] = useState<string>(
     () => storedPrefs?.scenarioId ?? SCENARIOS[0].name,
   );
+  const [scenarioFilter, setScenarioFilter] = useState<string>("");
   const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
     () => initialActiveMethods,
   );
@@ -303,8 +304,17 @@ export function App() {
         list.unshift(liveScenario);
       }
     }
-    return list;
-  }, [liveScenario]);
+    if (!scenarioFilter.trim()) return list;
+    const query = scenarioFilter.trim().toLowerCase();
+    return list.filter(option => {
+      if (option.name === LIVE_SCENARIO_NAME) return true;
+      const haystack = [option.label, option.description, option.highlight, option.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [liveScenario, scenarioFilter]);
 
   const scenario = useMemo(() => {
     if (!scenarioOptions.length) return SCENARIOS[0];
@@ -318,6 +328,23 @@ export function App() {
       setScenarioId(scenarioOptions[0].name);
     }
   }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ query?: string }>).detail;
+      const query = detail?.query ?? "";
+      setScenarioFilter(String(query));
+    };
+
+    window.addEventListener("cdc:scenario-filter", handler as EventListener);
+    window.dispatchEvent(new CustomEvent("cdc:scenario-filter-request"));
+
+    return () => {
+      window.removeEventListener("cdc:scenario-filter", handler as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -540,6 +567,23 @@ export function App() {
     setScenarioId(value);
   }, []);
 
+  const handleScenarioDownload = useCallback((target: ShellScenario) => {
+    const payload = {
+      name: target.name,
+      label: target.label,
+      description: target.description,
+      highlight: target.highlight,
+      seed: target.seed,
+      ops: target.ops,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${target.name}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, []);
+
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -628,21 +672,30 @@ export function App() {
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            className="sim-shell__scenario-sync"
-            onClick={() => {
-              if (scenario.name === LIVE_SCENARIO_NAME) return;
-              window.dispatchEvent(
-                new CustomEvent("cdc:apply-scenario-template", {
-                  detail: { id: scenario.name },
-                }),
-              );
-            }}
-            disabled={scenario.name === LIVE_SCENARIO_NAME}
-          >
-            Load in workspace
-          </button>
+          <div className="sim-shell__scenario-actions">
+            <button
+              type="button"
+              className="sim-shell__scenario-sync"
+              onClick={() => {
+                if (scenario.name === LIVE_SCENARIO_NAME) return;
+                window.dispatchEvent(
+                  new CustomEvent("cdc:apply-scenario-template", {
+                    detail: { id: scenario.name },
+                  }),
+                );
+              }}
+              disabled={scenario.name === LIVE_SCENARIO_NAME}
+            >
+              Load in workspace
+            </button>
+            <button
+              type="button"
+              className="sim-shell__scenario-download"
+              onClick={() => handleScenarioDownload(scenario)}
+            >
+              Download JSON
+            </button>
+          </div>
           <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
             {METHOD_ORDER.map(method => (
               <button
@@ -665,6 +718,11 @@ export function App() {
       {scenario.highlight && (
         <p className="sim-shell__description sim-shell__description--highlight" aria-live="polite">
           {scenario.highlight}
+        </p>
+      )}
+      {scenario.stats && (
+        <p className="sim-shell__description sim-shell__description--meta" aria-live="polite">
+          {scenario.stats.rows} rows · {scenario.stats.ops} ops
         </p>
       )}
 

@@ -6,6 +6,7 @@ const STORAGE_KEYS = Object.freeze({
   state: "cdc_playground",
   onboarding: "cdc_playground_onboarding_v1",
   lastTemplate: "cdc_playground_last_template_v1",
+  scenarioFilter: "cdc_playground_template_filter_v1",
 });
 
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
@@ -102,6 +103,7 @@ const SCENARIO_TEMPLATES = Object.freeze(
       schema: template.schema,
       rows: template.rows,
       events: template.events || [],
+      ops: template.ops || [],
     }))
 );
 
@@ -123,6 +125,7 @@ const els = {
   copyNdjson: document.getElementById("btnCopyNdjson"),
   downloadNdjson: document.getElementById("btnDownloadNdjson"),
   comparatorFeedback: document.getElementById("comparatorFeedback"),
+  scenarioFilter: document.getElementById("scenarioFilter"),
   learningSteps: document.getElementById("learningSteps"),
   learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
@@ -156,6 +159,7 @@ const els = {
 const uiState = {
   selectedEventIndex: null, // index within state.events
   lastShareId: null,
+  scenarioFilter: "",
   pendingShareId: (() => {
     if (typeof window === "undefined") return null;
     try {
@@ -199,8 +203,34 @@ function getTemplateById(id) {
 function renderTemplateGallery() {
   if (!els.templateGallery) return;
   els.templateGallery.innerHTML = "";
+  if (els.scenarioFilter && els.scenarioFilter.value !== uiState.scenarioFilter) {
+    els.scenarioFilter.value = uiState.scenarioFilter;
+  }
 
-  SCENARIO_TEMPLATES.forEach(template => {
+  const filter = (uiState.scenarioFilter || "").trim().toLowerCase();
+  const templates = SCENARIO_TEMPLATES.filter(template => {
+    if (!filter) return true;
+    const haystack = [
+      template.name,
+      template.description,
+      template.highlight,
+      template.id,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(filter);
+  });
+
+  if (!templates.length) {
+    const empty = document.createElement("p");
+    empty.className = "template-empty";
+    empty.textContent = "No scenarios match your filter.";
+    els.templateGallery.appendChild(empty);
+    return;
+  }
+
+  templates.forEach(template => {
     const card = document.createElement("article");
     card.className = "template-card";
     if (state.scenarioId === template.id) card.classList.add("is-active");
@@ -211,9 +241,10 @@ function renderTemplateGallery() {
     const desc = document.createElement("p");
     desc.textContent = template.description;
 
-    const highlight = document.createElement("p");
-    highlight.className = "template-highlight";
-    highlight.textContent = template.highlight;
+     const meta = document.createElement("p");
+     meta.className = "template-meta";
+     const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+     meta.textContent = `${template.rows?.length ?? 0} rows · ${opsCount} ops`;
 
     const button = document.createElement("button");
     button.type = "button";
@@ -229,8 +260,20 @@ function renderTemplateGallery() {
 
     card.appendChild(title);
     card.appendChild(desc);
-    card.appendChild(highlight);
+    card.appendChild(meta);
+    if (template.highlight) {
+      const highlight = document.createElement("p");
+      highlight.className = "template-highlight";
+      highlight.textContent = template.highlight;
+      card.appendChild(highlight);
+    }
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "btn-ghost template-download";
+    downloadBtn.textContent = "Download JSON";
+    downloadBtn.onclick = () => downloadScenarioTemplate(template);
     card.appendChild(button);
+    card.appendChild(downloadBtn);
     els.templateGallery.appendChild(card);
   });
 }
@@ -487,6 +530,13 @@ const load   = () => {
     state.remoteId = s.remoteId || null;
   } catch { /* ignore */ }
 };
+const loadTemplateFilter = () => {
+  try {
+    uiState.scenarioFilter = localStorage.getItem(STORAGE_KEYS.scenarioFilter) || "";
+  } catch {
+    uiState.scenarioFilter = "";
+  }
+};
 const flashButton = (btn, msg) => {
   if (!btn) return;
   const original = btn.textContent;
@@ -496,6 +546,14 @@ const flashButton = (btn, msg) => {
     btn.textContent = original;
     btn.disabled = false;
   }, 1500);
+};
+
+const saveTemplateFilter = (value) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.scenarioFilter, value);
+  } catch (err) {
+    console.warn("Save scenario filter failed", err?.message || err);
+  }
 };
 
 const toNdjson = (events) => events.map(ev => JSON.stringify(ev)).join("\n");
@@ -859,6 +917,9 @@ if (typeof window !== "undefined") {
     if (template) {
       applyScenarioTemplate(template, { focusStep: "events" });
     }
+  });
+  window.addEventListener("cdc:scenario-filter-request", () => {
+    window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter } }));
   });
 }
 
@@ -1710,6 +1771,25 @@ function exportScenario() {
   URL.revokeObjectURL(a.href);
 }
 
+function downloadScenarioTemplate(template) {
+  const payload = {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    highlight: template.highlight,
+    schema: template.schema,
+    rows: template.rows,
+    events: template.events,
+    ops: template.ops,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${template.id || template.name || "scenario"}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function importScenario(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -1862,6 +1942,17 @@ function bindUiHandlers() {
     els.autofillRow.onclick = () => { autofillRowAndInsert(); };
   }
 
+  if (els.scenarioFilter) {
+    els.scenarioFilter.value = uiState.scenarioFilter;
+    els.scenarioFilter.addEventListener("input", (event) => {
+      const value = event.target.value || "";
+      uiState.scenarioFilter = value;
+      saveTemplateFilter(value);
+      renderTemplateGallery();
+      window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: value } }));
+    });
+  }
+
   const emitSnapshotBtn = document.getElementById("emitSnapshot");
   if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;
 
@@ -1921,6 +2012,7 @@ function bindUiHandlers() {
 // ---------- Wire up UI ----------
 async function main() {
   load();
+  loadTemplateFilter();
   if (state.events.length) selectLastEvent();
   let hydratedFromTemplate = false;
   if (!state.schema.length) {
@@ -1943,6 +2035,9 @@ async function main() {
 
   renderTemplateGallery();
   bindUiHandlers();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter } }));
+  }
   broadcastComparatorState();
   setShareControlsEnabled(false);
 
