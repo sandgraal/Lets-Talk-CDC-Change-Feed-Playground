@@ -584,6 +584,14 @@ export function App() {
     URL.revokeObjectURL(link.href);
   }, []);
 
+  const handleScenarioPreview = useCallback((target: ShellScenario) => {
+    window.dispatchEvent(
+      new CustomEvent("cdc:preview-scenario", {
+        detail: target,
+      }),
+    );
+  }, []);
+
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -694,6 +702,13 @@ export function App() {
               onClick={() => handleScenarioDownload(scenario)}
             >
               Download JSON
+            </button>
+            <button
+              type="button"
+              className="sim-shell__scenario-preview"
+              onClick={() => handleScenarioPreview(scenario)}
+            >
+              Preview
             </button>
           </div>
           <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">

@@ -271,6 +271,27 @@
     </div>
   </div>
 
+  <div id="scenarioPreviewModal" class="preview-modal" role="dialog" aria-modal="true" aria-labelledby="scenarioPreviewTitle" hidden>
+    <div class="preview-modal__dialog">
+      <button type="button" class="preview-modal__close" id="scenarioPreviewClose" aria-label="Close scenario preview">×</button>
+      <h3 id="scenarioPreviewTitle"></h3>
+      <p id="scenarioPreviewDescription" class="preview-modal__description"></p>
+      <div id="scenarioPreviewTags" class="preview-modal__tags" aria-label="Scenario tags"></div>
+      <section>
+        <h4>Seed rows</h4>
+        <table class="preview-table" id="scenarioPreviewRows"></table>
+      </section>
+      <section>
+        <h4>Change operations</h4>
+        <ol class="preview-ops" id="scenarioPreviewOps"></ol>
+      </section>
+      <div class="preview-modal__actions">
+        <button type="button" id="scenarioPreviewLoad" class="btn-primary">Load in workspace</button>
+        <button type="button" id="scenarioPreviewDownload" class="btn-ghost">Download JSON</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Appwrite SDK + config -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
   <script>
