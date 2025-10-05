@@ -11,7 +11,9 @@
     "preview:sim": "vite preview --mode sim",
     "preview:web": "vite preview --mode web",
     "test:sim": "node sim/tests/property-tests.mjs",
-    "ci:preflight": "npm run build:sim && npm run build:web && npm run test:sim"
+    "ci:preflight": "npm run build:sim && npm run build:web && npm run test:sim",
+    "prepare:scenario": "node harness/scripts/prepare-scenario.mjs",
+    "snapshot:scenarios": "node harness/scripts/snapshot-scenarios.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

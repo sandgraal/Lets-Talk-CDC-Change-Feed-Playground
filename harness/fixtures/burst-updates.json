@@ -1,0 +1,84 @@
+{
+  "id": "burst-updates",
+  "name": "Burst Updates",
+  "description": "Five quick updates to expose lost intermediate writes for polling.",
+  "tags": [
+    "throughput",
+    "polling",
+    "lag"
+  ],
+  "ops": [
+    {
+      "t": 100,
+      "op": "insert",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst",
+        "email": "burst@example.com"
+      }
+    },
+    {
+      "t": 150,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst-1",
+        "email": "burst@example.com"
+      }
+    },
+    {
+      "t": 180,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst-2",
+        "email": "burst@example.com"
+      }
+    },
+    {
+      "t": 210,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst-3",
+        "email": "burst@example.com"
+      }
+    },
+    {
+      "t": 240,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst-4",
+        "email": "burst@example.com"
+      }
+    },
+    {
+      "t": 600,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "200"
+      },
+      "after": {
+        "name": "Burst-Final",
+        "email": "burst@example.com"
+      }
+    }
+  ]
+}

@@ -10,6 +10,11 @@ services:
       - "5432:5432"
     volumes:
       - ./generator/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -18,11 +23,17 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -32,11 +43,17 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 7s
+      timeout: 5s
+      retries: 10
 
   connect:
     image: debezium/connect:2.6
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8083:8083"
     environment:
@@ -47,23 +64,42 @@ services:
       STATUS_STORAGE_TOPIC: connect-status
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 7s
+      timeout: 5s
+      retries: 10
 
   generator:
     build: ./generator
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: postgres
       PGDATABASE: demo
+      SCENARIO_PATH: /app/scenario.json
+    volumes:
+      - ./scenario.json:/app/scenario.json:ro
 
   verifier:
     build: ./verifier
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     environment:
       KAFKA_BROKERS: kafka:29092
       TOPIC: dbserver1.public.customers
+      SCENARIO_PATH: /app/scenario.json
     ports:
       - "8089:8089"
+    volumes:
+      - ./scenario.json:/app/scenario.json:ro
+      - ./fixtures:/app/fixtures:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/health"]
+      interval: 7s
+      timeout: 5s
+      retries: 10

@@ -4,6 +4,7 @@ import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine, diffLane } fro
 import { MetricsStrip } from "./components/MetricsStrip";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
+import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
@@ -619,6 +620,7 @@ export function App() {
   const handleScenarioSelect = useCallback((value: string) => {
     userSelectedScenarioRef.current = true;
     setScenarioId(value);
+    track("comparator.scenario.select", { scenario: value });
   }, []);
 
   const handleScenarioDownload = useCallback((target: ShellScenario) => {
@@ -639,6 +641,7 @@ export function App() {
   }, []);
 
   const handleScenarioPreview = useCallback((target: ShellScenario) => {
+    track("comparator.scenario.preview", { scenario: target.name, tags: target.tags ?? [] });
     window.dispatchEvent(
       new CustomEvent("cdc:preview-scenario", {
         detail: target,
@@ -664,6 +667,11 @@ export function App() {
       .writeText(parts.join('\n'))
       .then(() => setSummaryCopied(true))
       .catch(() => setSummaryCopied(false));
+    track("comparator.summary.copied", {
+      scenario: scenario.name,
+      tags: scenario.tags ?? [],
+      methods: activeMethods,
+    });
   }, [summary, scenario, activeMethods]);
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
@@ -705,13 +713,15 @@ export function App() {
     runner.start();
     setIsPlaying(true);
     startLoop();
-  }, [resetRunnerState, startLoop]);
+    trackClockControl("play", { scenario: scenario.name });
+  }, [resetRunnerState, startLoop, scenario.name]);
 
   const handlePause = useCallback(() => {
     runnerRef.current?.pause();
     setIsPlaying(false);
     stopLoop();
-  }, [stopLoop]);
+    trackClockControl("pause", { scenario: scenario.name });
+  }, [stopLoop, scenario.name]);
 
   const handleStep = useCallback(
     (deltaMs = STEP_MS) => {
@@ -728,8 +738,9 @@ export function App() {
       if (!wasPlaying) {
         runner.pause();
       }
+      trackClockControl("step", { deltaMs, scenario: scenario.name });
     },
-    [],
+    [scenario.name],
   );
 
   const handleSeek = useCallback(
@@ -753,13 +764,15 @@ export function App() {
 
       runner.pause();
       setIsPlaying(false);
+      trackClockControl("seek", { targetMs, stepMs, scenario: scenario.name });
     },
-    [resetRunnerState],
+    [resetRunnerState, scenario.name],
   );
 
   const handleReset = useCallback(() => {
     resetRunnerState();
-  }, [resetRunnerState]);
+    trackClockControl("reset", { scenario: scenario.name });
+  }, [resetRunnerState, scenario.name]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

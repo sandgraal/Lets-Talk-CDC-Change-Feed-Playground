@@ -18,23 +18,23 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 6. ✅ Stand up a preflight suite (`npm run ci:preflight`) mirrored in GitHub Actions to run sim/web builds plus property tests before packaging.
 
 ## Harness Track
-- Flesh out generator/verifier packages with scripts to pull the shared scenario JSON and emit PASS/FAIL.
-- Add health checks + simple Makefile commands so `docker-compose up` yields deterministic order of operations.
-- Plan for HTML report rendering (likely React server components or static template).
-- Check snapshot fixtures for canonical scenarios into version control so new harness logic can diff against stable expectations.
-- Document rapid local debug loop (single command to replay scenario + inspect logs) to reduce time-to-signal on regression triage.
+- ✅ Generator/verifier now consume shared scenarios via `npm run prepare:scenario` (also wired into `harness/Makefile`) and expose PASS/FAIL summaries using the simulator diff engine.
+- ✅ Docker compose stack ships with service health checks and curated Make targets (`make up`, `make replay`, `make status`) for deterministic bring-up and debug loops.
+- ✅ Verifier serves both JSON and HTML reports at `http://localhost:8089` with live event snapshots and diff tallies.
+- ✅ Canonical scenario snapshots live in `harness/fixtures/` with a script (`npm run snapshot:scenarios`) to refresh them when templates change.
+- ✅ Documented the rapid debug flow in `docs/harness-guide.md`, covering scenario prep, replay commands, and log inspection.
 
 ## Telemetry + Copy
-- Define client-side event dispatcher (post-build) and evaluate storage destination (optional backend vs privacy-preserving client log).
-- Draft copy for “honest callouts” and “when to use which” sections so UI and docs share the canonical text.
-- Map telemetry taxonomy to product questions (activation, funnel drop-offs, scenario completeness) so the first release ships with useful dashboards.
+- ✅ Lightweight telemetry client buffers events to localStorage, exposes `window.telemetry.track`, and instruments key comparator/workspace flows.
+- Draft copy for “honest callouts” and “when to use which” sections so UI and docs share the canonical text. _(still pending)_
+- ✅ Telemetry taxonomy documented in `docs/telemetry-taxonomy.md`, mapping events to activation, funnel-drop, completeness, and collaboration questions.
 
 ## Risks to Monitor
-- Dual-stack UI (legacy DOM + future React) diverging—set kill date for legacy path.
-- Container start-up timing in harness causing flaky verification—add retries/backoff guidance.
-- Performance of timeline rendering with >1k events—prototype virtualization approach early.
-- Insight copy + embedded screenshots drifting between product and docs—establish single source review before publishing.
-- Schema migrations landing without comparator coverage—require property-test extensions before merging schema-altering PRs.
+- ✅ Dual-stack divergence mitigated via shared scenario module enforcement and telemetry coverage; kill-switch criteria recorded in `docs/risk-register.md`.
+- ✅ Harness reliability improved with health checks, generator backoff, and documented Make targets.
+- Performance of timeline rendering with >1k events—prototype virtualization approach early. _(open)_
+- ✅ Insight copy alignment tracked through telemetry taxonomy + snapshot exports; publishing gate documented in risk register.
+- ✅ Schema migration risk mitigated by property-test suite (`npm run test:sim`) executed in CI preflight.
 
 ## React Comparator Polish
 - Add inline diff gutters for each lane so users can scan insertions/deletions without expanding full event payloads.
