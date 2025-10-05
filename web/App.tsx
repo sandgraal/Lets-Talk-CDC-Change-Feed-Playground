@@ -796,6 +796,13 @@ export function App() {
           {scenario.highlight}
         </p>
       )}
+      {scenario.tags?.length ? (
+        <div className="sim-shell__tag-row" aria-label="Scenario tags">
+          {scenario.tags.map(tag => (
+            <span key={tag} className="sim-shell__tag-chip">#{tag}</span>
+          ))}
+        </div>
+      ) : null}
       {scenario.stats && (
         <p className="sim-shell__description sim-shell__description--meta" aria-live="polite">
           {scenario.stats.rows} rows · {scenario.stats.ops} ops
