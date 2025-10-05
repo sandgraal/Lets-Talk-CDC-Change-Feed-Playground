@@ -64,3 +64,25 @@ export type Table = {
   schema: Schema;
   rows: Row[];
 };
+
+export type SourceOp =
+  | {
+      t: number;
+      op: 'insert';
+      table: string;
+      pk: { id: string };
+      after: Record<string, unknown>;
+    }
+  | {
+      t: number;
+      op: 'update';
+      table: string;
+      pk: { id: string };
+      after: Record<string, unknown>;
+    }
+  | {
+      t: number;
+      op: 'delete';
+      table: string;
+      pk: { id: string };
+    };

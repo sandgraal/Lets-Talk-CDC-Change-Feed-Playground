@@ -5,7 +5,7 @@ import { MetricsStore } from './metrics';
 
 type State = 'IDLE' | 'SNAPSHOTTING' | 'TAILING' | 'PAUSED';
 
-type EmitFn = (events: Event[]) => void;
+type EmitFn = (events: Event[]) => Event[];
 
 type ModeHandlers = {
   startSnapshot?: (tables: Table[], emit: EmitFn) => void;
@@ -66,9 +66,10 @@ export class CDCController {
     this.metrics.reset();
   }
 
-  emit(events: Event[]) {
-    if (events.length === 0) return;
+  emit(events: Event[]): Event[] {
+    if (events.length === 0) return [];
     const enriched = this.bus.publish(this.topic, events);
     this.metrics.onProduced(enriched);
+    return enriched;
   }
 }

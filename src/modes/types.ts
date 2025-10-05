@@ -1,4 +1,4 @@
-import type { CDCMode, Event, Table } from "../domain/types";
+import type { CDCMode, Event, Table, SourceOp } from "../domain/types";
 import type { EventBus } from "../engine/eventBus";
 import type { Scheduler } from "../engine/scheduler";
 import type { MetricsStore } from "../engine/metrics";
@@ -9,9 +9,10 @@ export type ModeRuntime = {
   bus: EventBus;
   scheduler: Scheduler;
   metrics: MetricsStore;
+  topic: string;
 };
 
-export type EmitFn = (events: Event[]) => void;
+export type EmitFn = (events: Event[]) => Event[];
 
 export interface ModeLifecycle {
   startSnapshot?(tables: Table[], emit: EmitFn): void;
@@ -24,4 +25,7 @@ export interface ModeLifecycle {
 export interface ModeAdapter extends ModeLifecycle {
   readonly id: ModeIdentifier;
   initialise?(runtime: ModeRuntime): void;
+  configure?(config: Record<string, unknown>): void;
+  applySource?(op: SourceOp): void;
+  tick?(nowMs: number): void;
 }

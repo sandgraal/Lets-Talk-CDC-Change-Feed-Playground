@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CdcEvent, SourceOp, LaneDiffResult } from "../sim";
-import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine, diffLane } from "../sim";
-import { EventBus, MetricsStore, type MetricsSnapshot } from "../src";
+import type { SourceOp, Event } from "../src";
+import type { CdcEvent, LaneDiffResult } from "../sim";
+import type { MethodEngine } from "../sim";
+import {
+  createLogBasedAdapter,
+  createQueryBasedAdapter,
+  createTriggerBasedAdapter,
+  type ModeAdapter,
+  type ModeIdentifier,
+  type ModeRuntime,
+} from "../src";
+import { CDCController, EventBus, MetricsStore, Scheduler, type MetricsSnapshot } from "../src";
+import { ScenarioRunner, diffLane } from "../sim";
 
 type FeatureFlagKey =
   | "ff_event_bus"
@@ -109,7 +119,7 @@ type BusEvent = CdcEvent & {
 };
 
 type LaneRuntime = {
-  bus: EventBus<BusEvent>;
+  bus: EventBus<Event>;
   metrics: MetricsStore;
   topic: string;
 };
@@ -134,6 +144,12 @@ type LaneRuntimeSummary = {
 type CombinedBusEvent = {
   method: MethodOption;
   event: BusEvent;
+};
+
+type ControllerBackedEngine = MethodEngine & {
+  bus: EventBus<Event>;
+  metrics: MetricsStore;
+  topic: string;
 };
 
 type Summary = {
@@ -184,16 +200,140 @@ const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
   log: { fetchIntervalMs: 50 },
 };
 
-function createEngine(method: MethodOption) {
+const MODE_LOOKUP: Record<MethodOption, ModeIdentifier> = {
+  polling: "QUERY_BASED",
+  trigger: "TRIGGER_BASED",
+  log: "LOG_BASED",
+};
+
+const METHOD_META_LOOKUP: Record<MethodOption, CdcEvent["meta"]["method"]> = {
+  polling: "polling",
+  trigger: "trigger",
+  log: "log",
+};
+
+const createAdapterForMethod = (method: MethodOption): ModeAdapter => {
   switch (method) {
     case "polling":
-      return new PollingEngine();
+      return createQueryBasedAdapter();
     case "trigger":
-      return new TriggerEngine();
+      return createTriggerBasedAdapter();
     case "log":
     default:
-      return new LogEngine();
+      return createLogBasedAdapter();
   }
+};
+
+const sanitizeRecordForCdcEvent = (record: Record<string, unknown> | undefined) => {
+  if (!record) return null;
+  const clone = { ...record } as Record<string, unknown>;
+  delete clone.__ts;
+  return clone;
+};
+
+const eventToCdcEvent = (method: MethodOption, event: Event, seq: number): CdcEvent => ({
+  source: "demo-db",
+  table: event.table,
+  op: event.kind === "INSERT" ? "c" : event.kind === "UPDATE" ? "u" : "d",
+  pk: { id: String(event.after?.id ?? event.before?.id ?? "") },
+  before: sanitizeRecordForCdcEvent(event.before as Record<string, unknown> | undefined),
+  after: sanitizeRecordForCdcEvent(event.after as Record<string, unknown> | undefined),
+  ts_ms: event.commitTs,
+  tx: { id: event.txnId ?? `tx-${event.commitTs}`, lsn: typeof event.offset === "number" ? event.offset : null },
+  seq,
+  meta: { method: METHOD_META_LOOKUP[method] },
+});
+
+function createControllerEngineInstance(
+  method: MethodOption,
+  onProduced: (events: BusEvent[]) => void,
+): ControllerBackedEngine {
+  const bus = new EventBus<Event>();
+  const metrics = new MetricsStore();
+  const scheduler = new Scheduler();
+  const topic = `cdc.${method}`;
+
+  let adapter = createAdapterForMethod(method);
+  let controller: CDCController;
+  let runtime: ModeRuntime = { bus, metrics, scheduler, topic };
+  let currentConfig: Record<string, unknown> = {};
+  let sequence = 0;
+  const callbacks = new Set<(event: CdcEvent) => void>();
+
+  const toBusEvent = (event: Event): BusEvent => {
+    const existingSeq = (event as unknown as { __seq?: number }).__seq;
+    const seq = typeof existingSeq === "number" && existingSeq > 0 ? existingSeq : ++sequence;
+    (event as unknown as { __seq: number }).__seq = seq;
+    const base = eventToCdcEvent(method, event, seq);
+    return {
+      ...base,
+      offset: event.offset,
+      topic: event.topic ?? topic,
+    };
+  };
+
+  const interceptEmit = (emit: EmitFn): EmitFn => events => {
+    const enriched = emit(events);
+    if (enriched.length) {
+      const busEvents = enriched.map(ev => toBusEvent(ev));
+      onProduced(busEvents);
+      busEvents.forEach(evt => callbacks.forEach(cb => cb(evt)));
+    }
+    return enriched;
+  };
+
+  const initialiseController = () => {
+    adapter.initialise?.(runtime);
+    adapter.configure?.(currentConfig);
+    controller = new CDCController(MODE_LOOKUP[method], bus, scheduler, metrics, topic, {
+      startSnapshot: (tables, emit) =>
+        adapter.startSnapshot?.(tables, events => interceptEmit(emit)(events)),
+      startTailing: emit => adapter.startTailing?.(events => interceptEmit(emit)(events)),
+      stop: () => adapter.stop?.(),
+    });
+    controller.startSnapshot([]);
+    controller.startTailing();
+  };
+
+  initialiseController();
+
+  const engine: ControllerBackedEngine = {
+    name: method,
+    configure(opts) {
+      currentConfig = { ...opts };
+      adapter.configure?.(opts);
+    },
+    reset(seed) {
+      void seed;
+      controller.stop();
+      scheduler.clear();
+      metrics.reset();
+      bus.reset(topic);
+      sequence = 0;
+      adapter = createAdapterForMethod(method);
+      runtime = { bus, metrics, scheduler, topic };
+      initialiseController();
+    },
+    applySourceOp(op) {
+      adapter.applySource?.(op);
+    },
+    tick(now) {
+      adapter.tick?.(now);
+    },
+    onEvent(cb) {
+      callbacks.add(cb);
+      return () => callbacks.delete(cb);
+    },
+    bus,
+    metrics,
+    topic,
+  };
+
+  return engine;
+}
+
+function createEngine(method: MethodOption, onProduced: (events: BusEvent[]) => void) {
+  return createControllerEngineInstance(method, onProduced);
 }
 
 function emptyEventMap<T>(methods: MethodOption[]) {
@@ -448,6 +588,19 @@ export function App() {
       }));
     },
     [],
+  );
+  const handleProduced = useCallback(
+    (method: MethodOption, events: BusEvent[]) => {
+      if (!events.length) return;
+      setBusEvents(prev => {
+        const next = { ...prev };
+        const existing = next[method] ?? [];
+        next[method] = [...existing, ...events];
+        return next;
+      });
+      updateLaneSnapshot(method, { lastOffset: events[events.length - 1]?.offset ?? -1 });
+    },
+    [updateLaneSnapshot],
   );
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -864,22 +1017,26 @@ export function App() {
 
   const drainQueues = useCallback(() => {
     if (isConsumerPaused) return;
-    const additions: Partial<Record<MethodOption, BusEvent[]>> = {};
+    const additions: Partial<Record<MethodOption, CdcEvent[]>> = {};
     for (const method of activeMethods) {
       const runtime = laneRuntimeRef.current[method];
       if (!runtime) continue;
       const batch = runtime.bus.consume(runtime.topic, 50);
       if (!batch.length) continue;
       runtime.metrics.onConsumed(batch);
+      const converted = batch.map(event => {
+        const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
+        return eventToCdcEvent(method, event, seq);
+      });
       updateLaneSnapshot(method);
-      additions[method] = batch;
+      additions[method] = converted;
     }
 
     if (Object.keys(additions).length === 0) return;
 
     setLaneEvents(prev => {
       const next = { ...prev };
-      for (const [methodKey, events] of Object.entries(additions) as [MethodOption, BusEvent[]][]) {
+      for (const [methodKey, events] of Object.entries(additions) as [MethodOption, CdcEvent[]][]) {
         const existing = next[methodKey] ?? [];
         next[methodKey] = [...existing, ...events];
       }
@@ -914,7 +1071,7 @@ export function App() {
     const runtimes: Partial<Record<MethodOption, LaneRuntime>> = {};
 
     const engines = activeMethods.map(method => {
-      const engine = createEngine(method);
+      const engine = createEngine(method, events => handleProduced(method, events));
       const config = methodConfig[method];
       if (method === "polling") {
         engine.configure({
@@ -933,26 +1090,19 @@ export function App() {
       }
 
       const runtime: LaneRuntime = {
-        bus: new EventBus<BusEvent>(),
-        metrics: new MetricsStore(),
-        topic: `cdc.${method}`,
+        bus: engine.bus,
+        metrics: engine.metrics,
+        topic: engine.topic,
       };
       runtimes[method] = runtime;
 
       const unsubscribe = engine.onEvent(event => {
-        const published = runtime.bus.publish(runtime.topic, [{ ...event, topic: runtime.topic }]);
-        if (published.length) {
-          runtime.metrics.onProduced(published);
-          updateLaneSnapshot(method, {
-            lastOffset: published[published.length - 1]?.offset ?? -1,
-          });
-          setBusEvents(prev => {
-            const next = { ...prev };
-            const existing = next[method] ?? [];
-            next[method] = [...existing, ...published];
-            return next;
-          });
-        }
+        setLaneEvents(prev => {
+          const next = { ...prev };
+          const existing = next[method] ?? [];
+          next[method] = [...existing, event];
+          return next;
+        });
       });
       unsubscribes.push(unsubscribe);
       return engine;
@@ -973,7 +1123,7 @@ export function App() {
       stopLoop();
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [activeMethods, scenario, stopLoop, methodConfig, updateLaneSnapshot]);
+  }, [activeMethods, scenario, stopLoop, methodConfig, updateLaneSnapshot, handleProduced]);
 
   const toggleMethod = useCallback((method: MethodOption) => {
     setActiveMethods(prev => {
