@@ -147,6 +147,7 @@ const els = {
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
+  methodGuidance: document.getElementById("methodGuidance"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
   quickstartCards: {
@@ -206,6 +207,42 @@ const learningConfig = [
     isComplete: () => state.events.length > 0,
   },
 ];
+
+const METHOD_KEYS = ["polling", "trigger", "log"];
+
+function renderMethodGuidance() {
+  const container = els.methodGuidance;
+  if (!container) return;
+  const copy = typeof window !== "undefined" ? window.CDC_METHOD_COPY : null;
+  if (!copy) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  const heading = document.createElement("h3");
+  heading.className = "method-guidance__heading";
+  heading.textContent = "When to use which";
+  fragment.appendChild(heading);
+
+  const list = document.createElement("dl");
+  list.className = "method-guidance__list";
+
+  METHOD_KEYS.forEach(key => {
+    const entry = copy[key];
+    if (!entry) return;
+    const dt = document.createElement("dt");
+    dt.textContent = entry.label;
+    const dd = document.createElement("dd");
+    dd.textContent = entry.whenToUse;
+    list.appendChild(dt);
+    list.appendChild(dd);
+  });
+
+  fragment.appendChild(list);
+  container.innerHTML = "";
+  container.appendChild(fragment);
+}
 
 function getTemplateById(id) {
   if (!id) return null;
@@ -2406,6 +2443,7 @@ async function main() {
 
   renderTemplateGallery();
   bindUiHandlers();
+  renderMethodGuidance();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter } }));
   }

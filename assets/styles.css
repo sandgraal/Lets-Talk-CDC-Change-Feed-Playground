@@ -1285,6 +1285,41 @@ code {
   box-shadow: 0 0 12px rgba(255, 154, 118, 0.75);
 }
 
+.method-guidance {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(15, 26, 48, 0.85);
+  border: 1px solid rgba(59, 120, 201, 0.35);
+  color: #cbd5f5;
+}
+
+.method-guidance__heading {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  color: #93c5fd;
+}
+
+.method-guidance__list {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.method-guidance__list dt {
+  font-weight: 600;
+  color: #e0f2fe;
+}
+
+.method-guidance__list dd {
+  margin: 0;
+  color: #cbd5f5;
+  line-height: 1.4;
+  font-size: 0.95rem;
+}
+
 @media (max-width: 960px) {
   .hero { grid-template-columns: 1fr; }
   .workspace { grid-template-columns: 1fr; }

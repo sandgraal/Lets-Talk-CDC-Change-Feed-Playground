@@ -6,6 +6,7 @@ import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
+import methodCopyData from "../assets/method-copy.js";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
 const PREFERENCES_KEY = "cdc_comparator_prefs_v1" as const;
@@ -93,17 +94,14 @@ type ClockControlCommand =
   | { type: "seek"; timeMs: number; stepMs?: number }
   | { type: "reset" };
 
-const METHOD_LABELS: Record<MethodOption, string> = {
-  polling: "Polling (Query)",
-  trigger: "Trigger (Audit)",
-  log: "Log (WAL)",
+type MethodCopy = {
+  label: string;
+  laneDescription: string;
+  callout: string;
+  whenToUse: string;
 };
 
-const METHOD_DESCRIPTIONS: Record<MethodOption, string> = {
-  polling: "Periodic scans of source state. Fast to set up, but can miss deletes and rapid updates.",
-  trigger: "Database triggers capture before/after into an audit table. Complete coverage, added write latency.",
-  log: "Streams the transaction log for ordered, low-latency change events with minimal source impact.",
-};
+const METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
 
 const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
   polling: { pollIntervalMs: 500, includeSoftDeletes: false },
@@ -516,34 +514,34 @@ export function App() {
           lagSpread: summary.lagSpread,
           bestLag: {
             method: summary.bestLag.method,
-            label: METHOD_LABELS[summary.bestLag.method],
+            label: METHOD_COPY[summary.bestLag.method].label,
             metrics: summary.bestLag.metrics,
           },
           worstLag: {
             method: summary.worstLag.method,
-            label: METHOD_LABELS[summary.worstLag.method],
+            label: METHOD_COPY[summary.worstLag.method].label,
             metrics: summary.worstLag.metrics,
           },
           lowestDeletes: {
             method: summary.lowestDeletes.method,
-            label: METHOD_LABELS[summary.lowestDeletes.method],
+            label: METHOD_COPY[summary.lowestDeletes.method].label,
             metrics: summary.lowestDeletes.metrics,
           },
           highestDeletes: {
             method: summary.highestDeletes.method,
-            label: METHOD_LABELS[summary.highestDeletes.method],
+            label: METHOD_COPY[summary.highestDeletes.method].label,
             metrics: summary.highestDeletes.metrics,
           },
           orderingIssues: summary.orderingIssues.map(method => ({
             method,
-            label: METHOD_LABELS[method],
+            label: METHOD_COPY[method].label,
           })),
         }
       : null;
 
     const lanesDetail = laneMetrics.map(({ method, metrics }) => ({
       method,
-      label: METHOD_LABELS[method],
+      label: METHOD_COPY[method].label,
       metrics,
     }));
 
@@ -735,15 +733,15 @@ export function App() {
     if (!summary) return;
     const parts: string[] = [];
     parts.push(`${scenario.label}: ${scenario.description}`);
-    parts.push(`Methods: ${activeMethods.map(method => METHOD_LABELS[method]).join(", ")}`);
+    parts.push(`Methods: ${activeMethods.map(method => METHOD_COPY[method].label).join(", ")}`);
     if (summary.bestLag) {
-      parts.push(`Fastest ${METHOD_LABELS[summary.bestLag.method]} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
+      parts.push(`Fastest ${METHOD_COPY[summary.bestLag.method].label} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
     }
     if (summary.lagSpread > 0) {
-      parts.push(`${METHOD_LABELS[summary.worstLag.method]} trails by ${Math.round(summary.lagSpread)}ms`);
+      parts.push(`${METHOD_COPY[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
     }
-    parts.push(`Lowest delete capture: ${METHOD_LABELS[summary.lowestDeletes.method]} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
-    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ") : "All lanes aligned"}`);
+    parts.push(`Lowest delete capture: ${METHOD_COPY[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
+    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_COPY[method].label).join(", ") : "All lanes aligned"}`);
     if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
     navigator.clipboard
       .writeText(parts.join('\n'))
@@ -943,7 +941,7 @@ export function App() {
       });
       return {
         method,
-        label: METHOD_LABELS[method],
+        label: METHOD_COPY[method].label,
         total: events.length,
         inserts,
         updates,
@@ -1020,7 +1018,7 @@ export function App() {
                 aria-pressed={activeMethods.includes(method)}
                 onClick={() => toggleMethod(method)}
               >
-                {METHOD_LABELS[method]}
+                {METHOD_COPY[method].label}
               </button>
             ))}
           </div>
@@ -1101,7 +1099,7 @@ export function App() {
                 aria-labelledby={`control-${method}`}
                 data-active={active ? "true" : "false"}
               >
-                <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+                <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
                 <p className="sim-shell__control-copy">Adjust poll cadence and whether soft deletes are surfaced.</p>
                 <label className="sim-shell__control-field">
                   <span>Poll interval (ms)</span>
@@ -1135,7 +1133,7 @@ export function App() {
                 aria-labelledby={`control-${method}`}
                 data-active={active ? "true" : "false"}
               >
-                <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+                <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
                 <p className="sim-shell__control-copy">Tune audit extractor cadence and per-write trigger overhead.</p>
                 <label className="sim-shell__control-field">
                   <span>Extractor interval (ms)</span>
@@ -1180,7 +1178,7 @@ export function App() {
               aria-labelledby={`control-${method}`}
               data-active={active ? "true" : "false"}
             >
-              <legend id={`control-${method}`}>{METHOD_LABELS[method]}</legend>
+              <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
               <p className="sim-shell__control-copy">Control how frequently the WAL/Binlog fetcher polls for new records.</p>
               <label className="sim-shell__control-field">
                 <span>Fetch interval (ms)</span>
@@ -1200,27 +1198,27 @@ export function App() {
       </div>
 
       {summary && (
-        <div className="sim-shell__summary" aria-live="polite">
-          <ul>
-            <li>
-              <strong>Lag spread:</strong> {METHOD_LABELS[summary.bestLag.method]} is leading at
-              {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
-              {summary.lagSpread > 0
-                ? ` — ${METHOD_LABELS[summary.worstLag.method]} trails by ${summary.lagSpread.toFixed(0)}ms`
-                : " (no spread)"}
-            </li>
-            <li>
-              <strong>Delete capture:</strong> {METHOD_LABELS[summary.lowestDeletes.method]} is lowest at
-              {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_LABELS[summary.highestDeletes.method]}
-              {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
-            </li>
-            <li>
-              <strong>Ordering:</strong>
-              {summary.orderingIssues.length === 0
-                ? " All methods preserved ordering"
-                : ` Issues: ${summary.orderingIssues.map(method => METHOD_LABELS[method]).join(", ")}`}
-            </li>
-          </ul>
+      <div className="sim-shell__summary" aria-live="polite">
+        <ul>
+          <li>
+            <strong>Lag spread:</strong> {METHOD_COPY[summary.bestLag.method].label} is leading at
+            {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
+            {summary.lagSpread > 0
+              ? ` — ${METHOD_COPY[summary.worstLag.method].label} trails by ${summary.lagSpread.toFixed(0)}ms`
+              : " (no spread)"}
+          </li>
+          <li>
+            <strong>Delete capture:</strong> {METHOD_COPY[summary.lowestDeletes.method].label} is lowest at
+            {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_COPY[summary.highestDeletes.method].label}
+            {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
+          </li>
+          <li>
+            <strong>Ordering:</strong>
+            {summary.orderingIssues.length === 0
+              ? " All methods preserved ordering"
+              : ` Issues: ${summary.orderingIssues.map(method => METHOD_COPY[method].label).join(", ")}`}
+          </li>
+        </ul>
           <button type="button" className="sim-shell__summary-copy" onClick={handleCopySummary}>
             {summaryCopied ? "Copied" : "Copy summary"}
           </button>
@@ -1228,10 +1226,24 @@ export function App() {
       )}
 
       <div className="sim-shell__lane-grid">
-        {laneMetrics.map(({ method, metrics, events }) => {
-          const description = METHOD_DESCRIPTIONS[method];
+        {laneMetrics.map(({ method, metrics, events }, laneIndex) => {
+          const copy = METHOD_COPY[method];
+          const description = copy.laneDescription;
           const config = methodConfig[method];
           const diff = laneDiffs.get(method) ?? null;
+          const isPrimaryLane = laneIndex === 0;
+          const callouts: Array<{ text: string; tone: "warning" | "info" }> = [];
+          const tone = method === "polling" ? "warning" : "info";
+          if (copy.callout) {
+            if (method === "polling" && metrics.deletesPct < 100) {
+              callouts.push({
+                text: `${copy.callout} (${metrics.deletesPct.toFixed(0)}% of deletes captured in this scenario)`,
+                tone,
+              });
+            } else {
+              callouts.push({ text: copy.callout, tone });
+            }
+          }
           const filteredEvents = events.filter(event => {
             if (!eventOpsSet.has(event.op as EventOp)) return false;
             if (!eventSearchTerms.length) return true;
@@ -1257,7 +1269,7 @@ export function App() {
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
                 <div>
-                  <h3 className="sim-shell__lane-title">{METHOD_LABELS[method]}</h3>
+                  <h3 className="sim-shell__lane-title">{copy.label}</h3>
                   <p className="sim-shell__lane-copy">{description}</p>
                 </div>
                 <span className="sim-shell__lane-count">
@@ -1305,17 +1317,24 @@ export function App() {
                 )}
               </dl>
 
-              {method === "polling" && metrics.deletesPct < 100 && (
-                <p className="sim-shell__callout sim-shell__callout--warning">
-                  Hard deletes missed: {metrics.deletesPct.toFixed(0)}% captured.
-                </p>
+              {callouts.length > 0 && (
+                <div className="sim-shell__callouts">
+                  {callouts.map((callout, index) => (
+                    <p
+                      key={`${method}-callout-${index}`}
+                      className={`sim-shell__callout${callout.tone === "warning" ? " sim-shell__callout--warning" : ""}`}
+                      data-tour-target={isPrimaryLane && index === 0 ? "comparator-callouts" : undefined}
+                    >
+                      {callout.text}
+                    </p>
+                  ))}
+                </div>
               )}
-              {method === "trigger" && (
-                <p className="sim-shell__callout">Adds write latency via trigger execution.</p>
-              )}
-              {method === "log" && (
-                <p className="sim-shell__callout">Reads WAL/Binlog post-commit with strict ordering.</p>
-              )}
+
+              <section className="sim-shell__lane-why" aria-label={`When to use ${copy.label}`}>
+                <h4>When to use</h4>
+                <p>{copy.whenToUse}</p>
+              </section>
 
               {showEventList ? (
                 <ul className="sim-shell__event-list" aria-live="polite">

@@ -459,6 +459,37 @@
   color: #b91c1c;
 }
 
+.sim-shell__callouts {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.sim-shell__lane-why {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #1d4ed8;
+  font-size: 0.9rem;
+}
+
+.sim-shell__lane-why h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e3a8a;
+}
+
+.sim-shell__lane-why p {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .sim-shell__event-list {
   max-height: 220px;
   overflow-y: auto;
