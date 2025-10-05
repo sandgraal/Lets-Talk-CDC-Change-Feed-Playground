@@ -29,14 +29,14 @@ Status: v1
     types.ts         # Record, Event, Txn, Schema, Table, CDCMode
     storage.ts       # in-memory + Appwrite backing (optional)
   /ui
-    components/*     # EventLog, Controls, StatusIndicators, Tables, Metrics
-    glossary.tsx     # mini inline glossary
+    components/*     # EventLog, Controls, StatusIndicators, Tables, Metrics (placeholder wired)
+    glossary.ts      # mini inline glossary
     tooltips.ts      # copy for guided hints
   /features
     presets.ts       # vendor presets (labels/icons/text)
     scenarios.ts     # scripted demos: multi-update, delete, multi-table transaction
   /test
-    unit/*           # core engine tests
+    unit/*           # core engine tests (to add)
     e2e/*            # cypress/playwright flows
 
 pgsql
@@ -89,64 +89,10 @@ export type Metrics = {
 ```
 
 ### Event Bus abstraction (simulates Kafka)
-```ts
-// /src/engine/eventBus.ts
-export class EventBus {
-  private topics: Map<string, {offset:number; queue: Event[]}> = new Map();
-
-  publish(topic: string, evts: Event[]): Event[] {
-    const t = this.ensure(topic);
-    return evts.map(e => {
-      const offset = ++t.offset;
-      const withOffset = {...e, offset};
-      t.queue.push(withOffset);
-      return withOffset;
-    });
-  }
-
-  // consumer pull with back-pressure simulation
-  consume(topic: string, max = 1): Event[] {
-    const t = this.ensure(topic);
-    return t.queue.splice(0, max);
-  }
-
-  size(topic: string): number { return this.ensure(topic).queue.length; }
-
-  private ensure(topic: string) {
-    if (!this.topics.has(topic)) this.topics.set(topic, {offset: -1, queue: []});
-    return this.topics.get(topic)!;
-  }
-}
-```
+`src/engine/eventBus.ts` publishes events with offsets, supports per-topic resets, and backs the shared backlog/lag metrics powering the comparator UI.
 
 ### CDC state machine (lifecycle)
-```ts
-// /src/engine/stateMachine.ts
-type State = 'IDLE' | 'SNAPSHOTTING' | 'TAILING' | 'PAUSED';
-
-export class CDCController {
-  constructor(
-    private mode: CDCMode,
-    private bus: EventBus,
-    private scheduler: Scheduler,
-    private metrics: MetricsStore
-  ) {}
-
-  private state: State = 'IDLE';
-
-  startSnapshot(sourceTables: Table[]) { /* enqueue snapshot events by table */ }
-  startTailing() { this.state = 'TAILING'; /* subscribe to source change feed */ }
-  pause() { this.state = 'PAUSED'; }
-  resume() { this.state = 'TAILING'; }
-  stop() { this.state = 'IDLE'; this.scheduler.clear(); }
-
-  // called by modes to emit events
-  emit(topic: string, evts: Event[]) {
-    const withOffsets = this.bus.publish(topic, evts);
-    this.metrics.onProduced(withOffsets);
-  }
-}
-```
+`src/engine/stateMachine.ts` coordinates snapshot/tailing workflows through pluggable adapters. `emit` returns enriched bus events so downstream consumers (React UI, metrics) share a consistent transport.
 
 ## Feature Specs & Steps
 
@@ -174,13 +120,12 @@ export class CDCController {
    - Acceptance: rapid multi-updates collapse into single UPDATE. Deletes between polls are missed; metrics `missedDeletes` increments; banner explains why.
 
 5. **Event Bus in the UI (P0)**
-   - Insert middle column "Event Bus (topic: cdc.table)". Show backlog count + last offset. Animate flow Source -> Bus -> Destination.
-   - Acceptance: users can see events wait on the bus when consumer paused or slow.
+   - ✅ Middle column "Event Bus (topic: cdc.table)" wired via shared EventBus.
+   - Acceptance: pausing the consumer now shows backlog/lag growth per lane.
 
 6. **Trigger-based CDC mode (P1)**
-   - New mode that writes changes to a change_table on every write. `writeAmplification` = number of extra writes per txn (displayed).
-   - Emits events from change_table immediately (no polling).
-   - Acceptance: immediate capture (no lag) with overhead counter rising on heavy writes.
+   - Adapter skeleton implemented; emits events with configurable trigger overhead and increments write amplification metric.
+   - Next: surface write amplification in UI and integrate into guided walkthrough.
 
 7. **Schema change demo (P1)**
    - Buttons: Add Column, Drop Column on Source.
@@ -189,9 +134,7 @@ export class CDCController {
    - Acceptance: UI badges show schema vN -> vN+1; destination eventually aligns (LOG/TRIGGER).
 
 8. **Multi-table + transactions (P1)**
-   - Add orders + order_items with FK; "Create order (1:n items)" commits as single txn.
-   - For LOG/TRIGGER: emit per-row events with same `txnId`; consumer can apply via naive per-event apply (temporary inconsistency) or "apply on commit boundary" toggle.
-   - Acceptance: users observe inconsistency with naive apply and consistency with commit-boundary option.
+   - TODO: extend adapters and UI to preserve txn boundaries, add apply-on-commit toggle.
 
 9. **Vendor presets (labels only) (P1)**
    - Presets dropdown: MySQL + Debezium + Kafka; Postgres Logical Decoding + Kafka; SQL Server CDC + ETL; Oracle GoldenGate; MongoDB Change Streams (informational).
@@ -199,9 +142,7 @@ export class CDCController {
    - Acceptance: switching presets updates terminology across UI + glossary.
 
 10. **Metrics & Lag dashboard (P1)**
-    - Component `/src/ui/components/Metrics.tsx` showing produced/consumed/backlog, p50/p95 lag (ms), `missedDeletes` (QUERY), `writeAmplification` (TRIGGER), `snapshotRows`.
-    - Sparkline per metric (lightweight, no external deps).
-    - Acceptance: lag increases if consumer paused or slowed; resolves on resume.
+    - Metrics plumbing ready (shared `MetricsStore`). Need `/src/ui/components/Metrics.tsx` to visualise produced/consumed/backlog and lag percentiles.
 
 11. **Guided tooltips + glossary (P1)**
     - One-time walkthrough: Start CDC -> Snapshot -> Tailing. Differences per mode explained inline.
@@ -237,8 +178,11 @@ export class CDCController {
 - Developer toggle to emit these to Appwrite/console in dev.
 
 ## Testing
-- Unit (`/src/test/unit`): eventBus ordering/offsets/backlog; queryBased deletes not emitted; triggerBased overhead increments; logBased snapshot then tail; stateMachine pause/resume/stop behavior.
-- E2E (`/src/test/e2e`): edit record -> event log; query mode rapid updates; delete between polls; pause backlog/resume drain; schema add flows.
+- **Unit** (`/src/test/unit` – to author):
+  - EventBus publish/consume ordering and offset monotonicity.
+  - Mode adapters: query-based missed delete counters, trigger-based write amplification, log-based WAL tailing.
+  - CDCController pause/resume/stop clearing scheduler.
+- **E2E** (`/src/test/e2e`): edit record -> event log parity; query mode rapid updates collapse; delete between polls; pause backlog/resume drain; schema add flows.
 
 ## Accessibility
 - Keyboard navigation for all controls.
