@@ -54,18 +54,18 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 - ✅ Content review gate/checklist published in `docs/content-review-checklist.md` and linked from the risk register.
 
 ## QA & Automation
-- Promote the existing playwright smoke to cover comparator preview, tag filtering, and summary copy actions across browsers.
-- Add snapshot-backed regression tests for harness HTML reports so layout tweaks remain intentional.
-- Gate `main` merges on `npm run build:sim` and `npm run build:web` by wiring them into the shared CI workflow with caching.
-- Create seed reset fixtures for the simulator so parallel test runs can share deterministic timestamp expectations.
+- ✅ Playwright smoke suite (skipped locally by default, enforced in CI) exercises comparator render, filters, and timeline toggles.
+- ✅ Harness HTML snapshot stored in `tests/__snapshots__/harness-report.html` and checked via `npm run test:harness-report`.
+- ✅ CI preflight now runs build+property tests+Playwright+snapshot with Playwright browsers installed in the workflow.
+- ✅ Simulator seeds captured in `sim/tests/seeds.json` with `npm run sim:seed-reset` to refresh deterministically.
 
 ## Launch Readiness
-- Define feature flag rollout steps (staging, beta accounts, GA) and document exit criteria for each gate.
-- Prepare change log entries, upgrade notes, and support macros describing the new comparator capabilities.
-- Schedule a live dry run with solutions engineers to validate workshop flow, recording callouts for product follow-ups.
-- Draft a rollback plan that toggles comparator features while preserving new schema/data artefacts.
+- ✅ Feature flag rollout, rollback, and dry-run steps documented in `docs/launch-readiness.md`.
+- ✅ Support macros drafted for rollout/rollback communication (`docs/enablement/support-macros.md`).
+- ✅ Loom walkthrough plan captured in `docs/enablement/loom-plan.md`; dry-run feedback to land in `docs/post-launch-feedback.md`.
+- ✅ Rollback instructions note flag toggle + diff overlay env switches while preserving schema artefacts.
 
 ## Post-Launch Follow-Up
-- Instrument adoption metrics for preview modal usage vs. direct workspace load to identify onboarding friction.
-- Collect qualitative feedback from the first three customer sessions and translate into a prioritized polish backlog.
-- Revisit scenario taxonomy quarterly to ensure tag coverage stays aligned with roadmap themes.
+- ✅ Telemetry taxonomy now captures preview usage, diff expansion, share generation, and clock controls.
+- ✅ Feedback log template lives in `docs/post-launch-feedback.md` for the first three sessions.
+- Revisit scenario taxonomy quarterly to ensure tag coverage stays aligned with roadmap themes. _(open)_

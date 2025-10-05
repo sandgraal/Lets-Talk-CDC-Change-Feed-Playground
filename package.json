@@ -13,9 +13,13 @@
     "preview:sim": "vite preview --mode sim",
     "preview:web": "vite preview --mode web",
     "test:sim": "node sim/tests/property-tests.mjs",
-    "ci:preflight": "npm run build:sim && npm run build:web && npm run test:sim",
+    "test:e2e": "PLAYWRIGHT_DISABLE=1 playwright test",
+    "test:harness-report": "node tests/harness-report-snapshot.mjs",
+    "ci:preflight": "npm-run-all2 build:sim build:web test:sim test:e2e test:harness-report",
     "prepare:scenario": "node harness/scripts/prepare-scenario.mjs",
     "snapshot:scenarios": "node harness/scripts/snapshot-scenarios.mjs",
+    "snapshot:harness-report": "node tests/snapshot-harness-report.mjs",
+    "sim:seed-reset": "node sim/tests/reset-seeds.mjs",
     "ladle": "ladle dev"
   },
   "dependencies": {
@@ -23,8 +27,9 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/react": "^18.3.8",
     "@ladle/react": "^4.0.1",
+    "@playwright/test": "^1.55.1",
+    "@types/react": "^18.3.8",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.4",
     "npm-run-all2": "^6.1.2",
