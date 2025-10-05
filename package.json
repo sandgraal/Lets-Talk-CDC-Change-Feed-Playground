@@ -9,7 +9,9 @@
     "dev:sim": "vite --mode sim",
     "dev:web": "vite --mode web",
     "preview:sim": "vite preview --mode sim",
-    "preview:web": "vite preview --mode web"
+    "preview:web": "vite preview --mode web",
+    "test:sim": "node sim/tests/property-tests.mjs",
+    "ci:preflight": "npm run build:sim && npm run build:web && npm run test:sim"
   },
   "dependencies": {
     "react": "^18.3.1",

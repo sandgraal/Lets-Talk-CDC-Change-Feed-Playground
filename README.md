@@ -11,6 +11,10 @@ Open `index.html` in a browser. No build step.
 - Build the React comparator shell: `npm run build:web` → emits `assets/generated/ui-shell.js` for `assets/ui-shell-loader.js`
 - Build everything: `npm run build`
 
+### Verification
+- Property-based invariants: `npm run test:sim` (requires a fresh `npm run build:sim` bundle)
+- Full preflight mirror: `npm run ci:preflight` (runs sim/web builds and the invariant suite—identical to the GitHub Actions workflow)
+
 The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines in parallel to visualise lag, ordering, and delete capture differences.
 
 ### Advanced controls
@@ -22,6 +26,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Exports/imports carry comparator preferences and the latest insight snapshot for consistent replays
 - Curated scenarios live in `assets/shared-scenarios.js`; update that module once to change both the template gallery and comparator demos
 - Comparator lets you push any scenario back into the workspace via the new “Load in workspace” shortcut
+- Lane diff overlays surface missing/extra/out-of-order operations and lag hotspots per method so insights link to exact events
 
 ## Hacktoberfest 2025
 - This repository is registered for Hacktoberfest 2025. Make sure you have signed up at [hacktoberfest.com](https://hacktoberfest.com/).

@@ -5,6 +5,8 @@ import {
   LogEngine,
   ScenarioRunner,
 } from "./index";
+import { diffLane, diffAllLanes } from "./analysis/diff";
+import type { LaneDiffResult, LaneDiffIssue, LaneDiffIssueType, LaneLagSample } from "./analysis/diff";
 import type {
   CdcEvent,
   SourceOp,
@@ -24,6 +26,8 @@ const exportsObject = {
   TriggerEngine,
   LogEngine,
   ScenarioRunner,
+  diffLane,
+  diffAllLanes,
 };
 
 // Attach for non-module consumers once the bundle loads.
@@ -40,8 +44,20 @@ export type {
   MethodEngine,
   Scenario,
   ScenarioRunnerApi,
+  LaneDiffResult,
+  LaneDiffIssue,
+  LaneDiffIssueType,
+  LaneLagSample,
 };
 
-export { EventBus, PollingEngine, TriggerEngine, LogEngine, ScenarioRunner };
+export {
+  EventBus,
+  PollingEngine,
+  TriggerEngine,
+  LogEngine,
+  ScenarioRunner,
+  diffLane,
+  diffAllLanes,
+};
 
 export default exportsObject;

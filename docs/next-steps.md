@@ -10,12 +10,12 @@ _Tooling status: `npm run build:sim` → `assets/generated/sim-bundle.js`, `npm 
 - **Feature flag posture** _(Decision: launch behind `comparator_v2`)_ → Ship comparator enhancements gated via runtime flag with staged rollout (internal → beta → GA). Action: implement flag hook in shell bootstrap and draft the rollout calendar captured in Launch Readiness.
 
 ## Near-Term Build Goals
-1. Persist workspace scenarios + advanced controls into export/import/share flows, including comparator insight snapshots.
-2. Introduce deterministic clock hooks that power the guided onboarding/tour flow across lanes.
-3. Implement property-based tests for Polling/Trigger/Log invariants (lag behaviour, delete visibility, ordering).
-4. Freeze Scenario JSON schema for export/import and ensure existing templates or seeds map cleanly onto it.
-5. Ship lane diff overlays inside the comparator so insight callouts can link to concrete event deltas.
-6. Stand up a preflight lint/type/test suite in CI that mirrors the manual `sim` + `web` build to catch regressions before packaging.
+1. ✅ Persist workspace scenarios + advanced controls into export/import/share flows—exports now carry comparator preferences, analytics, and lane diffs; import/share hydration applies them and snapshots render inside the legacy shell.
+2. ✅ Introduce deterministic clock hooks—`window.cdcComparatorClock` and `cdc:comparator-clock` events allow guided tours to play, pause, step, seek, and reset the React comparator on a deterministic timeline.
+3. ✅ Implement property-based tests (`npm run test:sim`) covering lag, delete capture, and ordering invariants across Polling/Trigger/Log engines using randomly generated scenarios.
+4. ✅ Freeze Scenario JSON schema at `docs/schema/scenario-v2.json`, locking the v2 payload contract and verifying shared templates conform.
+5. ✅ Ship lane diff overlays in the comparator so insight callouts surface concrete missing/extra/order issues and lag hotspots per method.
+6. ✅ Stand up a preflight suite (`npm run ci:preflight`) mirrored in GitHub Actions to run sim/web builds plus property tests before packaging.
 
 ## Harness Track
 - Flesh out generator/verifier packages with scripts to pull the shared scenario JSON and emit PASS/FAIL.
