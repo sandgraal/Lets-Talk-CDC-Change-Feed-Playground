@@ -1,10 +1,11 @@
-const scenarios = [
+const defaultScenarios = [
   {
     id: "orders",
     name: "Omnichannel Orders",
     label: "Omnichannel Orders",
     description: "Track order lifecycle and fulfillment signals across channels.",
     highlight: "Focus on status transitions, totals, and fulfillment metadata.",
+    table: "orders",
     schema: [
       { name: "order_id", type: "string", pk: true },
       { name: "customer_id", type: "string", pk: false },
@@ -69,6 +70,13 @@ const scenarios = [
         },
         key: { order_id: "ORD-1003" }
       }
+    ],
+    ops: [
+      { t: 0, op: "insert", table: "orders", pk: { id: "ORD-1001" }, after: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" } },
+      { t: 200, op: "update", table: "orders", pk: { id: "ORD-1001" }, after: { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" } },
+      { t: 150, op: "insert", table: "orders", pk: { id: "ORD-1002" }, after: { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" } },
+      { t: 250, op: "insert", table: "orders", pk: { id: "ORD-1003" }, after: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" } },
+      { t: 360, op: "update", table: "orders", pk: { id: "ORD-1003" }, after: { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" } }
     ]
   },
   {
@@ -77,6 +85,7 @@ const scenarios = [
     label: "Real-time Payments",
     description: "Model authorization, capture, and decline flows for transactions.",
     highlight: "Great for demonstrating idempotent updates and risk review.",
+    table: "payments",
     schema: [
       { name: "transaction_id", type: "string", pk: true },
       { name: "account_id", type: "string", pk: false },
@@ -142,6 +151,13 @@ const scenarios = [
         },
         key: { transaction_id: "PAY-88377" }
       }
+    ],
+    ops: [
+      { t: 0, op: "insert", table: "payments", pk: { id: "PAY-88341" }, after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null } },
+      { t: 120, op: "update", table: "payments", pk: { id: "PAY-88341" }, after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" } },
+      { t: 200, op: "insert", table: "payments", pk: { id: "PAY-88355" }, after: { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null } },
+      { t: 240, op: "insert", table: "payments", pk: { id: "PAY-88377" }, after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null } },
+      { t: 300, op: "update", table: "payments", pk: { id: "PAY-88377" }, after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null } }
     ]
   },
   {
@@ -150,6 +166,7 @@ const scenarios = [
     label: "IoT Telemetry",
     description: "Capture rolling sensor readings with anomaly flags.",
     highlight: "Simulate snapshots, drifts, and device alerts in edge pipelines.",
+    table: "telemetry",
     schema: [
       { name: "reading_id", type: "string", pk: true },
       { name: "device_id", type: "string", pk: false },
@@ -214,6 +231,13 @@ const scenarios = [
         },
         key: { reading_id: "READ-302" }
       }
+    ],
+    ops: [
+      { t: 0, op: "insert", table: "telemetry", pk: { id: "READ-301" }, after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" } },
+      { t: 150, op: "update", table: "telemetry", pk: { id: "READ-301" }, after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" } },
+      { t: 210, op: "insert", table: "telemetry", pk: { id: "READ-302" }, after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" } },
+      { t: 260, op: "update", table: "telemetry", pk: { id: "READ-302" }, after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 26.3, pressure_kpa: 100.8, status: "alert", recorded_at: "2025-03-20T15:20:00Z" } },
+      { t: 180, op: "insert", table: "telemetry", pk: { id: "READ-377" }, after: { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" } }
     ]
   },
   {
@@ -224,7 +248,7 @@ const scenarios = [
     seed: 42,
     ops: [
       { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
-      { t: 400, op: "update", table: "customers", pk: { id: "1" }, after: { name: "A1" } },
+      { t: 400, op: "update", table: "customers", pk: { id: "1" }, after: { name: "A1", email: "a@example.com" } },
       { t: 700, op: "delete", table: "customers", pk: { id: "1" } }
     ]
   },
@@ -236,17 +260,17 @@ const scenarios = [
     seed: 7,
     ops: [
       { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },
-      { t: 150, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-1" } },
-      { t: 180, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-2" } },
-      { t: 210, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-3" } },
-      { t: 240, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-4" } },
-      { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final" } }
+      { t: 150, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-1", email: "burst@example.com" } },
+      { t: 180, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-2", email: "burst@example.com" } },
+      { t: 210, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-3", email: "burst@example.com" } },
+      { t: 240, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-4", email: "burst@example.com" } },
+      { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final", email: "burst@example.com" } }
     ]
   }
 ];
 
 if (typeof window !== "undefined") {
-  window.CDC_SCENARIOS = scenarios;
+  window.CDC_SCENARIOS = defaultScenarios;
 }
 
-export default scenarios;
+export default defaultScenarios;
