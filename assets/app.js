@@ -694,8 +694,15 @@ async function maybeHydrateSharedScenario() {
     if (doc.comparator?.preferences) {
       applyComparatorPreferences(doc.comparator.preferences);
     }
-    if (doc.comparator?.summary) {
-      renderComparatorFeedback(doc.comparator.summary);
+    const sharedDetail = buildComparatorSnapshotDetail(doc.comparator, {
+      label: doc.scenarioId || "Shared scenario",
+      name: doc.scenarioId || "shared",
+      isLive: false,
+      rowsLength: state.rows.length,
+      eventsLength: state.events.length,
+    });
+    if (sharedDetail) {
+      renderComparatorFeedback(sharedDetail);
     }
     uiState.lastShareId = doc.$id;
     save();
@@ -727,6 +734,9 @@ const nowTs = () => Date.now();
 const clone  = (x) => JSON.parse(JSON.stringify(x));
 const comparatorState = {
   summary: null,
+  analytics: [],
+  diffs: [],
+  tags: [],
 };
 const save   = () => {
   try {
@@ -828,14 +838,26 @@ function applyComparatorPreferences(prefs) {
 function buildComparatorExport() {
   const preferences = loadComparatorPreferences();
   let summary = comparatorState.summary;
+  let analytics = comparatorState.analytics;
+  let diffs = comparatorState.diffs;
+  let tags = comparatorState.tags;
   try {
     summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
+    analytics = analytics ? JSON.parse(JSON.stringify(analytics)) : [];
+    diffs = diffs ? JSON.parse(JSON.stringify(diffs)) : [];
+    tags = Array.isArray(tags) ? [...tags] : [];
   } catch {
     summary = null;
+    analytics = [];
+    diffs = [];
+    tags = [];
   }
   return {
     preferences: preferences || null,
     summary,
+    analytics,
+    diffs,
+    tags,
   };
 }
 
@@ -1143,6 +1165,16 @@ if (typeof window !== "undefined") {
     const template = detail?.id ? getTemplateById(detail.id) : detail;
     if (template) openScenarioPreview(template);
   });
+
+  if (!window.cdcComparatorClock) {
+    window.cdcComparatorClock = {
+      play: () => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "play" } })),
+      pause: () => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "pause" } })),
+      step: deltaMs => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "step", deltaMs } })),
+      seek: (timeMs, stepMs) => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "seek", timeMs, stepMs } })),
+      reset: () => window.dispatchEvent(new CustomEvent("cdc:comparator-clock", { detail: { type: "reset" } })),
+    };
+  }
 }
 
 function renderComparatorFeedback(detail) {
@@ -1154,15 +1186,24 @@ function renderComparatorFeedback(detail) {
     panel.innerHTML = "";
     panel.removeAttribute("data-live");
     comparatorState.summary = null;
+    comparatorState.analytics = [];
+    comparatorState.diffs = [];
+    comparatorState.tags = [];
     return;
   }
 
   const { summary, scenarioLabel, scenarioName, isLive } = detail;
 
   try {
-    comparatorState.summary = JSON.parse(JSON.stringify(detail));
+    comparatorState.summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
+    comparatorState.analytics = detail.analytics ? JSON.parse(JSON.stringify(detail.analytics)) : [];
+    comparatorState.diffs = detail.diffs ? JSON.parse(JSON.stringify(detail.diffs)) : [];
+    comparatorState.tags = Array.isArray(detail.tags) ? [...detail.tags] : [];
   } catch {
     comparatorState.summary = null;
+    comparatorState.analytics = [];
+    comparatorState.diffs = [];
+    comparatorState.tags = [];
   }
 
   const bestLag = summary.bestLag;
@@ -1201,6 +1242,27 @@ function renderComparatorFeedback(detail) {
     </ul>
   `;
   panel.hidden = false;
+}
+
+function buildComparatorSnapshotDetail(snapshot, context) {
+  if (!snapshot || !snapshot.summary) return null;
+
+  const analytics = Array.isArray(snapshot.analytics) ? snapshot.analytics : [];
+  const totalFromAnalytics = analytics.reduce((sum, lane) => sum + (lane.total || 0), 0);
+  const totalEvents = context.totalEvents ?? (totalFromAnalytics || context.eventsLength || 0);
+  const description = context.description || `${context.rowsLength ?? 0} rows · ${totalEvents} events`;
+
+  return {
+    summary: snapshot.summary,
+    analytics,
+    diffs: Array.isArray(snapshot.diffs) ? snapshot.diffs : [],
+    tags: Array.isArray(snapshot.tags) ? snapshot.tags : [],
+    totalEvents,
+    scenarioLabel: context.label,
+    scenarioName: context.name,
+    scenarioDescription: description,
+    isLive: Boolean(context.isLive),
+  };
 }
 
 const OP_METADATA = {
@@ -2031,8 +2093,15 @@ function importScenario(file) {
       if (scenarioPayload.comparator?.preferences) {
         applyComparatorPreferences(scenarioPayload.comparator.preferences);
       }
-      if (scenarioPayload.comparator?.summary) {
-        renderComparatorFeedback(scenarioPayload.comparator.summary);
+      const snapshotDetail = buildComparatorSnapshotDetail(scenarioPayload.comparator, {
+        label: scenarioPayload.name || scenarioPayload.label || state.scenarioId || "Imported scenario",
+        name: scenarioPayload.scenarioId || state.scenarioId || "imported",
+        isLive: false,
+        rowsLength: state.rows.length,
+        eventsLength: state.events.length,
+      });
+      if (snapshotDetail) {
+        renderComparatorFeedback(snapshotDetail);
       }
       save(); renderSchema(); renderEditor(); renderTable(); renderJSONLog();
       renderTemplateGallery();

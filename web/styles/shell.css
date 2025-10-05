@@ -121,6 +121,88 @@
   background: rgba(37, 99, 235, 0.2);
 }
 
+.sim-shell__lane-diff {
+  margin-top: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  background: rgba(248, 250, 252, 0.75);
+  display: grid;
+  gap: 0.6rem;
+}
+.sim-shell__lane-diff[data-has-issues="true"] {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(254, 226, 226, 0.5);
+}
+.sim-shell__lane-diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
+.sim-shell__lane-diff-chip {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+.sim-shell__lane-diff-chip--missing {
+  background: rgba(220, 38, 38, 0.18);
+  color: #b91c1c;
+}
+.sim-shell__lane-diff-chip--extra {
+  background: rgba(249, 115, 22, 0.18);
+  color: #c2410c;
+}
+.sim-shell__lane-diff-chip--ordering {
+  background: rgba(14, 116, 144, 0.18);
+  color: #0e7490;
+}
+.sim-shell__lane-diff-chip--lag {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+.sim-shell__lane-diff-chip--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+.sim-shell__lane-diff-details {
+  font-size: 0.82rem;
+  color: #1f2937;
+}
+.sim-shell__lane-diff-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.sim-shell__lane-diff-list {
+  margin: 0.35rem 0 0.25rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.sim-shell__lane-diff-more {
+  margin: 0.1rem 0 0;
+  color: rgba(15, 23, 42, 0.7);
+}
+.sim-shell__lane-diff-lag {
+  margin-top: 0.4rem;
+}
+.sim-shell__lane-diff-lag h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.85);
+}
+.sim-shell__lane-diff-lag ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
 .sim-shell__method-toggle {
   display: inline-flex;
   flex-wrap: wrap;

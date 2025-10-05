@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CdcEvent, SourceOp } from "../sim";
-import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine } from "../sim";
+import type { CdcEvent, SourceOp, LaneDiffResult } from "../sim";
+import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine, diffLane } from "../sim";
 import { MetricsStrip } from "./components/MetricsStrip";
+import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import "./styles/shell.css";
 
@@ -78,6 +79,13 @@ type Summary = {
   highestDeletes: LaneMetrics;
   orderingIssues: MethodOption[];
 };
+
+type ClockControlCommand =
+  | { type: "play" }
+  | { type: "pause" }
+  | { type: "step"; deltaMs?: number }
+  | { type: "seek"; timeMs: number; stepMs?: number }
+  | { type: "reset" };
 
 const METHOD_LABELS: Record<MethodOption, string> = {
   polling: "Polling (Query)",
@@ -293,6 +301,7 @@ export function App() {
     () => initialMethodConfig,
   );
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const isPlayingRef = useRef(isPlaying);
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
@@ -332,6 +341,10 @@ export function App() {
     const timer = window.setTimeout(() => setSummaryCopied(false), 2000);
     return () => window.clearTimeout(timer);
   }, [summaryCopied]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   useEffect(() => {
     if (!scenarioOptions.length) return;
@@ -487,6 +500,24 @@ export function App() {
       metrics,
     }));
 
+    const diffsDetail = laneMetrics.map(({ method }) => {
+      const diff = laneDiffs.get(method);
+      if (!diff) {
+        return {
+          method,
+          totals: { missing: 0, extra: 0, ordering: 0 },
+          issues: [],
+          lag: { max: 0, samples: [] },
+        };
+      }
+      return {
+        method,
+        totals: diff.totals,
+        issues: diff.issues.slice(0, 25),
+        lag: diff.lag,
+      };
+    });
+
     window.dispatchEvent(
       new CustomEvent("cdc:comparator-summary", {
         detail: {
@@ -499,10 +530,11 @@ export function App() {
           lanes: lanesDetail,
           analytics,
           tags: scenarioTags,
+          diffs: diffsDetail,
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags]);
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -647,17 +679,33 @@ export function App() {
     }));
   }, []);
 
+  const resetRunnerState = useCallback(
+    (options?: { keepLoop?: boolean }) => {
+      const runner = runnerRef.current;
+      if (!runner) return;
+
+      runner.reset(scenario.seed);
+      setLaneEvents(emptyEventMap(activeMethods));
+      setClock(0);
+
+      if (!options?.keepLoop) {
+        runner.pause();
+        setIsPlaying(false);
+        stopLoop();
+      }
+    },
+    [activeMethods, scenario.seed, stopLoop],
+  );
+
   const handleStart = useCallback(() => {
     const runner = runnerRef.current;
     if (!runner) return;
 
-    runner.reset(scenario.seed);
-    setLaneEvents(emptyEventMap(activeMethods));
-    setClock(0);
+    resetRunnerState({ keepLoop: true });
     runner.start();
     setIsPlaying(true);
     startLoop();
-  }, [activeMethods, scenario.seed, startLoop]);
+  }, [resetRunnerState, startLoop]);
 
   const handlePause = useCallback(() => {
     runnerRef.current?.pause();
@@ -665,21 +713,110 @@ export function App() {
     stopLoop();
   }, [stopLoop]);
 
-  const handleStep = useCallback(() => {
-    const runner = runnerRef.current;
-    if (!runner) return;
+  const handleStep = useCallback(
+    (deltaMs = STEP_MS) => {
+      const runner = runnerRef.current;
+      if (!runner) return;
 
-    const wasPlaying = isPlaying;
-    if (!wasPlaying) {
+      const wasPlaying = isPlayingRef.current;
+      if (!wasPlaying) {
+        runner.start();
+      }
+
+      runner.tick(deltaMs);
+
+      if (!wasPlaying) {
+        runner.pause();
+      }
+    },
+    [],
+  );
+
+  const handleSeek = useCallback(
+    (targetMs: number, stepMs?: number) => {
+      const runner = runnerRef.current;
+      if (!runner) return;
+
+      const stepSize = Math.max(10, stepMs ?? STEP_MS);
+      resetRunnerState({ keepLoop: false });
+      const ceiling = Math.max(targetMs, 0);
       runner.start();
-    }
 
-    runner.tick(STEP_MS);
+      let elapsed = 0;
+      let safety = 0;
+      while (elapsed < ceiling && safety < 10_000) {
+        const delta = Math.min(stepSize, ceiling - elapsed);
+        runner.tick(delta);
+        elapsed += delta;
+        safety += 1;
+      }
 
-    if (!wasPlaying) {
       runner.pause();
-    }
-  }, [isPlaying]);
+      setIsPlaying(false);
+    },
+    [resetRunnerState],
+  );
+
+  const handleReset = useCallback(() => {
+    resetRunnerState();
+  }, [resetRunnerState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const api = {
+      play: () => handleStart(),
+      pause: () => handlePause(),
+      step: (deltaMs?: number) => handleStep(deltaMs),
+      seek: (timeMs: number, stepMs?: number) => handleSeek(timeMs, stepMs),
+      reset: () => handleReset(),
+    } as const;
+
+    (window as any).cdcComparatorClock = api;
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<ClockControlCommand>).detail;
+      if (!detail) return;
+
+      switch (detail.type) {
+        case "play":
+          api.play();
+          break;
+        case "pause":
+          api.pause();
+          break;
+        case "step":
+          api.step(detail.deltaMs);
+          break;
+        case "seek":
+          api.seek(detail.timeMs, detail.stepMs);
+          break;
+        case "reset":
+          api.reset();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("cdc:comparator-clock", handler as EventListener);
+
+    return () => {
+      window.removeEventListener("cdc:comparator-clock", handler as EventListener);
+      if ((window as any).cdcComparatorClock === api) {
+        delete (window as any).cdcComparatorClock;
+      }
+    };
+  }, [handlePause, handleReset, handleSeek, handleStart, handleStep]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("cdc:comparator-clock-tick", {
+        detail: { clock },
+      }),
+    );
+  }, [clock]);
 
   useEffect(() => () => stopLoop(), [stopLoop]);
 
@@ -719,6 +856,13 @@ export function App() {
       };
     });
   }, [laneMetrics]);
+  const laneDiffs = useMemo(() => {
+    const map = new Map<MethodOption, LaneDiffResult>();
+    laneMetrics.forEach(({ method, events }) => {
+      map.set(method, diffLane(method, scenario.ops, events));
+    });
+    return map;
+  }, [laneMetrics, scenario.ops]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
@@ -816,7 +960,7 @@ export function App() {
         <button type="button" onClick={handlePause} disabled={!isPlaying}>
           Pause
         </button>
-        <button type="button" onClick={handleStep}>
+        <button type="button" onClick={() => handleStep()}>
           Step +{STEP_MS}ms
         </button>
       </div>
@@ -965,6 +1109,7 @@ export function App() {
           const description = METHOD_DESCRIPTIONS[method];
           const displayEvents = events.length > 12 ? events.slice(-12) : events;
           const config = methodConfig[method];
+          const diff = laneDiffs.get(method) ?? null;
           return (
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
@@ -978,6 +1123,8 @@ export function App() {
               <div className="sim-shell__metrics">
                 <MetricsStrip {...metrics} />
               </div>
+
+              <LaneDiffOverlay diff={diff} />
 
               <dl className="sim-shell__lane-config">
                 {method === "polling" && (
