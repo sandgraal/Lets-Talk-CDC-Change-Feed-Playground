@@ -3471,6 +3471,20 @@ function generateScenarioTelemetryRow() {
   };
 }
 
+function generateScenarioSchemaEvolutionRow() {
+  const base = {
+    order_id: `ORD-${Math.floor(Math.random() * 9000 + 2000)}`,
+    status: pickRandom(["created", "processing", "fulfilled", "cancelled"]) || "created",
+    amount: Number((Math.random() * 120 + 20).toFixed(2)),
+  };
+
+  if (Math.random() > 0.4) {
+    base.priority_flag = Math.random() > 0.5;
+  }
+
+  return base;
+}
+
 function generateScenarioSampleRow() {
   if (!state.scenarioId || state.scenarioId === "default") return null;
   const schema = Array.isArray(state.schema) ? state.schema : [];
@@ -3486,6 +3500,9 @@ function generateScenarioSampleRow() {
       break;
     case "iot":
       scenarioRow = generateScenarioTelemetryRow();
+      break;
+    case "schema-evolution":
+      scenarioRow = generateScenarioSchemaEvolutionRow();
       break;
     default:
       return null;
