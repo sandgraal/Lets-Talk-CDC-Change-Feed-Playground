@@ -92,6 +92,24 @@ const FALLBACK_SCENARIOS = [
     ],
     events: [],
   },
+  {
+    id: "schema-evolution",
+    name: "Schema Evolution",
+    label: "Schema Evolution",
+    description: "Add a column mid-stream and compare how each capture method reacts.",
+    highlight: "Log/trigger propagate new columns instantly; polling waits for refreshed rows.",
+    schema: [
+      { name: "order_id", type: "string", pk: true },
+      { name: "status", type: "string", pk: false },
+      { name: "amount", type: "number", pk: false },
+      { name: "priority_flag", type: "bool", pk: false },
+    ],
+    rows: [
+      { order_id: "ORD-2001", status: "processing", amount: 84.1, priority_flag: true },
+      { order_id: "ORD-2002", status: "fulfilled", amount: 46.0, priority_flag: false },
+    ],
+    events: [],
+  },
 ];
 
 const SHARED_SCENARIOS =

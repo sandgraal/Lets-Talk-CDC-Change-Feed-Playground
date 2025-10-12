@@ -123,4 +123,20 @@ export const SCENARIOS: ShellScenario[] = mapped.length
           { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final" } },
         ],
       },
+      {
+        name: "schema-evolution",
+        label: "Schema Evolution",
+        description: "Add a new column mid-stream and compare capture behaviours.",
+        highlight: "Log/trigger propagate schema immediately; polling lags until refreshed rows appear.",
+        stats: { rows: 2, ops: 5 },
+        tags: ["schema", "evolution"],
+        seed: 21,
+        ops: [
+          { t: 120, op: "insert", table: "orders", pk: { id: "ORD-2001" }, after: { status: "created", amount: 84.1 } },
+          { t: 260, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { status: "processing" } },
+          { t: 340, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { priority_flag: true } },
+          { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
+          { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } },
+        ],
+      },
     ];

@@ -46,6 +46,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 | Omnichannel Orders | Walking through status transitions and fulfilment edge cases | Mix of inserts/updates with delete coverage; great for lag comparisons |
 | Real-time Payments | Demonstrating idempotent updates or risk review flows | Trigger overhead tuning + delete capture expectations |
 | IoT Telemetry | Showing rolling measurements with anomaly flags | Highlights soft-delete vs. log consistency and clock controls |
+| Schema Evolution | Demonstrating column additions while capturing changes | Compare immediate log/trigger propagation with polling lag |
 | CRUD Basic | Teaching delete visibility basics | Minimal ops for first-time comparator demos |
 | Burst Updates | Stressing lag/ordering behaviour under rapid updates | Highlights polling gaps and diff overlays |
 

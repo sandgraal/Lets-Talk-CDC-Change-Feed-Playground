@@ -2047,11 +2047,25 @@ export function App() {
               callouts.push({ text: copy.callout, tone });
             }
           }
-          if (method === "trigger" && typeof writeAmplificationValue === "number" && writeAmplificationValue > 0) {
-            callouts.push({
-              text: `Write amplification ${writeAmplificationValue.toFixed(1)}x (extra audit writes per change)`,
-              tone: "info",
-            });
+          if (scenario.tags?.includes("schema")) {
+            if (method === "trigger" && typeof writeAmplificationValue === "number" && writeAmplificationValue > 0) {
+              callouts.push({
+                text: `Write amplification ${writeAmplificationValue.toFixed(1)}x (extra audit writes per change)`,
+                tone: "info",
+              });
+            }
+            if (method === "log") {
+              callouts.push({
+                text: "Log capture streams schema changes in-order, keeping downstream versions aligned.",
+                tone: "info",
+              });
+            }
+            if (method === "polling") {
+              callouts.push({
+                text: "Polling picks up new columns once refreshed rows include them; expect interim nulls.",
+                tone: "warning",
+              });
+            }
           }
           const filteredEvents = filteredEventsByMethod.get(method) ?? events;
           const filtered =

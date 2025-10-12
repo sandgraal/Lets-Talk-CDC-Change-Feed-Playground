@@ -271,6 +271,23 @@ const defaultScenarios = [
       { t: 240, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-4", email: "burst@example.com" } },
       { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final", email: "burst@example.com" } }
     ]
+  },
+  {
+    id: "schema-evolution",
+    name: "Schema Evolution",
+    label: "Schema Evolution",
+    description: "Add a column mid-stream and observe how each capture method reacts.",
+    highlight: "Log/trigger streams forward the new column immediately; polling only sees it once rows refresh.",
+    tags: ["schema", "evolution"],
+    table: "orders",
+    seed: 21,
+    ops: [
+      { t: 120, op: "insert", table: "orders", pk: { id: "ORD-2001" }, after: { status: "created", amount: 84.1 } },
+      { t: 260, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { status: "processing" } },
+      { t: 340, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { priority_flag: true } },
+      { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
+      { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } }
+    ]
   }
 ];
 
