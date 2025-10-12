@@ -1400,6 +1400,18 @@ export function App() {
     return map;
   }, [laneMetrics, scenario.ops]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("cdc:consumer-paused", {
+        detail: {
+          paused: isConsumerPaused,
+          backlog: totalBacklog,
+        },
+      }),
+    );
+  }, [isConsumerPaused, totalBacklog]);
+
   const handleCopySummary = useCallback(() => {
     if (!summary) return;
     const parts: string[] = [];

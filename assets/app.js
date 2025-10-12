@@ -217,6 +217,8 @@ let toastHost = null;
 let eventLogWidgetHandle = null;
 let eventLogWidgetLoad = null;
 const eventLogRowEventMap = new Map();
+let comparatorPaused = false;
+let applyPausedBanner = null;
 let officeBankruptcyOverlay = null;
 
 function featureFlagApi() {
@@ -2019,8 +2021,13 @@ if (typeof window !== "undefined") {
   window.addEventListener("cdc:workspace-request", () => {
     broadcastComparatorState();
   });
-  window.addEventListener("cdc:comparator-summary", (event) => {
+  window.addEventListener("cdc:comparator-summary", event => {
     renderComparatorFeedback(event?.detail);
+  });
+  window.addEventListener("cdc:consumer-paused", event => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail || {};
+    updateApplyPausedBanner(Boolean(detail.paused), Number(detail.backlog ?? 0));
   });
   window.addEventListener("cdc:apply-scenario-template", (event) => {
     const templateId = event?.detail?.id;
@@ -2842,11 +2849,47 @@ function findByPK(values) {
 
 // ---------- Operations (now publish to Appwrite too) ----------
 function setCrudButtonsDisabled(disabled) {
-  if (!hasCrudFixFlag()) return;
-  ["opInsert", "opUpdate", "opDelete"].forEach(id => {
+  const effective = disabled || comparatorPaused;
+  ["opInsert", "opUpdate", "opDelete", "btnAutofillRow"].forEach(id => {
     const btn = document.getElementById(id);
-    if (btn) btn.disabled = disabled;
+    if (btn) btn.disabled = effective;
   });
+}
+
+function ensureApplyPausedBanner() {
+  if (applyPausedBanner || !els.eventLog || !els.eventLog.parentElement) return;
+  applyPausedBanner = document.createElement("div");
+  applyPausedBanner.id = "applyPausedBanner";
+  applyPausedBanner.className = "apply-paused-banner";
+  applyPausedBanner.setAttribute("role", "status");
+  applyPausedBanner.setAttribute("aria-live", "polite");
+  els.eventLog.parentElement.insertBefore(applyPausedBanner, els.eventLog);
+}
+
+function updateApplyPausedBanner(paused, backlog) {
+  comparatorPaused = Boolean(paused);
+  const container = els.eventLog?.parentElement;
+  if (container) {
+    container.classList.toggle("is-comparator-paused", comparatorPaused);
+  }
+
+  if (!comparatorPaused) {
+    if (applyPausedBanner) {
+      applyPausedBanner.remove();
+      applyPausedBanner = null;
+    }
+    if (!uiState.pendingOperation) setCrudButtonsDisabled(false);
+    return;
+  }
+
+  ensureApplyPausedBanner();
+  if (!applyPausedBanner) return;
+  const count = Number.isFinite(backlog) ? Number(backlog) : 0;
+  const suffix = count === 1 ? " event" : " events";
+  applyPausedBanner.textContent = count > 0
+    ? `Comparator apply paused – ${count}${suffix} queued. Resume to drain the bus.`
+    : "Comparator apply paused. Resume to drain the event bus.";
+  setCrudButtonsDisabled(true);
 }
 
 async function runOperation(name, fn) {
