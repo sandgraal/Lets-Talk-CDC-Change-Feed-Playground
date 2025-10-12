@@ -281,6 +281,7 @@ const defaultScenarios = [
     tags: ["schema", "evolution"],
     table: "orders",
     seed: 21,
+    schemaVersion: 2,
     ops: [
       { t: 120, op: "insert", table: "orders", pk: { id: "ORD-2001" }, after: { status: "created", amount: 84.1 } },
       { t: 260, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { status: "processing" } },

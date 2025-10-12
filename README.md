@@ -30,6 +30,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Polling: `poll_interval_ms` knob plus optional soft-delete visibility
 - Trigger: extractor cadence and per-write trigger overhead
 - Log: WAL/Binlog fetch interval
+- Schema walkthrough: add/drop columns on the fly to watch schema change events propagate
 - Live workspace feed: the comparator listens for table mutations and exposes them as a "Workspace (live)" scenario alongside curated demos
 - Shared Event Log renderer powers both the playground and comparator, with filters, per-event copy, and NDJSON export
 - Comparator preferences (scenario, methods, knobs) persist locally so you resume where you left off

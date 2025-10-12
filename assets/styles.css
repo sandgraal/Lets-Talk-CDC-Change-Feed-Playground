@@ -905,6 +905,40 @@ select:focus {
 
 .export-actions { margin-top: 8px; }
 
+.schema-demo-actions {
+  margin-top: 18px;
+  border: 1px solid rgba(78,116,173,0.32);
+  border-radius: 14px;
+  background: rgba(14, 28, 52, 0.6);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+.schema-demo-actions h4 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--accent);
+}
+.schema-demo-actions p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.schema-demo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.schema-demo-buttons button {
+  flex: 1 1 180px;
+  border-radius: 999px;
+  border: 1px solid rgba(165, 180, 252, 0.45);
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
 .apply-paused-banner {
   margin: 12px 0;
   padding: 12px 16px;

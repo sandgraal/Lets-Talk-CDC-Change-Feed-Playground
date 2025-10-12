@@ -12,6 +12,7 @@ const STORAGE_KEYS = Object.freeze({
 });
 
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
+const SCHEMA_DEMO_COLUMN = { name: "priority_flag", type: "boolean" };
 
 const officeEasterEgg = {
   toastShown: false,
@@ -106,6 +107,7 @@ const FALLBACK_SCENARIOS = [
       { name: "amount", type: "number", pk: false },
       { name: "priority_flag", type: "bool", pk: false },
     ],
+    schemaVersion: 2,
     rows: [
       { order_id: "ORD-2001", status: "processing", amount: 84.1, priority_flag: true },
       { order_id: "ORD-2002", status: "fulfilled", amount: 46.0, priority_flag: false },
@@ -189,6 +191,8 @@ const els = {
     rows: document.getElementById("btnQuickRows"),
     events: document.getElementById("btnQuickEvents"),
   },
+  schemaAdd: document.getElementById("btnSchemaAdd"),
+  schemaDrop: document.getElementById("btnSchemaDrop"),
   inspectorList: document.getElementById("eventList"),
   inspectorDetail: document.getElementById("eventDetail"),
   inspectorPrev: document.getElementById("eventPrev"),
@@ -778,6 +782,7 @@ function applyScenarioTemplate(template, options = {}) {
   renderTable();
   renderJSONLog();
   renderTemplateGallery();
+  syncSchemaDemoButtons();
 
   const focusStep = options.focusStep || (state.rows.length ? "events" : "rows");
   updateLearning(focusStep);
@@ -1013,6 +1018,10 @@ const save   = () => {
     console.warn("Save to localStorage failed", err?.message || err);
   }
 };
+
+function hasColumn(name) {
+  return state.schema.some(col => col.name === name);
+}
 
 function trackEvent(event, payload = {}, context = {}) {
   try {
@@ -2777,6 +2786,7 @@ function addColumn({ name, type, pk }) {
   const newInput = els.rowEditor.querySelector(`input[data-col="${normalized}"]`);
   if (newInput) newInput.focus();
   refreshSchemaStatus(`Added column "${normalized}".`, "success");
+  syncSchemaDemoButtons();
 }
 
 function removeColumn(name) {
@@ -2791,6 +2801,7 @@ function removeColumn(name) {
   renderEditor();
   renderTable();
   refreshSchemaStatus(`Removed column "${name}".`, state.schema.length ? "muted" : "success");
+  syncSchemaDemoButtons();
 }
 
 function recordSchemaChange(kind, column) {
@@ -2836,6 +2847,53 @@ function recordSchemaChange(kind, column) {
   refreshSchemaStatus();
 }
 
+function syncSchemaDemoButtons() {
+  const hasPriority = hasColumn(SCHEMA_DEMO_COLUMN.name);
+  const addBtn = document.getElementById("btnSchemaAdd");
+  const dropBtn = document.getElementById("btnSchemaDrop");
+  const disableAdd = hasPriority || comparatorPaused;
+  const disableDrop = !hasPriority || comparatorPaused;
+  if (addBtn) {
+    addBtn.disabled = disableAdd;
+    if (disableAdd) {
+      addBtn.title = comparatorPaused ? "Resume apply to change schema." : "Column already present.";
+    } else {
+      addBtn.removeAttribute("title");
+    }
+  }
+  if (dropBtn) {
+    dropBtn.disabled = disableDrop;
+    if (disableDrop) {
+      dropBtn.title = comparatorPaused ? "Resume apply to change schema." : "Column not present.";
+    } else {
+      dropBtn.removeAttribute("title");
+    }
+  }
+}
+
+function addSchemaDemoColumn() {
+  if (hasColumn(SCHEMA_DEMO_COLUMN.name)) {
+    refreshSchemaStatus(`Column "${SCHEMA_DEMO_COLUMN.name}" already present.`, "muted");
+    return;
+  }
+  addColumn({ ...SCHEMA_DEMO_COLUMN, pk: false });
+  if (state.scenarioId !== "schema-evolution") {
+    state.scenarioId = "schema-evolution";
+    save();
+    renderTemplateGallery();
+  }
+  syncSchemaDemoButtons();
+}
+
+function dropSchemaDemoColumn() {
+  if (!hasColumn(SCHEMA_DEMO_COLUMN.name)) {
+    refreshSchemaStatus(`Column "${SCHEMA_DEMO_COLUMN.name}" not found.`, "muted");
+    return;
+  }
+  removeColumn(SCHEMA_DEMO_COLUMN.name);
+  syncSchemaDemoButtons();
+}
+
 function renderSchema() {
   els.schemaPills.innerHTML = "";
   for (const c of state.schema) {
@@ -2848,6 +2906,7 @@ function renderSchema() {
   }
   updateLearning();
   refreshSchemaStatus();
+  syncSchemaDemoButtons();
 }
 
 // ---------- Editor (row inputs) ----------
@@ -2960,7 +3019,7 @@ function findByPK(values) {
 // ---------- Operations (now publish to Appwrite too) ----------
 function setCrudButtonsDisabled(disabled) {
   const effective = disabled || comparatorPaused;
-  ["opInsert", "opUpdate", "opDelete", "btnAutofillRow"].forEach(id => {
+  ["opInsert", "opUpdate", "opDelete", "btnAutofillRow", "btnSchemaAdd", "btnSchemaDrop"].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
     btn.disabled = effective;
@@ -2997,6 +3056,7 @@ function updateApplyPausedBanner(paused, backlog) {
       applyPausedBanner = null;
     }
     if (!uiState.pendingOperation) setCrudButtonsDisabled(false);
+    syncSchemaDemoButtons();
     return;
   }
 
@@ -3008,6 +3068,7 @@ function updateApplyPausedBanner(paused, backlog) {
     ? `Comparator apply paused – ${count}${suffix} queued. Resume to drain the bus.`
     : "Comparator apply paused. Resume to drain the event bus.";
   setCrudButtonsDisabled(true);
+  syncSchemaDemoButtons();
 }
 
 async function runOperation(name, fn) {
@@ -3465,13 +3526,16 @@ function bindUiHandlers() {
   const clearRowsBtn = document.getElementById("clearRows");
   if (clearRowsBtn) clearRowsBtn.onclick = () => { state.rows = []; save(); renderTable(); };
 
+  if (els.schemaAdd) els.schemaAdd.onclick = addSchemaDemoColumn;
+  if (els.schemaDrop) els.schemaDrop.onclick = dropSchemaDemoColumn;
+
   const copyNdjsonBtn = document.getElementById("btnCopyNdjson");
   if (copyNdjsonBtn) copyNdjsonBtn.onclick = copyNdjson;
 
   const downloadNdjsonBtn = document.getElementById("btnDownloadNdjson");
   if (downloadNdjsonBtn) downloadNdjsonBtn.onclick = downloadNdjson;
 
-  ["filterC", "filterU", "filterD", "filterR"].forEach(id => {
+  ["filterC", "filterU", "filterD", "filterR", "filterS"].forEach(id => {
     const cb = document.getElementById(id);
     if (cb) cb.onchange = renderJSONLog;
   });
@@ -3502,6 +3566,8 @@ function bindUiHandlers() {
     localStorage.removeItem(STORAGE_KEYS.onboarding);
     location.reload();
   };
+
+  syncSchemaDemoButtons();
 }
 
 // ---------- Wire up UI ----------
@@ -3829,3 +3895,4 @@ function autofillRowAndInsert() {
 
 updateApplyPausedBanner(false, 0);
 setCrudButtonsDisabled(false);
+syncSchemaDemoButtons();
