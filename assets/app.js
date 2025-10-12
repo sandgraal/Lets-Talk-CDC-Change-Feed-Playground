@@ -1146,6 +1146,58 @@ function emitSparkleTrail(op = "c") {
   }
 }
 
+function emitOfficeConfetti() {
+  if (typeof document === "undefined") return;
+  const host = document.body;
+  if (!host) return;
+
+  const palette = ["#0A5AE8", "#1E88FF", "#7FB3FF", "#F8FAFF", "#FFE173"];
+  const originRect = els.rowEditor?.getBoundingClientRect?.();
+  const viewportWidth = typeof window !== "undefined"
+    ? window.innerWidth
+    : document.documentElement?.clientWidth || 0;
+  const viewportHeight = typeof window !== "undefined"
+    ? window.innerHeight
+    : document.documentElement?.clientHeight || 0;
+  const originX = originRect ? originRect.left + originRect.width / 2 : viewportWidth / 2 || 0;
+  const originY = originRect ? originRect.top + originRect.height / 2 : viewportHeight / 2 || 0;
+  const pieces = 16 + Math.floor(Math.random() * 6);
+
+  for (let i = 0; i < pieces; i++) {
+    const piece = document.createElement("span");
+    piece.className = "office-confetti-piece";
+    piece.style.left = `${originX}px`;
+    piece.style.top = `${originY}px`;
+
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    piece.style.background = `linear-gradient(140deg, ${color} 0%, rgba(255, 255, 255, 0.85) 80%)`;
+
+    const startOffsetX = (Math.random() - 0.5) * 80;
+    const startOffsetY = (Math.random() - 0.5) * 32;
+    const driftX = startOffsetX + (Math.random() - 0.5) * 240;
+    const driftY = startOffsetY + 280 + Math.random() * 180;
+    const startRotation = (Math.random() * 120) - 60;
+    const endRotation = startRotation + (Math.random() * 720 - 360);
+    const duration = 1200 + Math.random() * 600;
+    const delay = Math.random() * 90;
+
+    host.appendChild(piece);
+
+    const animation = piece.animate([
+      { transform: `translate(${startOffsetX}px, ${startOffsetY}px) rotate(${startRotation}deg)`, opacity: 0.95 },
+      { transform: `translate(${driftX}px, ${driftY}px) rotate(${endRotation}deg)`, opacity: 0 }
+    ], { duration, delay, easing: "cubic-bezier(0.22, 0.61, 0.36, 1)" });
+
+    const cleanup = () => piece.remove();
+    if (animation.finished) {
+      animation.finished.then(cleanup).catch(cleanup);
+    } else {
+      animation.onfinish = cleanup;
+      setTimeout(cleanup, duration + delay + 120);
+    }
+  }
+}
+
 function refreshSchemaStatus(message, tone = "muted") {
   const el = els.schemaStatus;
   if (!el) return;
@@ -1208,6 +1260,19 @@ function ensureDefaultSchema() {
     state.rows = [];
   }
   return mutated;
+}
+
+function isOfficeSchemaActive() {
+  if (!state.schema.length) return false;
+  if (state.scenarioId && state.scenarioId !== "default") return false;
+  if (state.schema.length !== DEFAULT_SCHEMA.length) return false;
+  const signature = (col) => `${col.name}::${col.type}::${col.pk ? 1 : 0}`;
+  const expected = DEFAULT_SCHEMA.map(signature).slice().sort();
+  const actual = state.schema.map(signature).slice().sort();
+  for (let i = 0; i < expected.length; i++) {
+    if (expected[i] !== actual[i]) return false;
+  }
+  return true;
 }
 
 // Debezium-ish envelope
@@ -2601,6 +2666,7 @@ function seedRows() {
     }
     state.rows = samples;
     refreshSchemaStatus("Seeded sample rows based on your schema.", "success");
+    if (isOfficeSchemaActive()) emitOfficeConfetti();
   } else {
     refreshSchemaStatus("Rows already exist. Clear rows to regenerate fresh samples.", "muted");
   }
@@ -3078,4 +3144,5 @@ function autofillRowAndInsert() {
   refreshSchemaStatus("Sample row inserted into the table.", "success");
   updateLearning("rows");
   emitSparkleTrail("c");
+  if (isOfficeSchemaActive()) emitOfficeConfetti();
 }

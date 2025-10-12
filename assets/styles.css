@@ -1319,6 +1319,20 @@ code {
   box-shadow: 0 0 12px rgba(255, 154, 118, 0.75);
 }
 
+.office-confetti-piece {
+  position: fixed;
+  width: 12px;
+  height: 18px;
+  margin-left: -6px;
+  margin-top: -9px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 9998;
+  box-shadow: 0 6px 12px rgba(10, 35, 76, 0.25);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
 .tour-scrim {
   position: fixed;
   inset: 0;
