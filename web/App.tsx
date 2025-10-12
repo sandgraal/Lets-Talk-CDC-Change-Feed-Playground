@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SourceOp, Event } from "../src";
+import type { SourceOp, Event as EngineEvent } from "../src";
 import type { CdcEvent, LaneDiffResult } from "../sim";
 import type { MethodEngine } from "../sim";
 import {
@@ -11,6 +11,7 @@ import {
   type ModeRuntime,
 } from "../src";
 import { CDCController, EventBus, MetricsStore, Scheduler, type MetricsSnapshot } from "../src";
+import { EventLog, type EventLogFilters, type EventLogRow, type EmitFn } from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
 
 type FeatureFlagKey =
@@ -119,7 +120,7 @@ type BusEvent = CdcEvent & {
 };
 
 type LaneRuntime = {
-  bus: EventBus<Event>;
+  bus: EventBus<EngineEvent>;
   metrics: MetricsStore;
   topic: string;
 };
@@ -147,7 +148,7 @@ type CombinedBusEvent = {
 };
 
 type ControllerBackedEngine = MethodEngine & {
-  bus: EventBus<Event>;
+  bus: EventBus<EngineEvent>;
   metrics: MetricsStore;
   topic: string;
 };
@@ -231,7 +232,7 @@ const sanitizeRecordForCdcEvent = (record: Record<string, unknown> | undefined) 
   return clone;
 };
 
-const eventToCdcEvent = (method: MethodOption, event: Event, seq: number): CdcEvent => ({
+const eventToCdcEvent = (method: MethodOption, event: EngineEvent, seq: number): CdcEvent => ({
   source: "demo-db",
   table: event.table,
   op: event.kind === "INSERT" ? "c" : event.kind === "UPDATE" ? "u" : "d",
@@ -248,7 +249,7 @@ function createControllerEngineInstance(
   method: MethodOption,
   onProduced: (events: BusEvent[]) => void,
 ): ControllerBackedEngine {
-  const bus = new EventBus<Event>();
+  const bus = new EventBus<EngineEvent>();
   const metrics = new MetricsStore();
   const scheduler = new Scheduler();
   const topic = `cdc.${method}`;
@@ -260,7 +261,7 @@ function createControllerEngineInstance(
   let sequence = 0;
   const callbacks = new Set<(event: CdcEvent) => void>();
 
-  const toBusEvent = (event: Event): BusEvent => {
+  const toBusEvent = (event: EngineEvent): BusEvent => {
     const existingSeq = (event as unknown as { __seq?: number }).__seq;
     const seq = typeof existingSeq === "number" && existingSeq > 0 ? existingSeq : ++sequence;
     (event as unknown as { __seq: number }).__seq = seq;
@@ -434,16 +435,6 @@ function sanitizeMethodConfig(partial?: PartialMethodConfigMap): MethodConfigMap
   return base;
 }
 
-function formatRowPreview(row: Record<string, unknown>): string {
-  try {
-    const json = JSON.stringify(row);
-    if (!json) return "{}";
-    return json.length > 140 ? `${json.slice(0, 140)}…` : json;
-  } catch (err) {
-    return "{...}";
-  }
-}
-
 function loadPreferences(): ComparatorPreferences | null {
   if (typeof window === "undefined") return null;
   try {
@@ -604,14 +595,15 @@ export function App() {
   );
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<string[] | undefined>).detail;
+    const handler: EventListener = event => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as (string[] | undefined);
       const list = Array.isArray(detail) ? detail : [];
       setFeatureFlags(new Set(list.map(String)));
     };
-    window.addEventListener("cdc:feature-flags", handler as EventListener);
+    window.addEventListener("cdc:feature-flags" as string, handler);
     return () => {
-      window.removeEventListener("cdc:feature-flags", handler as EventListener);
+      window.removeEventListener("cdc:feature-flags" as string, handler);
     };
   }, []);
   const hasFeatureFlag = useCallback(
@@ -724,6 +716,51 @@ export function App() {
       return true;
     });
   }, [combinedBusEvents, eventLogMethod, eventLogTable, eventLogTxn]);
+  const eventLogRows = useMemo<EventLogRow[]>(() => {
+    return filteredCombinedBusEvents.map(({ method, event }, index) => {
+      const offset = typeof event.offset === "number" ? event.offset : null;
+      const seq = typeof event.seq === "number" ? event.seq : null;
+      const ts = typeof event.ts_ms === "number" ? event.ts_ms : null;
+      const idParts = [
+        method,
+        offset != null ? `offset-${offset}` : null,
+        seq != null ? `seq-${seq}` : null,
+        ts != null ? `ts-${ts}` : null,
+        index,
+      ].filter(Boolean);
+      const pk = event.pk?.id != null ? String(event.pk.id) : null;
+      return {
+        id: idParts.length ? idParts.join("|") : `${method}-${index}`,
+        methodId: method,
+        methodLabel: METHOD_COPY[method].label,
+        op: event.op ?? "",
+        offset,
+        topic: event.topic ?? null,
+        table: event.table ?? null,
+        tsMs: ts,
+        pk,
+        txnId: event.tx?.id ?? null,
+        before: event.before ?? null,
+        after: event.after ?? null,
+      };
+    });
+  }, [filteredCombinedBusEvents]);
+  const eventLogFilters = useMemo<EventLogFilters>(
+    () => ({
+      methodId: eventLogMethod ?? undefined,
+      table: eventLogTable ?? undefined,
+      txnId: eventLogTxn ? eventLogTxn : undefined,
+    }),
+    [eventLogMethod, eventLogTable, eventLogTxn],
+  );
+  const eventLogFilterOptions = useMemo(
+    () => ({
+      methods: METHOD_ORDER.map(method => ({ id: method, label: METHOD_COPY[method].label })),
+      tables: availableEventLogTables,
+      txns: availableEventLogTxns,
+    }),
+    [availableEventLogTables, availableEventLogTxns],
+  );
   const isPlayingRef = useRef(isPlaying);
 
   useEffect(() => {
@@ -816,28 +853,29 @@ export function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ query?: string; tags?: string[] }>).detail;
+    const handler: EventListener = event => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as { query?: string; tags?: string[] } | undefined;
       const query = detail?.query ?? "";
       const tags = Array.isArray(detail?.tags) ? detail.tags.map(String) : [];
       setScenarioFilter(String(query));
       setScenarioTags(tags);
     };
 
-    window.addEventListener("cdc:scenario-filter", handler as EventListener);
+    window.addEventListener("cdc:scenario-filter" as string, handler);
     window.dispatchEvent(new CustomEvent("cdc:scenario-filter-request"));
 
     return () => {
-      window.removeEventListener("cdc:scenario-filter", handler as EventListener);
+      window.removeEventListener("cdc:scenario-filter" as string, handler);
     };
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handler = (event: Event) => {
-      const custom = event as CustomEvent<WorkspaceBroadcastDetail>;
-      const detail = custom.detail;
+    const handler: EventListener = event => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as WorkspaceBroadcastDetail | undefined;
       if (!detail || !detail.scenario) {
         setLiveScenario(null);
         return;
@@ -857,11 +895,11 @@ export function App() {
       });
     };
 
-    window.addEventListener("cdc:workspace-update", handler as EventListener);
+    window.addEventListener("cdc:workspace-update" as string, handler);
     window.dispatchEvent(new CustomEvent("cdc:workspace-request"));
 
     return () => {
-      window.removeEventListener("cdc:workspace-update", handler as EventListener);
+      window.removeEventListener("cdc:workspace-update" as string, handler);
     };
   }, []);
 
@@ -875,8 +913,9 @@ export function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handler = (event: Event) => {
-      const prefs = (event as CustomEvent<ComparatorPreferences | null>).detail;
+    const handler: EventListener = event => {
+      if (!(event instanceof CustomEvent)) return;
+      const prefs = event.detail as ComparatorPreferences | null;
       if (!prefs) {
         userSelectedScenarioRef.current = false;
         return;
@@ -899,9 +938,9 @@ export function App() {
       }
     };
 
-    window.addEventListener("cdc:comparator-preferences-set", handler as EventListener);
+    window.addEventListener("cdc:comparator-preferences-set" as string, handler);
     return () => {
-      window.removeEventListener("cdc:comparator-preferences-set", handler as EventListener);
+      window.removeEventListener("cdc:comparator-preferences-set" as string, handler);
     };
   }, []);
 
@@ -929,81 +968,6 @@ export function App() {
     eventLogTxn,
     eventLogMethod,
   ]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const summaryDetail = summary
-      ? {
-          lagSpread: summary.lagSpread,
-          bestLag: {
-            method: summary.bestLag.method,
-            label: METHOD_COPY[summary.bestLag.method].label,
-            metrics: summary.bestLag.metrics,
-          },
-          worstLag: {
-            method: summary.worstLag.method,
-            label: METHOD_COPY[summary.worstLag.method].label,
-            metrics: summary.worstLag.metrics,
-          },
-          lowestDeletes: {
-            method: summary.lowestDeletes.method,
-            label: METHOD_COPY[summary.lowestDeletes.method].label,
-            metrics: summary.lowestDeletes.metrics,
-          },
-          highestDeletes: {
-            method: summary.highestDeletes.method,
-            label: METHOD_COPY[summary.highestDeletes.method].label,
-            metrics: summary.highestDeletes.metrics,
-          },
-          orderingIssues: summary.orderingIssues.map(method => ({
-            method,
-            label: METHOD_COPY[method].label,
-          })),
-        }
-      : null;
-
-    const lanesDetail = laneMetrics.map(({ method, metrics }) => ({
-      method,
-      label: METHOD_COPY[method].label,
-      metrics,
-    }));
-
-    const diffsDetail = laneMetrics.map(({ method }) => {
-      const diff = laneDiffs.get(method);
-      if (!diff) {
-        return {
-          method,
-          totals: { missing: 0, extra: 0, ordering: 0 },
-          issues: [],
-          lag: { max: 0, samples: [] },
-        };
-      }
-      return {
-        method,
-        totals: diff.totals,
-        issues: diff.issues.slice(0, 25),
-        lag: diff.lag,
-      };
-    });
-
-    window.dispatchEvent(
-      new CustomEvent("cdc:comparator-summary", {
-        detail: {
-          scenarioName: scenario.name,
-          scenarioLabel: scenario.label,
-          scenarioDescription: scenario.description,
-          isLive: scenario.name === LIVE_SCENARIO_NAME,
-          totalEvents,
-          summary: summaryDetail,
-          lanes: lanesDetail,
-          analytics,
-          tags: scenarioTags,
-          diffs: diffsDetail,
-        },
-      }),
-    );
-  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -1072,18 +1036,20 @@ export function App() {
 
     const engines = activeMethods.map(method => {
       const engine = createEngine(method, events => handleProduced(method, events));
-      const config = methodConfig[method];
       if (method === "polling") {
+        const config = methodConfig.polling;
         engine.configure({
           poll_interval_ms: config.pollIntervalMs,
           include_soft_deletes: config.includeSoftDeletes,
         });
       } else if (method === "trigger") {
+        const config = methodConfig.trigger;
         engine.configure({
           extract_interval_ms: config.extractIntervalMs,
           trigger_overhead_ms: config.triggerOverheadMs,
         });
       } else {
+        const config = methodConfig.log;
         engine.configure({
           fetch_interval_ms: config.fetchIntervalMs,
         });
@@ -1172,21 +1138,18 @@ export function App() {
     });
   }, [scenario.name]);
 
-  const handleEventLogTableChange = useCallback((value: string) => {
-    setEventLogTable(value ? value : null);
-  }, []);
-
-  const handleEventLogTxnChange = useCallback((value: string) => {
-    setEventLogTxn(value);
-  }, []);
-
-  const handleEventLogMethodChange = useCallback((value: string) => {
-    if (isMethodOption(value)) {
-      setEventLogMethod(value);
-      return;
-    }
-    setEventLogMethod(null);
-  }, []);
+  const handleEventLogFiltersChange = useCallback(
+    (next: EventLogFilters) => {
+      if (next.methodId && isMethodOption(next.methodId)) {
+        setEventLogMethod(next.methodId);
+      } else {
+        setEventLogMethod(null);
+      }
+      setEventLogTable(next.table ?? null);
+      setEventLogTxn(next.txnId ?? "");
+    },
+    [setEventLogMethod, setEventLogTable, setEventLogTxn],
+  );
 
   const handleDownloadEventLog = useCallback(() => {
     if (filteredCombinedBusEvents.length === 0) return;
@@ -1230,20 +1193,39 @@ export function App() {
   }, [activeMethods, scenario.name]);
 
   const handleCopyEvent = useCallback(
-    (method: MethodOption, event: BusEvent) => {
-      const payload = JSON.stringify({ method, ...event }, null, 2);
+    (row: EventLogRow) => {
+      const payload = JSON.stringify(
+        {
+          method: row.methodId ?? null,
+          methodLabel: row.methodLabel ?? null,
+          op: row.op,
+          offset: row.offset ?? null,
+          topic: row.topic ?? null,
+          table: row.table ?? null,
+          ts_ms: row.tsMs ?? null,
+          pk: row.pk ?? null,
+          txnId: row.txnId ?? null,
+          before: row.before ?? null,
+          after: row.after ?? null,
+        },
+        null,
+        2,
+      );
       navigator.clipboard
         .writeText(payload)
         .then(() =>
           track("comparator.event.copy", {
             scenario: scenario.name,
-            method,
-            op: event.op,
-            offset: event.offset ?? null,
+            method: row.methodId ?? null,
+            op: row.op,
+            offset: row.offset ?? null,
           }),
         )
         .catch(() => {
-          track("comparator.event.copy.error", { scenario: scenario.name, method });
+          track("comparator.event.copy.error", {
+            scenario: scenario.name,
+            method: row.methodId ?? null,
+          });
         });
     },
     [scenario.name],
@@ -1280,6 +1262,105 @@ export function App() {
       }),
     );
   }, []);
+
+  const laneMetrics: LaneMetrics[] = useMemo(() => {
+    return activeMethods.map(method => {
+      const events = laneEvents[method] ?? [];
+      return {
+        method,
+        events,
+        metrics: computeMetrics(events, clock, scenario, method),
+      };
+    });
+  }, [activeMethods, clock, laneEvents, scenario]);
+
+  const scenarioDeleteCount = useMemo(
+    () => scenario.ops.filter(op => op.op === "delete").length,
+    [scenario.ops],
+  );
+
+  const laneRuntimeSummaries = useMemo(() => {
+    return activeMethods.reduce((map, method) => {
+      const stats = laneStats[method];
+      const consumedEvents = laneEvents[method] ?? [];
+      const capturedDeletes = consumedEvents.filter(evt => evt.op === "d").length;
+      const summary: LaneRuntimeSummary = {
+        backlog: stats?.backlog ?? 0,
+        lastOffset: stats?.lastOffset ?? -1,
+        produced: stats?.metrics.produced ?? 0,
+        consumed: stats?.metrics.consumed ?? 0,
+        lagMsP50: stats?.metrics.lagMsP50 ?? 0,
+        lagMsP95: stats?.metrics.lagMsP95 ?? 0,
+        missedDeletes: Math.max(scenarioDeleteCount - capturedDeletes, 0),
+        writeAmplification: stats?.metrics.writeAmplification ?? 0,
+      };
+      map.set(method, summary);
+      return map;
+    }, new Map<MethodOption, LaneRuntimeSummary>());
+  }, [activeMethods, laneEvents, laneStats, scenarioDeleteCount]);
+
+  const totalBacklog = useMemo(
+    () =>
+      activeMethods.reduce(
+        (sum, method) => sum + (laneRuntimeSummaries.get(method)?.backlog ?? 0),
+        0,
+      ),
+    [activeMethods, laneRuntimeSummaries],
+  );
+
+  const aggregateEventBusTotals = useMemo(
+    () => {
+      if (!eventBusEnabled) {
+        return { produced: 0, consumed: 0, backlog: 0 };
+      }
+      return activeMethods.reduce(
+        (acc, method) => {
+          const summary = laneRuntimeSummaries.get(method);
+          if (!summary) return acc;
+          acc.produced += summary.produced;
+          acc.consumed += summary.consumed;
+          acc.backlog += summary.backlog;
+          return acc;
+        },
+        { produced: 0, consumed: 0, backlog: 0 },
+      );
+    },
+    [activeMethods, laneRuntimeSummaries, eventBusEnabled],
+  );
+
+  const summary = computeSummary(laneMetrics);
+  const totalEvents = useMemo(
+    () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
+    [laneMetrics],
+  );
+  const analytics = useMemo(() => {
+    return laneMetrics.map(({ method, events }) => {
+      let inserts = 0;
+      let updates = 0;
+      let deletes = 0;
+      events.forEach(evt => {
+        if (evt.op === 'c') inserts += 1;
+        else if (evt.op === 'u') updates += 1;
+        else if (evt.op === 'd') deletes += 1;
+      });
+      return {
+        method,
+        label: METHOD_COPY[method].label,
+        total: events.length,
+        inserts,
+        updates,
+        deletes,
+      };
+    });
+  }, [laneMetrics]);
+
+  const laneDiffs = useMemo(() => {
+    const map = new Map<MethodOption, LaneDiffResult>();
+    laneMetrics.forEach(({ method, events }) => {
+      map.set(method, diffLane(method, scenario.ops, events));
+    });
+    return map;
+  }, [laneMetrics, scenario.ops]);
 
   const handleCopySummary = useCallback(() => {
     if (!summary) return;
@@ -1439,8 +1520,9 @@ export function App() {
 
     (window as any).cdcComparatorClock = api;
 
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<ClockControlCommand>).detail;
+    const handler: EventListener = event => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as ClockControlCommand | undefined;
       if (!detail) return;
 
       switch (detail.type) {
@@ -1464,10 +1546,10 @@ export function App() {
       }
     };
 
-    window.addEventListener("cdc:comparator-clock", handler as EventListener);
+    window.addEventListener("cdc:comparator-clock" as string, handler);
 
     return () => {
-      window.removeEventListener("cdc:comparator-clock", handler as EventListener);
+      window.removeEventListener("cdc:comparator-clock" as string, handler);
       if ((window as any).cdcComparatorClock === api) {
         delete (window as any).cdcComparatorClock;
       }
@@ -1485,103 +1567,80 @@ export function App() {
 
   useEffect(() => () => stopLoop(), [stopLoop]);
 
-  const laneMetrics: LaneMetrics[] = useMemo(() => {
-    return activeMethods.map(method => {
-      const events = laneEvents[method] ?? [];
-      return {
-        method,
-        events,
-        metrics: computeMetrics(events, clock, scenario, method),
-      };
-    });
-  }, [activeMethods, clock, laneEvents, scenario]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  const scenarioDeleteCount = useMemo(
-    () => scenario.ops.filter(op => op.op === "delete").length,
-    [scenario.ops],
-  );
+    const summaryDetail = summary
+      ? {
+          lagSpread: summary.lagSpread,
+          bestLag: {
+            method: summary.bestLag.method,
+            label: METHOD_COPY[summary.bestLag.method].label,
+            metrics: summary.bestLag.metrics,
+          },
+          worstLag: {
+            method: summary.worstLag.method,
+            label: METHOD_COPY[summary.worstLag.method].label,
+            metrics: summary.worstLag.metrics,
+          },
+          lowestDeletes: {
+            method: summary.lowestDeletes.method,
+            label: METHOD_COPY[summary.lowestDeletes.method].label,
+            metrics: summary.lowestDeletes.metrics,
+          },
+          highestDeletes: {
+            method: summary.highestDeletes.method,
+            label: METHOD_COPY[summary.highestDeletes.method].label,
+            metrics: summary.highestDeletes.metrics,
+          },
+          orderingIssues: summary.orderingIssues.map(method => ({
+            method,
+            label: METHOD_COPY[method].label,
+          })),
+        }
+      : null;
 
-  const laneRuntimeSummaries = useMemo(() => {
-    return activeMethods.reduce((map, method) => {
-      const stats = laneStats[method];
-      const consumedEvents = laneEvents[method] ?? [];
-      const capturedDeletes = consumedEvents.filter(evt => evt.op === "d").length;
-      const summary: LaneRuntimeSummary = {
-        backlog: stats?.backlog ?? 0,
-        lastOffset: stats?.lastOffset ?? -1,
-        produced: stats?.metrics.produced ?? 0,
-        consumed: stats?.metrics.consumed ?? 0,
-        lagMsP50: stats?.metrics.lagMsP50 ?? 0,
-        lagMsP95: stats?.metrics.lagMsP95 ?? 0,
-        missedDeletes: Math.max(scenarioDeleteCount - capturedDeletes, 0),
-        writeAmplification: stats?.metrics.writeAmplification ?? 0,
-      };
-      map.set(method, summary);
-      return map;
-    }, new Map<MethodOption, LaneRuntimeSummary>());
-  }, [activeMethods, laneEvents, laneStats, scenarioDeleteCount]);
+    const lanesDetail = laneMetrics.map(({ method, metrics }) => ({
+      method,
+      label: METHOD_COPY[method].label,
+      metrics,
+    }));
 
-  const totalBacklog = useMemo(
-    () =>
-      activeMethods.reduce(
-        (sum, method) => sum + (laneRuntimeSummaries.get(method)?.backlog ?? 0),
-        0,
-      ),
-    [activeMethods, laneRuntimeSummaries],
-  );
-
-  const aggregateEventBusTotals = useMemo(
-    () => {
-      if (!eventBusEnabled) {
-        return { produced: 0, consumed: 0, backlog: 0 };
+    const diffsDetail = laneMetrics.map(({ method }) => {
+      const diff = laneDiffs.get(method);
+      if (!diff) {
+        return {
+          method,
+          totals: { missing: 0, extra: 0, ordering: 0 },
+          issues: [],
+          lag: { max: 0, samples: [] },
+        };
       }
-      return activeMethods.reduce(
-        (acc, method) => {
-          const summary = laneRuntimeSummaries.get(method);
-          if (!summary) return acc;
-          acc.produced += summary.produced;
-          acc.consumed += summary.consumed;
-          acc.backlog += summary.backlog;
-          return acc;
-        },
-        { produced: 0, consumed: 0, backlog: 0 },
-      );
-    },
-    [activeMethods, laneRuntimeSummaries, eventBusEnabled],
-  );
-
-  const summary = computeSummary(laneMetrics);
-  const totalEvents = useMemo(
-    () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
-    [laneMetrics],
-  );
-  const analytics = useMemo(() => {
-    return laneMetrics.map(({ method, events }) => {
-      let inserts = 0;
-      let updates = 0;
-      let deletes = 0;
-      events.forEach(evt => {
-        if (evt.op === 'c') inserts += 1;
-        else if (evt.op === 'u') updates += 1;
-        else if (evt.op === 'd') deletes += 1;
-      });
       return {
         method,
-        label: METHOD_COPY[method].label,
-        total: events.length,
-        inserts,
-        updates,
-        deletes,
+        totals: diff.totals,
+        issues: diff.issues.slice(0, 25),
+        lag: diff.lag,
       };
     });
-  }, [laneMetrics]);
-  const laneDiffs = useMemo(() => {
-    const map = new Map<MethodOption, LaneDiffResult>();
-    laneMetrics.forEach(({ method, events }) => {
-      map.set(method, diffLane(method, scenario.ops, events));
-    });
-    return map;
-  }, [laneMetrics, scenario.ops]);
+
+    window.dispatchEvent(
+      new CustomEvent("cdc:comparator-summary", {
+        detail: {
+          scenarioName: scenario.name,
+          scenarioLabel: scenario.label,
+          scenarioDescription: scenario.description,
+          isLive: scenario.name === LIVE_SCENARIO_NAME,
+          totalEvents,
+          summary: summaryDetail,
+          lanes: lanesDetail,
+          analytics,
+          tags: scenarioTags,
+          diffs: diffsDetail,
+        },
+      }),
+    );
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
@@ -1701,126 +1760,19 @@ export function App() {
       </div>
 
       {eventLogEnabled && (
-      <section className="sim-shell__event-log" aria-label="Event log">
-        <header className="sim-shell__event-log-header">
-          <div>
-            <h3>Event Log</h3>
-            <p className="sim-shell__event-log-stats">
-              Produced {aggregateEventBusTotals.produced} · Consumed {aggregateEventBusTotals.consumed} · Backlog {aggregateEventBusTotals.backlog}
-            </p>
-          </div>
-          <div className="sim-shell__event-log-actions">
-            <span>{filteredCombinedBusEvents.length} events</span>
-            <button type="button" onClick={handleDownloadEventLog} disabled={filteredCombinedBusEvents.length === 0}>
-              Download NDJSON
-            </button>
-            <button type="button" onClick={handleClearEventLog} disabled={combinedBusEvents.length === 0}>
-              Clear
-            </button>
-          </div>
-        </header>
-        <div className="sim-shell__event-log-filters" role="group" aria-label="Event log filters">
-          <label>
-            <span>Method</span>
-            <select
-              value={eventLogMethod ?? ""}
-              onChange={event => handleEventLogMethodChange(event.target.value)}
-            >
-              <option value="">All methods</option>
-              {METHOD_ORDER.map(method => (
-                <option key={method} value={method}>
-                  {METHOD_COPY[method].label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Table</span>
-            <select
-              value={eventLogTable ?? ""}
-              onChange={event => handleEventLogTableChange(event.target.value)}
-              disabled={availableEventLogTables.length === 0}
-            >
-              <option value="">All tables</option>
-              {availableEventLogTables.map(table => (
-                <option key={table} value={table}>
-                  {table}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Txn</span>
-            <select
-              value={eventLogTxn}
-              onChange={event => handleEventLogTxnChange(event.target.value)}
-              disabled={availableEventLogTxns.length === 0}
-            >
-              <option value="">All txns</option>
-              {availableEventLogTxns.map(txn => (
-                <option key={txn} value={txn}>
-                  {txn}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {filteredCombinedBusEvents.length > 0 ? (
-          <ul className="sim-shell__event-log-list">
-            {filteredCombinedBusEvents
-              .slice(Math.max(filteredCombinedBusEvents.length - MAX_EVENT_LOG_ROWS, 0))
-              .map(({ method, event }) => {
-                const label = METHOD_COPY[method].label;
-                const offset = event.offset ?? null;
-                const key = `${method}-${offset ?? event.seq ?? event.ts_ms}`;
-                const table = event.table ?? "—";
-                const txnId = event.tx?.id ?? "";
-                return (
-                  <li key={key} className="sim-shell__event-log-item">
-                    <span className="sim-shell__event-log-method">{label}</span>
-                    <span className="sim-shell__event-log-op" data-op={event.op}>
-                      {event.op.toUpperCase()}
-                    </span>
-                    <span className="sim-shell__event-log-offset">offset {offset != null ? offset : "—"}</span>
-                    <span className="sim-shell__event-log-topic">{event.topic}</span>
-                    <span className="sim-shell__event-log-table">table {table}</span>
-                    <span className="sim-shell__event-log-meta">
-                      ts={event.ts_ms}ms · pk={event.pk?.id ?? "?"}{txnId ? ` · txn=${txnId}` : ""}
-                    </span>
-                    <button
-                      type="button"
-                      className="sim-shell__event-log-copy"
-                      onClick={() => handleCopyEvent(method, event)}
-                    >
-                      Copy
-                    </button>
-                    {(event.before || event.after) && (
-                      <details className="sim-shell__event-log-details">
-                        <summary>Row image</summary>
-                        {event.before && (
-                          <div>
-                            <span>before</span>
-                            <code>{formatRowPreview(event.before)}</code>
-                          </div>
-                        )}
-                        {event.after && (
-                          <div>
-                            <span>after</span>
-                            <code>{formatRowPreview(event.after)}</code>
-                          </div>
-                        )}
-                      </details>
-                    )}
-                  </li>
-                );
-              })}
-          </ul>
-        ) : (
-          <p className="sim-shell__event-log-empty">
-            {combinedBusEvents.length > 0 ? "No events match the current filters." : "No events yet."}
-          </p>
-        )}
-      </section>
+        <EventLog
+          className="sim-shell__event-log"
+          events={eventLogRows}
+          stats={aggregateEventBusTotals}
+          totalCount={combinedBusEvents.length}
+          filters={eventLogFilters}
+          filterOptions={eventLogFilterOptions}
+          onFiltersChange={handleEventLogFiltersChange}
+          onDownload={handleDownloadEventLog}
+          onClear={handleClearEventLog}
+          onCopyEvent={handleCopyEvent}
+          maxVisibleEvents={MAX_EVENT_LOG_ROWS}
+        />
       )}
 
       <div
@@ -1848,10 +1800,10 @@ export function App() {
 
       <div className="sim-shell__controls" aria-label="Method tuning controls">
         {METHOD_ORDER.map(method => {
-          const config = methodConfig[method];
           const active = activeMethods.includes(method);
 
           if (method === "polling") {
+            const config = methodConfig.polling;
             return (
               <fieldset
                 key={method}
@@ -1913,6 +1865,7 @@ export function App() {
           }
 
           if (method === "trigger") {
+            const config = methodConfig.trigger;
             return (
               <fieldset
                 key={method}
@@ -1958,6 +1911,7 @@ export function App() {
             );
           }
 
+          const config = methodConfig.log;
           return (
             <fieldset
               key={method}
@@ -2016,7 +1970,6 @@ export function App() {
         {laneMetrics.map(({ method, metrics, events }, laneIndex) => {
           const copy = METHOD_COPY[method];
           const description = copy.laneDescription;
-          const config = methodConfig[method];
           const diff = laneDiffs.get(method) ?? null;
           const isPrimaryLane = laneIndex === 0;
           const runtimeSummary = laneRuntimeSummaries.get(method);
@@ -2087,7 +2040,9 @@ export function App() {
               )}
 
               <dl className="sim-shell__lane-config">
-                {method === "polling" && (
+                {method === "polling" && (() => {
+                  const config = methodConfig.polling;
+                  return (
                   <>
                   <div>
                     <dt>Poll interval</dt>
@@ -2098,8 +2053,11 @@ export function App() {
                     <dd data-tooltip="Include soft delete markers to surface tombstones." >{config.includeSoftDeletes ? "included" : "ignored"}</dd>
                   </div>
                 </>
-              )}
-              {method === "trigger" && (
+                  );
+                })()}
+              {method === "trigger" && (() => {
+                const config = methodConfig.trigger;
+                return (
                 <>
                   <div>
                     <dt>Extractor interval</dt>
@@ -2110,13 +2068,17 @@ export function App() {
                     <dd data-tooltip="Injected synchronous latency per source write.">{config.triggerOverheadMs} ms</dd>
                   </div>
                 </>
-              )}
-              {method === "log" && (
+                );
+              })()}
+              {method === "log" && (() => {
+                const config = methodConfig.log;
+                return (
                 <div>
                   <dt>Fetch interval</dt>
                   <dd data-tooltip="Shorter intervals decrease lag but use more resources.">{config.fetchIntervalMs} ms</dd>
                 </div>
-              )}
+                );
+              })()}
               </dl>
 
               {callouts.length > 0 && (

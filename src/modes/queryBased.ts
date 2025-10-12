@@ -76,12 +76,13 @@ export function createQueryBasedAdapter(): ModeAdapter {
             deleted: false,
           });
           lastEmittedVersion.set(key, 1);
+          const { id, __ts, ...rest } = row as { id: string; __ts?: number; [key: string]: unknown };
           snapshotEvents.push({
             id: nextEventId(),
             kind: "INSERT",
             table: tableDef.name,
             before: undefined,
-            after: { id: row.id, ...row, __ts: row.__ts ?? 0 },
+            after: { id, ...rest, __ts: __ts ?? 0 },
             txnId: `snapshot-${row.__ts ?? 0}`,
             commitTs: row.__ts ?? 0,
             schemaVersion: 1,

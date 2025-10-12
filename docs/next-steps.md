@@ -26,6 +26,6 @@
 
 ## Near-Term Priorities (handoff)
 - Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries.
-- Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
+- ✅ Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
 - Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`).
 - Begin P1 work: Trigger mode walkthrough + schema change demo once adapter metrics solid.

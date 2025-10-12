@@ -581,7 +581,8 @@
   text-align: right;
 }
 
-.sim-shell__event-log {
+.sim-shell__event-log,
+.cdc-event-log {
   margin-top: 1.5rem;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 16px;
@@ -592,20 +593,23 @@
   gap: 0.75rem;
 }
 
-.sim-shell__event-log-header {
+.sim-shell__event-log-header,
+.cdc-event-log__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.sim-shell__event-log-stats {
+.sim-shell__event-log-stats,
+.cdc-event-log__stats {
   margin: 0.15rem 0 0;
   font-size: 0.8rem;
   color: #475569;
 }
 
-.sim-shell__event-log-actions {
+.sim-shell__event-log-actions,
+.cdc-event-log__actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -613,14 +617,16 @@
   color: #475569;
 }
 
-.sim-shell__event-log-header h3 {
+.sim-shell__event-log-header h3,
+.cdc-event-log__header h3 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: #0f172a;
 }
 
-.sim-shell__event-log-header div {
+.sim-shell__event-log-header div,
+.cdc-event-log__header div {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -628,7 +634,8 @@
   color: #475569;
 }
 
-.sim-shell__event-log-header button {
+.sim-shell__event-log-header button,
+.cdc-event-log__actions button {
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
@@ -637,26 +644,30 @@
   color: #1d4ed8;
 }
 
-.sim-shell__event-log-header button:disabled {
+.sim-shell__event-log-header button:disabled,
+.cdc-event-log__actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.sim-shell__event-log-filters {
+.sim-shell__event-log-filters,
+.cdc-event-log__filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin: 0.4rem 0 0.6rem;
 }
 
-.sim-shell__event-log-filters label {
+.sim-shell__event-log-filters label,
+.cdc-event-log__filters label {
   display: grid;
   gap: 0.25rem;
   font-size: 0.8rem;
   color: #475569;
 }
 
-.sim-shell__event-log-filters select {
+.sim-shell__event-log-filters select,
+.cdc-event-log__filters select {
   padding: 0.35rem 0.6rem;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.6);
@@ -664,7 +675,8 @@
   font-size: 0.85rem;
 }
 
-.sim-shell__event-log-list {
+.sim-shell__event-log-list,
+.cdc-event-log__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -673,7 +685,8 @@
   border-top: 1px solid rgba(148, 163, 184, 0.3);
 }
 
-.sim-shell__event-log-item {
+.sim-shell__event-log-item,
+.cdc-event-log__item {
   display: grid;
   grid-template-columns: auto auto auto 1fr auto auto;
   gap: 0.5rem;
@@ -684,16 +697,19 @@
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.sim-shell__event-log-item:last-child {
+.sim-shell__event-log-item:last-child,
+.cdc-event-log__item:last-child {
   border-bottom: none;
 }
 
-.sim-shell__event-log-method {
+.sim-shell__event-log-method,
+.cdc-event-log__method {
   font-weight: 600;
   color: #0f172a;
 }
 
-.sim-shell__event-log-op {
+.sim-shell__event-log-op,
+.cdc-event-log__op {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -703,35 +719,45 @@
   letter-spacing: 0.04em;
 }
 
-.sim-shell__event-log-op[data-op="c"] {
+.sim-shell__event-log-op[data-op="c"],
+.cdc-event-log__op[data-op="C"],
+.cdc-event-log__op[data-op="c"] {
   background: rgba(16, 185, 129, 0.18);
   color: #047857;
 }
 
-.sim-shell__event-log-op[data-op="u"] {
+.sim-shell__event-log-op[data-op="u"],
+.cdc-event-log__op[data-op="U"],
+.cdc-event-log__op[data-op="u"] {
   background: rgba(59, 130, 246, 0.18);
   color: #1d4ed8;
 }
 
-.sim-shell__event-log-op[data-op="d"] {
+.sim-shell__event-log-op[data-op="d"],
+.cdc-event-log__op[data-op="D"],
+.cdc-event-log__op[data-op="d"] {
   background: rgba(220, 38, 38, 0.18);
   color: #b91c1c;
 }
 
-.sim-shell__event-log-topic {
+.sim-shell__event-log-topic,
+.cdc-event-log__topic {
   color: #475569;
 }
 
-.sim-shell__event-log-table {
+.sim-shell__event-log-table,
+.cdc-event-log__table {
   color: #1e293b;
 }
 
-.sim-shell__event-log-meta {
+.sim-shell__event-log-meta,
+.cdc-event-log__meta {
   color: #64748b;
   text-align: right;
 }
 
-.sim-shell__event-log-copy {
+.sim-shell__event-log-copy,
+.cdc-event-log__copy {
   font-size: 0.75rem;
   border: 1px solid rgba(100, 116, 139, 0.4);
   background: rgba(148, 163, 184, 0.12);
@@ -740,34 +766,48 @@
   border-radius: 8px;
 }
 
-.sim-shell__event-log-empty {
+.sim-shell__event-log-empty,
+.cdc-event-log__empty {
   margin: 0;
   padding: 1rem 0.25rem 0;
   font-size: 0.85rem;
   color: #64748b;
 }
+.cdc-event-log__notice {
+  padding: 0.5rem 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.cdc-event-log__extra {
+  color: #475569;
+}
 
-.sim-shell__event-log-details {
+.sim-shell__event-log-details,
+.cdc-event-log__details {
   grid-column: 1 / -1;
   margin-top: 0.35rem;
   color: #475569;
 }
 
-.sim-shell__event-log-details summary {
+.sim-shell__event-log-details summary,
+.cdc-event-log__details summary {
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
   color: #334155;
 }
 
-.sim-shell__event-log-details div {
+.sim-shell__event-log-details div,
+.cdc-event-log__details div {
   margin-top: 0.35rem;
   display: grid;
   gap: 0.2rem;
   font-size: 0.75rem;
 }
 
-.sim-shell__event-log-details code {
+.sim-shell__event-log-details code,
+.cdc-event-log__details code {
   display: block;
   padding: 0.35rem 0.45rem;
   border-radius: 6px;

@@ -17,11 +17,6 @@ function cloneRowPayload(payload: Record<string, unknown> | null | undefined) {
   return JSON.parse(JSON.stringify(payload));
 }
 
-function toRow(id: string, payload: Record<string, unknown> | null | undefined, updatedAt: number): Event["after"] {
-  if (!payload) return null;
-  return { id, ...payload, __ts: updatedAt };
-}
-
 export function createLogBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
