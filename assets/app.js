@@ -196,6 +196,9 @@ const uiState = {
 };
 
 let toastHost = null;
+let eventLogWidgetHandle = null;
+let eventLogWidgetLoad = null;
+const eventLogRowEventMap = new Map();
 let officeBankruptcyOverlay = null;
 
 function featureFlagApi() {
@@ -1510,16 +1513,7 @@ function getRenderableEvents() {
 
 function renderJSONLog(precomputed) {
   const items = precomputed || getRenderableEvents();
-  if (!items.length) {
-    if (els.eventLog) els.eventLog.textContent = "// no events yet (check filters)";
-    renderEventInspector(items);
-    updateLearning();
-    broadcastComparatorState();
-    return;
-  }
-
-  const payload = items.map(({ event }) => JSON.stringify(event, null, 2)).join("\n");
-  if (els.eventLog) els.eventLog.innerHTML = highlightJson(payload);
+  renderReactEventLog(items);
   renderEventInspector(items);
   updateLearning();
   broadcastComparatorState();
@@ -1559,6 +1553,132 @@ function extractPrimaryKeyValue(event, pkColumn, fallback) {
   const before = getEventBefore(event);
   if (before && before[pkColumn] != null) return before[pkColumn];
   return fallback;
+}
+
+const EVENT_LOG_METHOD = {
+  id: "playground",
+  label: "Playground events",
+};
+
+function renderLegacyEventLog(items) {
+  if (!els.eventLog) return;
+  if (!items.length) {
+    els.eventLog.textContent = "// no events yet (check filters)";
+    return;
+  }
+  const payload = items.map(({ event }) => JSON.stringify(event, null, 2)).join("\n");
+  els.eventLog.innerHTML = highlightJson(payload);
+}
+
+function buildEventLogRows(items) {
+  const pkColumn = resolvePrimaryKeyColumn();
+  eventLogRowEventMap.clear();
+  return items.map(({ event, index }) => {
+    const op = getOp(event);
+    const ts = getEventTimestamp(event);
+    const pk = extractPrimaryKeyValue(event, pkColumn, `${index}`);
+    const offset = typeof event.offset === "number" ? event.offset : null;
+    const topic = event.topic ?? "playground";
+    const table = event.table ?? state.scenarioId ?? "workspace";
+    const txnId = event.txnId ?? event.payload?.txnId ?? null;
+    const id = String(event.id ?? `${op}-${index}-${ts ?? Date.now()}`);
+    const row = {
+      id,
+      methodId: EVENT_LOG_METHOD.id,
+      methodLabel: EVENT_LOG_METHOD.label,
+      op,
+      offset,
+      topic,
+      table,
+      tsMs: ts,
+      pk: pk != null ? String(pk) : null,
+      txnId,
+      before: getEventBefore(event) ?? null,
+      after: getEventAfter(event) ?? null,
+    };
+    eventLogRowEventMap.set(id, event);
+    return row;
+  });
+}
+
+function buildEventLogProps(rows) {
+  const tables = Array.from(new Set(rows.map(row => row.table).filter(Boolean))).sort();
+  const txns = Array.from(new Set(rows.map(row => row.txnId).filter(Boolean))).sort();
+  const methods = rows.length ? [EVENT_LOG_METHOD] : [];
+
+  return {
+    className: "cdc-event-log",
+    events: rows,
+    stats: {
+      produced: state.events.length,
+      consumed: state.events.length,
+      backlog: 0,
+    },
+    totalCount: state.events.length,
+    filters: {},
+    filterOptions: {
+      methods,
+      tables,
+      txns,
+    },
+    onDownload: rows.length ? downloadNdjson : undefined,
+    onCopyEvent: handleEventLogCopy,
+    emptyMessage: "// no events yet (check filters)",
+    noMatchMessage: "No events match the current filters.",
+    maxVisibleEvents: 2000,
+  };
+}
+
+function handleEventLogCopy(row) {
+  const original = eventLogRowEventMap.get(row.id);
+  if (!original) return;
+  try {
+    const payload = JSON.stringify(original, null, 2);
+    navigator.clipboard.writeText(payload).catch(() => {});
+  } catch {
+    /* ignore clipboard errors */
+  }
+}
+
+function renderReactEventLog(items) {
+  if (!els.eventLog) return;
+  if (!window.__LetstalkCdcEventLogWidget?.load) {
+    renderLegacyEventLog(items);
+    return;
+  }
+
+  const rows = buildEventLogRows(items);
+  const props = buildEventLogProps(rows);
+
+  if (!eventLogWidgetLoad) {
+    eventLogWidgetLoad = window.__LetstalkCdcEventLogWidget
+      .load()
+      .catch(error => {
+        console.warn("Event log widget unavailable", error);
+        eventLogWidgetLoad = null;
+        return null;
+      });
+  }
+
+  if (!eventLogWidgetHandle) {
+    els.eventLog.textContent = "// loading event log…";
+  }
+
+  eventLogWidgetLoad
+    ?.then(module => {
+      if (!module) {
+        renderLegacyEventLog(items);
+        return;
+      }
+      if (!eventLogWidgetHandle) {
+        eventLogWidgetHandle = module.createEventLogWidget(els.eventLog, props);
+      } else {
+        eventLogWidgetHandle.render(props);
+      }
+    })
+    .catch(() => {
+      renderLegacyEventLog(items);
+    });
 }
 
 function buildWorkspaceOps() {

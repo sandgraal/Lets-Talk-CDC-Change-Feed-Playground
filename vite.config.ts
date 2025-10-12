@@ -10,9 +10,12 @@ export default defineConfig(({ mode }) => {
         outDir: "assets/generated",
         emptyOutDir: false,
         rollupOptions: {
-          input: "web/main.tsx",
+          input: {
+            shell: "web/main.tsx",
+            "event-log-widget": "web/event-log-widget.tsx",
+          },
           output: {
-            entryFileNames: "ui-shell.js",
+            entryFileNames: chunk => (chunk.name === "event-log-widget" ? "event-log-widget.js" : "ui-shell.js"),
             chunkFileNames: "ui-[name].js",
             assetFileNames: "ui-[name].[ext]",
           },

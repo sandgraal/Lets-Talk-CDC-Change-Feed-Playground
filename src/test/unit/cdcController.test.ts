@@ -45,4 +45,32 @@ describe("CDCController", () => {
     expect(snapshotAfterStop.consumed).toBe(0);
     expect(bus.size("cdc.widgets")).toBe(0);
   });
+
+  it("handles pause and resume transitions", () => {
+    const bus = new EventBus<Event>();
+    const scheduler = new Scheduler();
+    const metrics = new MetricsStore();
+    const controller = new CDCController("QUERY_BASED", bus, scheduler, metrics, "cdc.playground", {
+      startSnapshot: (_, emit) => emit([sampleEvent]),
+      startTailing: () => {},
+    });
+
+    controller.startSnapshot([]);
+    expect(controller.currentState).toBe("SNAPSHOTTING");
+
+    controller.startTailing();
+    expect(controller.currentState).toBe("TAILING");
+
+    controller.pause();
+    expect(controller.currentState).toBe("PAUSED");
+
+    controller.pause();
+    expect(controller.currentState).toBe("PAUSED");
+
+    controller.resume();
+    expect(controller.currentState).toBe("TAILING");
+
+    controller.stop();
+    expect(controller.currentState).toBe("IDLE");
+  });
 });

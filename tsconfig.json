@@ -16,7 +16,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": [
-      "vite/client"
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom"
     ]
   },
   "include": [

@@ -125,4 +125,39 @@ describe("Mode adapters", () => {
     expect(emitted[1].kind).toBe("UPDATE");
     expect(emitted[0].commitTs).toBeLessThan(emitted[1].commitTs);
   });
+
+  it("log adapter emits snapshot rows with schema metadata", () => {
+    const adapter = createLogBasedAdapter();
+    const { runtime } = createRuntime("cdc.log");
+    adapter.initialise?.(runtime);
+
+    const snapshot: Event[] = [];
+    adapter.startSnapshot?.(
+      [
+        {
+          name: "widgets",
+          schema: {
+            name: "widgets",
+            columns: [
+              { name: "id", type: "string" },
+              { name: "status", type: "string" },
+            ],
+            version: 3,
+          },
+          rows: [
+            { id: "w1", status: "seed", __ts: 50 },
+          ],
+        },
+      ],
+      events => {
+        snapshot.push(...events);
+        return events;
+      },
+    );
+
+    expect(snapshot).toHaveLength(1);
+    expect(snapshot[0].kind).toBe("INSERT");
+    expect(snapshot[0].schemaVersion).toBe(1);
+    expect(snapshot[0].after?.status).toBe("seed");
+  });
 });
