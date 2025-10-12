@@ -1,7 +1,7 @@
 (function attachSimulatorLoader(global) {
   if (global.__LetstalkCdcSimulator?.load) return;
 
-  const bundleHref = "./assets/generated/sim-bundle.js";
+  const bundleHref = "./generated/sim-bundle.js";
 
   async function loadBundle() {
     if (global.__LetstalkCdcSimulatorBundle) {

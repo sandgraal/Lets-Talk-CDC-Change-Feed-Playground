@@ -1992,7 +1992,20 @@ function renderEventInspector(precomputed) {
   if (els.inspectorReplay) els.inspectorReplay.disabled = !items.length;
 
   const activeButton = listEl.querySelector(".inspector-item.is-active");
-  if (activeButton) activeButton.scrollIntoView({ block: "nearest" });
+
+  // Only auto-scroll when the inspector is already on screen to avoid jumping the page
+  let shouldAutoScroll = true;
+  if (typeof window !== "undefined") {
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    if (viewportHeight) {
+      const intersectsViewport = (rect) => rect.top < viewportHeight && rect.bottom > 0;
+      const listRect = listEl.getBoundingClientRect();
+      const detailRect = detailEl.getBoundingClientRect();
+      shouldAutoScroll = intersectsViewport(listRect) || intersectsViewport(detailRect);
+    }
+  }
+
+  if (shouldAutoScroll && activeButton) activeButton.scrollIntoView({ block: "nearest" });
 }
 
 function stepSelectedEvent(delta) {

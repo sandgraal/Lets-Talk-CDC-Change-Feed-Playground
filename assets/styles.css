@@ -1338,7 +1338,7 @@ code {
   border-radius: 16px;
   padding: 20px 24px;
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.35);
-  z-index: 9001;
+  z-index: 9500;
   outline: none;
 }
 

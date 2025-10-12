@@ -16,7 +16,7 @@
 
   async function loadShell() {
     try {
-      await import("./assets/generated/ui-shell.js");
+      await import("./generated/ui-shell.js");
       global.__LetstalkCdcUiShellLoaded = true;
     } catch (error) {
       console.warn(
