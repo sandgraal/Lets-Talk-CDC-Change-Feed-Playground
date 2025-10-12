@@ -200,6 +200,16 @@ const els = {
   inspectorReplay: document.getElementById("eventReplay"),
 };
 
+if (typeof document !== "undefined") {
+  document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
+  document.getElementById("btnReset")?.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEYS.state);
+    localStorage.removeItem(STORAGE_KEYS.lastTemplate);
+    localStorage.removeItem(STORAGE_KEYS.onboarding);
+    location.reload();
+  });
+}
+
 const uiState = {
   selectedEventIndex: null, // index within state.events
   lastShareId: null,
@@ -3394,9 +3404,6 @@ function bindUiHandlers() {
   if (els.onboardingButton) {
     els.onboardingButton.onclick = () => showOnboarding();
   }
-  if (els.guidedTourButton) {
-    els.guidedTourButton.onclick = () => startGuidedTour();
-  }
   if (els.onboardingClose) {
     els.onboardingClose.onclick = () => hideOnboarding(true);
   }
@@ -3573,13 +3580,7 @@ function bindUiHandlers() {
   const importInput = document.getElementById("importFile");
   if (importInput) importInput.onchange = (e) => e.target.files[0] && importScenario(e.target.files[0]);
 
-  const resetBtn = document.getElementById("btnReset");
-  if (resetBtn) resetBtn.onclick = () => {
-    localStorage.removeItem(STORAGE_KEYS.state);
-    localStorage.removeItem(STORAGE_KEYS.lastTemplate);
-    localStorage.removeItem(STORAGE_KEYS.onboarding);
-    location.reload();
-  };
+
 
   syncSchemaDemoButtons();
 }
