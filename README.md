@@ -13,6 +13,7 @@ Open `index.html` in a browser. No build step.
 
 ### Verification
 - Property-based invariants: `npm run test:sim` (requires a fresh `npm run build:sim` bundle)
+- Unit suite (engine adapters + UI widgets): `npm run test:unit`
 - Playwright smoke (CI enforced): `PLAYWRIGHT_DISABLE=0 npm run test:e2e`
 - Harness HTML snapshot: `npm run test:harness-report`
 - Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
@@ -30,6 +31,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Trigger: extractor cadence and per-write trigger overhead
 - Log: WAL/Binlog fetch interval
 - Live workspace feed: the comparator listens for table mutations and exposes them as a "Workspace (live)" scenario alongside curated demos
+- Shared Event Log renderer powers both the playground and comparator, with filters, per-event copy, and NDJSON export
 - Comparator preferences (scenario, methods, knobs) persist locally so you resume where you left off
 - Exports/imports carry comparator preferences and the latest insight snapshot for consistent replays
 - Curated scenarios live in `assets/shared-scenarios.js`; update that module once to change both the template gallery and comparator demos
