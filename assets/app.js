@@ -291,7 +291,7 @@ const learningConfig = [
     id: "schema",
     target: "#schema",
     tip: "Add at least one column and designate a primary key so updates can locate rows.",
-    completeTip: "Nice foundation. Head to the table to add seed data.",
+    completeTip: "Nice foundation. Explore schema walkthrough to add/drop columns.",
     isComplete: () => state.schema.length > 0,
   },
   {
@@ -305,7 +305,7 @@ const learningConfig = [
     id: "events",
     target: "#change-feed",
     tip: "Run inserts, updates, deletes, or emit snapshot to see change events stream in.",
-    completeTip: "Great! Copy or download the NDJSON to share your feed.",
+    completeTip: "Great! Copy or download NDJSON, then compare lanes in the metrics dashboard.",
     isComplete: () => state.events.length > 0,
   },
 ];
@@ -331,7 +331,13 @@ const GUIDED_TOUR_STEPS = [
     id: "workspace-events",
     selector: "#change-feed",
     title: "Stream events",
-    description: "Trigger inserts, updates, and deletes here—then pivot to the comparator to see how each method behaves.",
+    description: "Trigger inserts, updates, deletes, or schema changes here. Watch the event log classify snapshots and schema updates.",
+  },
+  {
+    id: "workspace-schema-demo",
+    selector: ".schema-demo-actions",
+    title: "Schema walkthrough",
+    description: "Use these helpers to add or drop the demo column while events stream. Schema change events land alongside CDC operations.",
   },
   {
     id: "comparator-callouts",
@@ -352,7 +358,15 @@ const GUIDED_TOUR_STEPS = [
     title: "Compare lane metrics",
     timeout: TOUR_COMPARATOR_TIMEOUT,
     description:
-      "Lag, throughput, delete capture, ordering, and consistency update live. Use the diff overlay just below to see missing, extra, and out-of-order operations.",
+      "Lag, throughput, delete capture, ordering, and write amplification update live. Use the diff overlay just below to see missing, extra, and out-of-order operations.",
+  },
+  {
+    id: "comparator-dashboard",
+    selector: '.sim-shell__metrics-dashboard',
+    title: "Metrics dashboard",
+    timeout: TOUR_COMPARATOR_TIMEOUT,
+    description:
+      "Totals across produced/consumed/backlog sit here. Hover to see per-lane lag percentiles, missed deletes, and trigger write amplification.",
   },
   {
     id: "comparator-actions",
