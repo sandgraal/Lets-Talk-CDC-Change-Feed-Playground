@@ -1782,6 +1782,11 @@ export function App() {
       )}
 
       <div className="sim-shell__event-filters" role="group" aria-label="Event filters">
+        {isConsumerPaused && (
+          <div className="sim-shell__pause-banner" role="status" aria-live="polite">
+            Apply paused. Resume to drain the event bus.
+          </div>
+        )}
         <label className="sim-shell__event-search">
           <span>Search events</span>
           <input
@@ -2097,7 +2102,11 @@ export function App() {
               <LaneDiffOverlay diff={diff} scenarioName={scenario.name} />
 
               {eventBusEnabled && (
-                <section className="sim-shell__lane-bus" aria-label={`${copy.label} event bus`}>
+                <section
+                  className="sim-shell__lane-bus"
+                  aria-label={`${copy.label} event bus`}
+                  data-paused={isConsumerPaused ? "true" : "false"}
+                >
                   <header>
                     <h4>Event Bus</h4>
                     <span>{runtime?.topic ?? `cdc.${method}`}</span>
