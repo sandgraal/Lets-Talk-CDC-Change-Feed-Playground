@@ -36,6 +36,7 @@ declare global {
 }
 import { MetricsStrip } from "./components/MetricsStrip";
 import { MetricsDashboard } from "./components/MetricsDashboard";
+import { Button } from "./components/ui/Button";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
