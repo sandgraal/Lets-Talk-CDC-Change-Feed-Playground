@@ -11,6 +11,13 @@ const STORAGE_KEYS = Object.freeze({
 
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
 
+const officeEasterEgg = {
+  toastShown: false,
+  seedCount: 0,
+  bankruptcyShown: false,
+  megadeskActive: false,
+};
+
 const DEFAULT_SCHEMA = [
   { name: "id", type: "number", pk: true },
   { name: "customer_name", type: "string", pk: false },
@@ -189,6 +196,7 @@ const uiState = {
 };
 
 let toastHost = null;
+let officeBankruptcyOverlay = null;
 
 function featureFlagApi() {
   if (typeof window === "undefined") return undefined;
@@ -720,6 +728,8 @@ function maybeShowOnboarding() {
 
 function applyScenarioTemplate(template, options = {}) {
   if (!template) return;
+  officeEasterEgg.seedCount = 0;
+  officeEasterEgg.bankruptcyShown = false;
   state.schema = clone(template.schema || []);
   state.rows = clone(template.rows || []);
   state.events = clone(template.events || []);
@@ -1077,6 +1087,18 @@ function applyComparatorPreferences(prefs) {
   }
 }
 
+function showOfficeToastOnce() {
+  if (officeEasterEgg.toastShown) return;
+  officeEasterEgg.toastShown = true;
+  const message = "Bears. Beets. Battle-tested schema.";
+  if (hasCrudFixFlag()) {
+    pushToast(message, "success", { timeout: 4200 });
+  } else {
+    refreshSchemaStatus(message, "success");
+    setTimeout(() => refreshSchemaStatus(), 4200);
+  }
+}
+
 function buildComparatorExport() {
   const preferences = loadComparatorPreferences();
   let summary = comparatorState.summary;
@@ -1104,6 +1126,11 @@ function buildComparatorExport() {
 }
 
 function emitSparkleTrail(op = "c") {
+  if (isOfficeSchemaActive() && op === "c") {
+    emitOfficeStaplerTrail();
+    return;
+  }
+
   const source = els.rowEditor;
   const target = els.eventLog;
   if (!source || !target) return;
@@ -1146,10 +1173,85 @@ function emitSparkleTrail(op = "c") {
   }
 }
 
+function emitOfficeStaplerTrail() {
+  const source = els.rowEditor;
+  const target = els.eventLog;
+  if (!source || !target) return;
+
+  const srcRect = source.getBoundingClientRect();
+  const dstRect = target.getBoundingClientRect();
+  const blobs = 5;
+
+  for (let i = 0; i < blobs; i++) {
+    const originX = srcRect.left + srcRect.width * (0.25 + Math.random() * 0.5);
+    const originY = srcRect.top + srcRect.height * (0.25 + Math.random() * 0.5);
+    const destX = dstRect.left + dstRect.width * (0.2 + Math.random() * 0.6);
+    const destY = dstRect.top + dstRect.height * (0.12 + Math.random() * 0.26);
+    const blob = document.createElement("span");
+    blob.className = "stapler-blob";
+    blob.style.left = `${originX}px`;
+    blob.style.top = `${originY}px`;
+    document.body.appendChild(blob);
+
+    const dx = destX - originX;
+    const dy = destY - originY;
+    const wobbleX = dx * (0.35 + Math.random() * 0.25);
+    const wobbleY = dy * (0.35 + Math.random() * 0.25);
+    const duration = 720 + Math.random() * 240;
+    const delay = Math.random() * 110;
+
+    const animation = blob.animate([
+      { transform: "translate(-50%, -50%) scale(0.9)", opacity: 0.94 },
+      { transform: `translate(-50%, -50%) translate(${wobbleX}px, ${wobbleY}px) scale(1.05) rotate(${Math.random() * 12 - 6}deg)`, opacity: 0.8 },
+      { transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(0.55)`, opacity: 0 }
+    ], { duration, delay, easing: "cubic-bezier(0.25, 0.8, 0.25, 1)" });
+
+    const cleanup = () => blob.remove();
+    if (animation.finished) {
+      animation.finished.then(cleanup).catch(cleanup);
+    } else {
+      animation.onfinish = cleanup;
+      setTimeout(cleanup, duration + delay + 120);
+    }
+  }
+}
+
+function toggleMegadeskMode(force) {
+  const desired = typeof force === "boolean" ? force : !officeEasterEgg.megadeskActive;
+  officeEasterEgg.megadeskActive = desired;
+  if (typeof document !== "undefined" && document.body) {
+    document.body.classList.toggle("megadesk-mode", desired);
+  }
+  const message = desired ? "Megadesk assembled. Productivity intensifies." : "Megadesk dismantled. Back to one desk.";
+  if (hasCrudFixFlag()) {
+    pushToast(message, "info", { timeout: 2600 });
+  } else {
+    refreshSchemaStatus(message, "success");
+    setTimeout(() => refreshSchemaStatus(), 3200);
+  }
+}
+
+function handleMegadeskShortcut(event) {
+  if (!event) return;
+  const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
+  if (!(key === "m" || key === "M")) return;
+  const commandPressed = event.metaKey || event.ctrlKey;
+  if (!commandPressed || !event.shiftKey) return;
+  const target = event.target;
+  if (target) {
+    const tag = target.tagName;
+    if (tag && ["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+    if (target.isContentEditable) return;
+  }
+  event.preventDefault();
+  toggleMegadeskMode();
+}
+
 function emitOfficeConfetti() {
   if (typeof document === "undefined") return;
   const host = document.body;
   if (!host) return;
+  showOfficeToastOnce();
 
   const palette = ["#0A5AE8", "#1E88FF", "#7FB3FF", "#F8FAFF", "#FFE173"];
   const originRect = els.rowEditor?.getBoundingClientRect?.();
@@ -1195,6 +1297,82 @@ function emitOfficeConfetti() {
       animation.onfinish = cleanup;
       setTimeout(cleanup, duration + delay + 120);
     }
+  }
+}
+
+function showOfficeBankruptcyModal() {
+  if (officeEasterEgg.bankruptcyShown) return;
+  officeEasterEgg.bankruptcyShown = true;
+  if (typeof document === "undefined") return;
+  if (officeBankruptcyOverlay) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "office-bankruptcy-overlay";
+
+  const modal = document.createElement("div");
+  modal.className = "office-bankruptcy-modal";
+
+  const emoji = document.createElement("span");
+  emoji.className = "office-bankruptcy-emoji";
+  emoji.textContent = "🏆";
+
+  const title = document.createElement("h3");
+  title.textContent = "Michael declares schema bankruptcy!";
+
+  const copy = document.createElement("p");
+  copy.innerHTML = "Three seed runs in a row? That’s a Dundie-worthy effort.<br/>Want to reset the table and start fresh?";
+
+  const actionRow = document.createElement("div");
+  actionRow.className = "office-bankruptcy-actions";
+
+  const confirm = document.createElement("button");
+  confirm.type = "button";
+  confirm.className = "btn-primary";
+  confirm.textContent = "I declare schema bankruptcy!";
+  confirm.onclick = handleOfficeBankruptcyReset;
+
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "btn-ghost";
+  dismiss.textContent = "Keep hustling";
+  dismiss.onclick = hideOfficeBankruptcyModal;
+
+  actionRow.appendChild(confirm);
+  actionRow.appendChild(dismiss);
+
+  modal.appendChild(emoji);
+  modal.appendChild(title);
+  modal.appendChild(copy);
+  modal.appendChild(actionRow);
+  overlay.appendChild(modal);
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) hideOfficeBankruptcyModal();
+  });
+
+  document.body.appendChild(overlay);
+  officeBankruptcyOverlay = overlay;
+}
+
+function hideOfficeBankruptcyModal() {
+  if (!officeBankruptcyOverlay) return;
+  officeBankruptcyOverlay.remove();
+  officeBankruptcyOverlay = null;
+}
+
+function handleOfficeBankruptcyReset() {
+  state.rows = [];
+  state.events = [];
+  uiState.selectedEventIndex = null;
+  officeEasterEgg.seedCount = 0;
+  save();
+  renderTable();
+  renderEditor();
+  renderJSONLog();
+  refreshSchemaStatus("Fresh sheet started. Oscar will handle the paperwork.", "success");
+  hideOfficeBankruptcyModal();
+  if (hasCrudFixFlag()) {
+    pushToast("Fresh table, same Dundies energy.", "info", { timeout: 3500 });
   }
 }
 
@@ -1254,6 +1432,8 @@ function ensureDefaultSchema() {
   if (!state.schema.length) {
     state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
     state.scenarioId = "default";
+    officeEasterEgg.seedCount = 0;
+    officeEasterEgg.bankruptcyShown = false;
     mutated = true;
   }
   if (!state.rows.length) {
@@ -2501,6 +2681,16 @@ function renderTable() {
     state.schema.forEach(c => {
       const td = tr.insertCell();
       td.textContent = r[c.name];
+      if (isOfficeSchemaActive()) {
+        const tips = r.__officeTips;
+        if (Array.isArray(tips)) {
+          const tip = tips.find(entry => entry.field === c.name);
+          if (tip) {
+            td.title = tip.message;
+            td.dataset.officeTip = "true";
+          }
+        }
+      }
     });
   }
   updateLearning();
@@ -2649,6 +2839,8 @@ function seedRows() {
 
   if (!demandPrimaryKey("seeding sample rows")) return;
 
+  const officeActive = isOfficeSchemaActive();
+
   if (state.rows.length === 0) {
     const samples = [];
     const pkFields = getPrimaryKeyFields();
@@ -2666,9 +2858,20 @@ function seedRows() {
     }
     state.rows = samples;
     refreshSchemaStatus("Seeded sample rows based on your schema.", "success");
-    if (isOfficeSchemaActive()) emitOfficeConfetti();
+    if (officeActive) {
+      officeEasterEgg.seedCount += 1;
+      if (officeEasterEgg.seedCount >= 3 && !officeEasterEgg.bankruptcyShown) {
+        showOfficeBankruptcyModal();
+      }
+      emitOfficeConfetti();
+    } else {
+      officeEasterEgg.seedCount = 0;
+    }
   } else {
     refreshSchemaStatus("Rows already exist. Clear rows to regenerate fresh samples.", "muted");
+    if (!officeActive) {
+      officeEasterEgg.seedCount = 0;
+    }
   }
 
   save();
@@ -2809,6 +3012,10 @@ function quickstartEmitEvent() {
 }
 
 function bindUiHandlers() {
+  if (typeof document !== "undefined") {
+    document.addEventListener("keydown", handleMegadeskShortcut);
+  }
+
   if (els.onboardingButton) {
     els.onboardingButton.onclick = () => showOnboarding();
   }
@@ -3056,6 +3263,113 @@ async function main() {
   if (shouldShowOnboarding) maybeShowOnboarding();
 }
 main();
+
+function pickRandom(list) {
+  if (!Array.isArray(list) || !list.length) return null;
+  const index = Math.floor(Math.random() * list.length);
+  return list[index];
+}
+
+function randomRecentIso(maxHoursBack) {
+  const horizon = typeof maxHoursBack === "number" && maxHoursBack > 0 ? maxHoursBack : 24;
+  const now = Date.now();
+  const offset = Math.floor(Math.random() * horizon * 60 * 60 * 1000);
+  return new Date(now - offset).toISOString();
+}
+
+function generateScenarioOrdersRow() {
+  const status = pickRandom(["pending", "processing", "packed", "shipped", "cancelled", "delivered"]) || "processing";
+  const methods = ["Expedited", "Standard", "Same Day", "Store Pickup", "Locker Pickup"];
+  return {
+    order_id: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
+    customer_id: `C-${Math.floor(Math.random() * 900 + 100)}`,
+    status,
+    subtotal: Number((Math.random() * 350 + 35).toFixed(2)),
+    shipping_method: pickRandom(methods) || "Standard",
+    updated_at: randomRecentIso(72),
+  };
+}
+
+function generateScenarioPaymentsRow() {
+  const status = pickRandom(["authorized", "captured", "pending_review", "declined"]) || "authorized";
+  const authorizedAt = randomRecentIso(96);
+  let capturedAt = null;
+  if (status === "captured") {
+    const base = Date.parse(authorizedAt);
+    const deltaMinutes = Math.floor(Math.random() * 20) + 2;
+    capturedAt = new Date(base + deltaMinutes * 60000).toISOString();
+  }
+  return {
+    transaction_id: `PAY-${Math.floor(Math.random() * 90000 + 10000)}`,
+    account_id: `ACC-${Math.floor(Math.random() * 9000 + 1000)}`,
+    payment_method: pickRandom(["card", "wallet", "bank_transfer", "ach", "apple_pay"]) || "card",
+    amount: Number((Math.random() * 475 + 10).toFixed(2)),
+    status,
+    authorized_at: authorizedAt,
+    captured_at: capturedAt,
+  };
+}
+
+function generateScenarioTelemetryRow() {
+  const status = pickRandom(["nominal", "warning", "alert"]) || "nominal";
+  const deviceSuffix = String(Math.floor(Math.random() * 18) + 1).padStart(2, "0");
+  const baseTemp = Number((Math.random() * 5 + 18).toFixed(1));
+  let temperature = baseTemp;
+  if (status === "warning") {
+    temperature = Number((baseTemp + Math.random() * 1.5 + 0.5).toFixed(1));
+  } else if (status === "alert") {
+    temperature = Number((baseTemp + Math.random() * 2.5 + 1.5).toFixed(1));
+  }
+  const pressure = status === "alert"
+    ? Number((Math.random() * 2 + 98).toFixed(1))
+    : Number((Math.random() * 1.5 + 99).toFixed(1));
+  return {
+    reading_id: `READ-${Math.floor(Math.random() * 900 + 100)}`,
+    device_id: `THERM-${deviceSuffix}`,
+    temperature_c: temperature,
+    pressure_kpa: pressure,
+    status,
+    recorded_at: randomRecentIso(24),
+  };
+}
+
+function generateScenarioSampleRow() {
+  if (!state.scenarioId || state.scenarioId === "default") return null;
+  const schema = Array.isArray(state.schema) ? state.schema : [];
+  if (!schema.length) return null;
+
+  let scenarioRow = null;
+  switch (state.scenarioId) {
+    case "orders":
+      scenarioRow = generateScenarioOrdersRow();
+      break;
+    case "payments":
+      scenarioRow = generateScenarioPaymentsRow();
+      break;
+    case "iot":
+      scenarioRow = generateScenarioTelemetryRow();
+      break;
+    default:
+      return null;
+  }
+  if (!scenarioRow) return null;
+
+  const row = {};
+  for (const col of schema) {
+    if (Object.prototype.hasOwnProperty.call(scenarioRow, col.name)) {
+      row[col.name] = scenarioRow[col.name];
+    } else {
+      row[col.name] = randomSampleForColumn(col);
+    }
+  }
+
+  if (state.scenarioId === "payments" && row.status !== "captured") {
+    row.captured_at = null;
+  }
+
+  return row;
+}
+
 function randomSampleForColumn(col) {
   switch (col.name) {
     case "id":
@@ -3101,6 +3415,9 @@ function randomSampleForColumn(col) {
 }
 
 function generateSampleRow() {
+  const scenarioRow = generateScenarioSampleRow();
+  if (scenarioRow) return scenarioRow;
+
   const row = {};
   for (const col of state.schema) {
     row[col.name] = randomSampleForColumn(col);
@@ -3109,7 +3426,43 @@ function generateSampleRow() {
     const quantity = Math.floor(Math.random() * 40) + 5;
     row.order_total = Number((row.price_per_unit * quantity).toFixed(2));
   }
+  if (isOfficeSchemaActive()) applyOfficeLore(row);
   return row;
+}
+
+function applyOfficeLore(row) {
+  const profiles = [
+    { customer: "Dunmore High School", rep: "Dwight Schrute", region: "Schrute Farms", tooltipField: "region", tooltip: "Account overlap?" },
+    { customer: "Athlead Inc.", rep: "Jim Halpert", region: "Stamford (Remote)", tooltipField: null, tooltip: null },
+    { customer: "Vance Refrigeration", rep: "Phyllis Vance", region: "Scranton", tooltipField: "customer_name", tooltip: "Bob already called dibs." },
+    { customer: "Serenity by Jan", rep: "Michael Scott", region: "Corporate Liaison", tooltipField: null, tooltip: null },
+    { customer: "Wuphf.com", rep: "Ryan Howard", region: "SoHo", tooltipField: "sales_rep", tooltip: "Is this still a thing?" },
+  ];
+  const profile = profiles[Math.floor(Math.random() * profiles.length)];
+
+  if (row.hasOwnProperty("customer_name") && profile.customer) row.customer_name = profile.customer;
+  if (row.hasOwnProperty("sales_rep") && profile.rep) row.sales_rep = profile.rep;
+  if (row.hasOwnProperty("region") && profile.region) row.region = profile.region;
+
+  if (row.hasOwnProperty("price_per_unit") && typeof row.price_per_unit === "number") {
+    const chaos = (Math.random() - 0.5) * 1.2;
+    row.price_per_unit = Number(Math.max(4, row.price_per_unit + chaos).toFixed(2));
+  }
+  if (row.hasOwnProperty("order_total") && typeof row.order_total === "number") {
+    const surcharge = profile.rep === "Dwight Schrute" ? 9.84 : Math.random() * 4;
+    row.order_total = Number((row.order_total + surcharge).toFixed(2));
+  }
+
+  const tips = [];
+  if (profile.tooltip && profile.tooltipField) {
+    tips.push({ field: profile.tooltipField, message: profile.tooltip });
+  }
+  Object.defineProperty(row, "__officeTips", {
+    value: tips,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
 }
 
 function autofillRowAndInsert() {
@@ -3129,6 +3482,15 @@ function autofillRowAndInsert() {
 
   // mutate table state + log event
   const after = clone(sample);
+  const tips = sample.__officeTips;
+  if (tips) {
+    Object.defineProperty(after, "__officeTips", {
+      value: tips,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+  }
   state.rows.push(after);
   const docId = nextDocumentId();
   const evt = buildEvent("c", null, after);
