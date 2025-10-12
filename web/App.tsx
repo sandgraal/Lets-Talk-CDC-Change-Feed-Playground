@@ -36,7 +36,7 @@ declare global {
 }
 import { MetricsStrip } from "./components/MetricsStrip";
 import { MetricsDashboard } from "./components/MetricsDashboard";
-import { Button } from "./components/ui/Button";
+import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
@@ -62,6 +62,11 @@ type Metrics = {
   orderingOk: boolean;
   consistent: boolean;
   writeAmplification?: number;
+};
+
+const SCHEMA_DEMO_COLUMN = {
+  name: "priority_flag",
+  type: "Boolean",
 };
 
 function computeTriggerWriteAmplification(
@@ -170,6 +175,8 @@ type ControllerBackedEngine = MethodEngine & {
   topic: string;
 };
 
+type SchemaChangeAction = "add" | "drop";
+
 type Summary = {
   bestLag: LaneMetrics;
   worstLag: LaneMetrics;
@@ -218,6 +225,8 @@ const DEFAULT_METHOD_CONFIG: MethodConfigMap = {
   trigger: { extractIntervalMs: 250, triggerOverheadMs: 8 },
   log: { fetchIntervalMs: 50 },
 };
+
+const SCHEMA_DEMO_METHODS: MethodOption[] = ["polling", "trigger", "log"];
 
 const MODE_LOOKUP: Record<MethodOption, ModeIdentifier> = {
   polling: "QUERY_BASED",

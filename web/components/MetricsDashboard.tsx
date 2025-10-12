@@ -14,15 +14,15 @@ export type MetricsDashboardLane = {
 
 export type MetricsDashboardProps = {
   lanes: MetricsDashboardLane[];
+  renderSchemaWalkthrough?: (laneId: string) => React.ReactNode;
 };
-
 const formatNumber = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString() : "—";
 
 const formatLag = (value: number) =>
   Number.isFinite(value) ? `${Math.round(value)}ms` : "—";
 
-export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes }) => {
+export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes, renderSchemaWalkthrough }) => {
   const totals = lanes.reduce(
     (acc, lane) => {
       acc.produced += lane.produced;
@@ -47,6 +47,11 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes }) => {
             <header>
               <h4>{lane.label}</h4>
             </header>
+            {renderSchemaWalkthrough && (
+              <div className="sim-shell__schema-demo-inline">
+                {renderSchemaWalkthrough(lane.id)}
+              </div>
+            )}
             <dl>
               <div>
                 <dt>Produced</dt>
