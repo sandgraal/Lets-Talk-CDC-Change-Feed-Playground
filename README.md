@@ -37,6 +37,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Curated scenarios live in `assets/shared-scenarios.js`; update that module once to change both the template gallery and comparator demos
 - Comparator lets you push any scenario back into the workspace via the new “Load in workspace” shortcut
 - Lane diff overlays surface missing/extra/out-of-order operations and lag hotspots per method so insights link to exact events
+- Metrics dashboard summarises produced/consumed counts, backlog, and lag percentiles per method
 - Telemetry client (`window.telemetry`) buffers activation/funnel events locally so tours and tests can assert on adoption flows
 
 ### Scenario matrix

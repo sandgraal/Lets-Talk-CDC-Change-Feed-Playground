@@ -121,6 +121,70 @@
   background: rgba(37, 99, 235, 0.2);
 }
 
+.sim-shell__metrics-dashboard {
+  margin: 1.5rem 0;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  background: rgba(236, 253, 245, 0.6);
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.sim-shell__metrics-dashboard-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.sim-shell__metrics-dashboard-header p {
+  margin: 0.35rem 0 0;
+  color: #0d9488;
+  font-size: 0.85rem;
+}
+
+.sim-shell__metrics-dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.sim-shell__metrics-dashboard-card {
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 14px;
+  background: rgba(241, 245, 249, 0.85);
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sim-shell__metrics-dashboard-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.sim-shell__metrics-dashboard-card dl {
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sim-shell__metrics-dashboard-card dl div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #1e3a8a;
+}
+
+.sim-shell__metrics-dashboard-card dt {
+  font-weight: 600;
+}
+
+.sim-shell__metrics-dashboard-card dd {
+  margin: 0;
+}
+
 .sim-shell__event-filters {
   margin: 1rem 0;
   display: flex;

@@ -35,6 +35,7 @@ declare global {
   }
 }
 import { MetricsStrip } from "./components/MetricsStrip";
+import { MetricsDashboard } from "./components/MetricsDashboard";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
@@ -1400,6 +1401,23 @@ export function App() {
     return map;
   }, [laneMetrics, scenario.ops]);
 
+  const metricsDashboardLanes = useMemo(() =>
+    activeMethods.map(method => {
+      const runtimeSummary = laneRuntimeSummaries.get(method);
+      return {
+        id: method,
+        label: METHOD_COPY[method].label,
+        produced: runtimeSummary?.produced ?? 0,
+        consumed: runtimeSummary?.consumed ?? 0,
+        backlog: runtimeSummary?.backlog ?? 0,
+        lagP50: runtimeSummary?.lagMsP50 ?? 0,
+        lagP95: runtimeSummary?.lagMsP95 ?? 0,
+        missedDeletes: runtimeSummary?.missedDeletes,
+        writeAmplification: runtimeSummary?.writeAmplification,
+      };
+    }),
+  [activeMethods, laneRuntimeSummaries]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(
@@ -2038,6 +2056,10 @@ export function App() {
             {summaryCopied ? "Copied" : "Copy summary"}
           </button>
         </div>
+      )}
+
+      {metricsDashboardLanes.length > 0 && (
+        <MetricsDashboard lanes={metricsDashboardLanes} />
       )}
 
       <div className="sim-shell__lane-grid" data-tour-target="comparator-lanes">
