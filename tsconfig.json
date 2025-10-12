@@ -25,6 +25,7 @@
     "web/**/*.tsx",
     "web/stories/**/*.tsx",
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "src/test/**/*.ts"
   ]
 }

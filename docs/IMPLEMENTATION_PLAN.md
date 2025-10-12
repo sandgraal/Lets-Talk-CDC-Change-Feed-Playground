@@ -29,7 +29,7 @@ Status: v1
     types.ts         # Record, Event, Txn, Schema, Table, CDCMode
     storage.ts       # in-memory + Appwrite backing (optional)
   /ui
-    components/*     # EventLog, Controls, StatusIndicators, Tables, Metrics (placeholder wired)
+    components/*     # EventLog, Controls, StatusIndicators, Tables, Metrics
     glossary.ts      # mini inline glossary
     tooltips.ts      # copy for guided hints
   /features

@@ -1,0 +1,128 @@
+import { describe, expect, it } from "vitest";
+import { createQueryBasedAdapter, createTriggerBasedAdapter, createLogBasedAdapter, type ModeRuntime } from "../../modes";
+import { EventBus } from "../../engine/eventBus";
+import { Scheduler } from "../../engine/scheduler";
+import { MetricsStore } from "../../engine/metrics";
+import type { Event, SourceOp } from "../../domain/types";
+
+function createRuntime(topic: string) {
+  const metrics = new MetricsStore();
+  const runtime: ModeRuntime = {
+    bus: new EventBus<Event>(),
+    scheduler: new Scheduler(),
+    metrics,
+    topic,
+  };
+  return { runtime, metrics };
+}
+
+describe("Mode adapters", () => {
+  it("query adapter records missed deletes when soft deletes are disabled", () => {
+    const adapter = createQueryBasedAdapter();
+    const { runtime, metrics } = createRuntime("cdc.query");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ fetch_interval_ms: 25 });
+    adapter.configure?.({ poll_interval_ms: 10, include_soft_deletes: false });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const insert: SourceOp = {
+      t: 1,
+      op: "insert",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "new" },
+    };
+    const deleteOp: SourceOp = {
+      t: 20,
+      op: "delete",
+      table: "widgets",
+      pk: { id: "w1" },
+    };
+
+    adapter.applySource?.(insert);
+    adapter.tick?.(15);
+    adapter.applySource?.(deleteOp);
+    adapter.tick?.(30);
+
+    expect(emitted.some(evt => evt.kind === "DELETE")).toBe(false);
+    expect(metrics.snapshot().missedDeletes).toBe(1);
+  });
+
+  it("trigger adapter bumps write amplification and emits audit events", () => {
+    const adapter = createTriggerBasedAdapter();
+    const { runtime, metrics } = createRuntime("cdc.trigger");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ extract_interval_ms: 1, trigger_overhead_ms: 5 });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const insert: SourceOp = {
+      t: 10,
+      op: "insert",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "new" },
+    };
+    const update: SourceOp = {
+      t: 20,
+      op: "update",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "updated" },
+    };
+
+    adapter.applySource?.(insert);
+    adapter.applySource?.(update);
+    adapter.tick?.(50);
+
+    expect(emitted.length).toBe(2);
+    expect(metrics.snapshot().writeAmplification).toBe(2);
+  });
+
+  it("log adapter flushes WAL entries in order", () => {
+    const adapter = createLogBasedAdapter();
+    const { runtime } = createRuntime("cdc.log");
+    adapter.initialise?.(runtime);
+
+    adapter.startSnapshot?.([], () => []);
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const insert: SourceOp = {
+      t: 5,
+      op: "insert",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "new" },
+    };
+    const update: SourceOp = {
+      t: 15,
+      op: "update",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "updated" },
+    };
+
+    adapter.applySource?.(insert);
+    adapter.applySource?.(update);
+    adapter.tick?.(200);
+
+    expect(emitted.length).toBe(2);
+    expect(emitted[0].kind).toBe("INSERT");
+    expect(emitted[1].kind).toBe("UPDATE");
+    expect(emitted[0].commitTs).toBeLessThan(emitted[1].commitTs);
+  });
+});
