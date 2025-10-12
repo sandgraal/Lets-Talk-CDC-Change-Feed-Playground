@@ -59,7 +59,22 @@ type Metrics = {
   deletesPct: number;
   orderingOk: boolean;
   consistent: boolean;
+  writeAmplification?: number;
 };
+
+function computeTriggerWriteAmplification(
+  stats: Partial<Record<MethodOption, LaneStats>>,
+  method: MethodOption,
+  events: CdcEvent[],
+  scenario: ShellScenario,
+): number | undefined {
+  if (events.length === 0) return 0;
+  const statValue = stats[method]?.metrics.writeAmplification;
+  if (typeof statValue === "number" && statValue >= 0) return statValue;
+  const sourceOps = scenario.ops.filter(op => op.table === events[0]?.table);
+  if (!sourceOps.length) return events.length;
+  return events.length / sourceOps.length;
+}
 
 const METHOD_ORDER = ["polling", "trigger", "log"] as const;
 const MIN_LANES = 2;
@@ -160,6 +175,7 @@ type Summary = {
   lowestDeletes: LaneMetrics;
   highestDeletes: LaneMetrics;
   orderingIssues: MethodOption[];
+  triggerWriteAmplification: LaneMetrics | null;
 };
 
 type ClockControlCommand =
@@ -468,7 +484,13 @@ function savePreferences(prefs: ComparatorPreferences) {
   }
 }
 
-function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenario, method: MethodOption): Metrics {
+function computeMetrics(
+  events: CdcEvent[],
+  clock: number,
+  scenario: ShellScenario,
+  method: MethodOption,
+  stats: Partial<Record<MethodOption, LaneStats>>,
+): Metrics {
   const lastEvent = events.length ? events[events.length - 1] : null;
   const lagMs = lastEvent ? Math.max(clock - lastEvent.ts_ms, 0) : clock;
   const throughput = clock > 0 ? events.length / (clock / 1000) : 0;
@@ -492,6 +514,10 @@ function computeMetrics(events: CdcEvent[], clock: number, scenario: ShellScenar
     deletesPct,
     orderingOk,
     consistent,
+    writeAmplification:
+      method === "trigger"
+        ? computeTriggerWriteAmplification(stats, method, events, scenario) ?? 0
+        : undefined,
   };
 }
 
@@ -508,6 +534,17 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
 
   const orderingIssues = lanes.filter(lane => !lane.metrics.orderingOk).map(lane => lane.method);
 
+  const triggerLanes = lanes.filter(
+    lane => lane.method === "trigger" && typeof lane.metrics.writeAmplification === "number",
+  );
+  const triggerWriteAmplification = triggerLanes.length
+    ? triggerLanes.reduce((max, lane) => {
+        if (!max.metrics.writeAmplification) return lane;
+        if (!lane.metrics.writeAmplification) return max;
+        return lane.metrics.writeAmplification > max.metrics.writeAmplification ? lane : max;
+      })
+    : null;
+
   return {
     bestLag,
     worstLag,
@@ -515,6 +552,7 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
     lowestDeletes,
     highestDeletes,
     orderingIssues,
+    triggerWriteAmplification,
   };
 }
 
@@ -1269,10 +1307,10 @@ export function App() {
       return {
         method,
         events,
-        metrics: computeMetrics(events, clock, scenario, method),
+        metrics: computeMetrics(events, clock, scenario, method, laneStats),
       };
     });
-  }, [activeMethods, clock, laneEvents, scenario]);
+  }, [activeMethods, clock, laneEvents, scenario, laneStats]);
 
   const scenarioDeleteCount = useMemo(
     () => scenario.ops.filter(op => op.op === "delete").length,
@@ -1374,6 +1412,11 @@ export function App() {
       parts.push(`${METHOD_COPY[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
     }
     parts.push(`Lowest delete capture: ${METHOD_COPY[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
+    if (summary.triggerWriteAmplification) {
+      parts.push(
+        `Trigger write amplification: ${METHOD_COPY[summary.triggerWriteAmplification.method].label} ${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`,
+      );
+    }
     parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_COPY[method].label).join(", ") : "All lanes aligned"}`);
     if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
     navigator.clipboard
@@ -1597,6 +1640,13 @@ export function App() {
             method,
             label: METHOD_COPY[method].label,
           })),
+          triggerWriteAmplification: summary.triggerWriteAmplification
+            ? {
+                method: summary.triggerWriteAmplification.method,
+                label: METHOD_COPY[summary.triggerWriteAmplification.method].label,
+                value: summary.triggerWriteAmplification.metrics.writeAmplification ?? 0,
+              }
+            : null,
         }
       : null;
 
@@ -1953,6 +2003,13 @@ export function App() {
             {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_COPY[summary.highestDeletes.method].label}
             {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
           </li>
+          {summary.triggerWriteAmplification && (
+            <li>
+              <strong>Trigger overhead:</strong> {METHOD_COPY[summary.triggerWriteAmplification.method].label} is at
+              {" "}
+              {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
+            </li>
+          )}
           <li>
             <strong>Ordering:</strong>
             {summary.orderingIssues.length === 0
@@ -1974,6 +2031,10 @@ export function App() {
           const isPrimaryLane = laneIndex === 0;
           const runtimeSummary = laneRuntimeSummaries.get(method);
           const runtime = laneRuntimeRef.current[method];
+          const writeAmplificationValue =
+            method === "trigger"
+              ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification ?? 0
+              : undefined;
           const callouts: Array<{ text: string; tone: "warning" | "info" }> = [];
           const tone = method === "polling" ? "warning" : "info";
           if (copy.callout) {
@@ -1985,6 +2046,12 @@ export function App() {
             } else {
               callouts.push({ text: copy.callout, tone });
             }
+          }
+          if (method === "trigger" && typeof writeAmplificationValue === "number" && writeAmplificationValue > 0) {
+            callouts.push({
+              text: `Write amplification ${writeAmplificationValue.toFixed(1)}x (extra audit writes per change)`,
+              tone: "info",
+            });
           }
           const filteredEvents = filteredEventsByMethod.get(method) ?? events;
           const filtered =
@@ -2031,6 +2098,11 @@ export function App() {
                   <p>
                     Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
                   </p>
+                  {method === "trigger" && (
+                    <p>
+                      Write amplification: {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
+                    </p>
+                  )}
                   {method === "polling" && (
                     <p className="sim-shell__lane-bus-warning">
                       Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
@@ -2066,6 +2138,12 @@ export function App() {
                   <div>
                     <dt>Trigger overhead</dt>
                     <dd data-tooltip="Injected synchronous latency per source write.">{config.triggerOverheadMs} ms</dd>
+                  </div>
+                  <div>
+                    <dt>Write amplification</dt>
+                    <dd data-tooltip="Additional audit writes compared to source operations.">
+                      {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
+                    </dd>
                   </div>
                 </>
                 );

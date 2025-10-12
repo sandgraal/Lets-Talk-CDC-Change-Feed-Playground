@@ -7,6 +7,7 @@ const base = {
   deletesPct: 82,
   orderingOk: true,
   consistent: true,
+  writeAmplification: 1.4,
 };
 
 export const Balanced = () => <MetricsStrip {...base} />;
@@ -17,6 +18,7 @@ export const DeleteGap = () => (
     deletesPct={38}
     orderingOk={false}
     consistent={false}
+    writeAmplification={2.6}
   />
 );
 

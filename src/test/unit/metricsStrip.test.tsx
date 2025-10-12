@@ -11,6 +11,7 @@ describe("MetricsStrip", () => {
         deletesPct={64}
         orderingOk={false}
         consistent={true}
+        writeAmplification={2.5}
       />,
     );
 
@@ -19,5 +20,6 @@ describe("MetricsStrip", () => {
     expect(screen.getByText(/Deletes: 64%/i)).toBeInTheDocument();
     expect(screen.getByText(/Ordering: KO/i)).toBeInTheDocument();
     expect(screen.getByText(/Consistency: OK/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trigger WA: 2\.5x/i)).toBeInTheDocument();
   });
 });
