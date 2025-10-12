@@ -138,6 +138,7 @@ const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
   events: [],     // emitted events (local + realtime)
+  schemaVersion: 1,
   scenarioId: null,
   remoteId: null,
 };
@@ -756,6 +757,7 @@ function applyScenarioTemplate(template, options = {}) {
   officeEasterEgg.seedCount = 0;
   officeEasterEgg.bankruptcyShown = false;
   state.schema = clone(template.schema || []);
+  state.schemaVersion = template.schemaVersion ? Number(template.schemaVersion) : 1;
   state.rows = clone(template.rows || []);
   state.events = clone(template.events || []);
   state.scenarioId = template.id;
@@ -943,6 +945,7 @@ async function maybeHydrateSharedScenario() {
     }
 
     state.schema = doc.schema || [];
+    state.schemaVersion = Number(doc.schemaVersion) || 1;
     state.rows = doc.rows || [];
     state.events = doc.events || [];
     state.scenarioId = doc.scenarioId || null;
@@ -1030,6 +1033,7 @@ const load   = () => {
     state.schema = s.schema || [];
     state.rows   = s.rows   || [];
     state.events = s.events || [];
+    state.schemaVersion = Number(s.schemaVersion) || 1;
     state.scenarioId = s.scenarioId || null;
     state.remoteId = s.remoteId || null;
   } catch { /* ignore */ }
@@ -1411,7 +1415,8 @@ function refreshSchemaStatus(message, tone = "muted") {
     : hasPk
       ? `${columns} column${columns === 1 ? "" : "s"} defined. Click a pill to remove.`
       : `Define at least one primary key so updates and deletes can locate rows.`;
-  el.textContent = message ?? defaultMsg;
+  const versionSuffix = ` · schema v${Number(state.schemaVersion) || 1}`;
+  el.textContent = `${message ?? defaultMsg}${versionSuffix}`;
   el.classList.remove("is-error", "is-success");
   if (tone === "error") el.classList.add("is-error");
   if (tone === "success") el.classList.add("is-success");
@@ -1457,6 +1462,7 @@ function ensureDefaultSchema() {
   if (!state.schema.length) {
     state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
     state.scenarioId = "default";
+    state.schemaVersion = 1;
     officeEasterEgg.seedCount = 0;
     officeEasterEgg.bankruptcyShown = false;
     mutated = true;
@@ -1507,6 +1513,7 @@ function getFilterFlags() {
     u: document.getElementById("filterU")?.checked ?? true,
     d: document.getElementById("filterD")?.checked ?? true,
     r: document.getElementById("filterR")?.checked ?? true,
+    s: document.getElementById("filterS")?.checked ?? true,
   };
 }
 
@@ -1520,7 +1527,10 @@ function filterEvents(evts) {
 
 function getOp(ev) {
   // supports both plain and Debezium-envelope shapes
-  return ev.op ?? ev.payload?.op ?? "u";
+  const direct = ev.op ?? ev.payload?.op;
+  if (direct) return direct;
+  if (typeof ev.kind === "string" && ev.kind.startsWith("SCHEMA_")) return "s";
+  return "u";
 }
 
 function getRenderableEvents() {
@@ -1577,6 +1587,17 @@ function extractPrimaryKeyValue(event, pkColumn, fallback) {
   return fallback;
 }
 
+function getSchemaChangeDetail(event) {
+  if (!event) return null;
+  const directKind = typeof event.kind === "string" && event.kind.startsWith("SCHEMA_") ? event.kind : null;
+  const payloadChange = event.payload?.schema?.change ?? null;
+  const kind = directKind || (payloadChange?.kind && String(payloadChange.kind).startsWith("SCHEMA_") ? payloadChange.kind : null);
+  if (!kind) return null;
+  const column = event.column || payloadChange?.column || null;
+  const version = event.schemaVersion ?? event.payload?.schema?.version ?? null;
+  return { kind, column, schemaVersion: version };
+}
+
 const EVENT_LOG_METHOD = {
   id: "playground",
   label: "Playground events",
@@ -1598,12 +1619,23 @@ function buildEventLogRows(items) {
   return items.map(({ event, index }) => {
     const op = getOp(event);
     const ts = getEventTimestamp(event);
-    const pk = extractPrimaryKeyValue(event, pkColumn, `${index}`);
+    const schemaChange = getSchemaChangeDetail(event);
+    const pk = op === "s"
+      ? (schemaChange?.column?.name ?? `schema-${index}`)
+      : extractPrimaryKeyValue(event, pkColumn, `${index}`);
     const offset = typeof event.offset === "number" ? event.offset : null;
-    const topic = event.topic ?? "playground";
-    const table = event.table ?? state.scenarioId ?? "workspace";
+    const topic = event.topic ?? (op === "s" ? "cdc.schema" : "playground");
+    const table = op === "s" ? "schema" : (event.table ?? state.scenarioId ?? "workspace");
     const txnId = event.txnId ?? event.payload?.txnId ?? null;
     const id = String(event.id ?? `${op}-${index}-${ts ?? Date.now()}`);
+    let meta;
+    if (schemaChange) {
+      const action = schemaChange.kind === "SCHEMA_DROP_COL" ? "Dropped" : "Added";
+      const columnName = schemaChange.column?.name ?? "column";
+      const columnType = schemaChange.column?.type ? ` (${schemaChange.column.type})` : "";
+      const version = schemaChange.schemaVersion ?? state.schemaVersion;
+      meta = `${action} ${columnName}${columnType} · v${version}`;
+    }
     const row = {
       id,
       methodId: EVENT_LOG_METHOD.id,
@@ -1617,6 +1649,7 @@ function buildEventLogRows(items) {
       txnId,
       before: getEventBefore(event) ?? null,
       after: getEventAfter(event) ?? null,
+      meta,
     };
     eventLogRowEventMap.set(id, event);
     return row;
@@ -1709,7 +1742,7 @@ function buildWorkspaceOps() {
   const baseTs = events.reduce((min, event) => {
     const op = getOp(event);
     const ts = getEventTimestamp(event);
-    if (op === "r" || ts == null) return min;
+    if (op === "r" || op === "s" || ts == null) return min;
     return Math.min(min, ts);
   }, Number.POSITIVE_INFINITY);
   const hasBase = Number.isFinite(baseTs);
@@ -1717,7 +1750,7 @@ function buildWorkspaceOps() {
   const ops = [];
   events.forEach((event, index) => {
     const op = getOp(event);
-    if (op === "r") return; // snapshots don't become source ops
+    if (op === "r" || op === "s") return; // schema/snapshot events don't become source ops
 
     const ts = getEventTimestamp(event);
     const normalizedTs = hasBase && ts != null ? Math.max(0, ts - baseTs) : index * 150;
@@ -1748,6 +1781,7 @@ function buildWorkspaceOps() {
 function buildComparatorDetail() {
   const ops = buildWorkspaceOps();
   return {
+    schemaVersion: state.schemaVersion,
     schema: clone(state.schema),
     rows: clone(state.rows),
     events: clone(state.events),
@@ -1757,6 +1791,7 @@ function buildComparatorDetail() {
       description: `${state.rows.length} rows · ${ops.length} operations`,
       seed: 1,
       ops,
+      schemaVersion: state.schemaVersion,
     },
   };
 }
@@ -2164,6 +2199,7 @@ const OP_METADATA = {
   u: { label: "Update", tone: "op-update" },
   d: { label: "Delete", tone: "op-delete" },
   r: { label: "Snapshot", tone: "op-snapshot" },
+  s: { label: "Schema", tone: "op-schema" },
 };
 
 function normalizeEvent(event) {
@@ -2189,6 +2225,13 @@ function formatTimestamp(ts) {
 }
 
 function describePrimaryKeyValue(normalized) {
+  if (normalized.op === "s") {
+    const detail = getSchemaChangeDetail(normalized.raw);
+    const action = detail?.kind === "SCHEMA_DROP_COL" ? "Drop" : "Add";
+    const columnName = detail?.column?.name ?? "column";
+    const version = detail?.schemaVersion ?? state.schemaVersion;
+    return `${action} ${columnName} · schema v${version}`;
+  }
   const pkFields = getPrimaryKeyFields();
   if (!pkFields.length) {
     if (normalized.key && typeof normalized.key === "object") {
@@ -2307,6 +2350,7 @@ function renderEventInspector(precomputed) {
   const activeItem = items[activeIdx];
   const normalized = normalizeEvent(activeItem.event);
   const opMeta = OP_METADATA[normalized.op] || { label: normalized.op.toUpperCase(), tone: "op-generic" };
+  const schemaChange = normalized.op === "s" ? getSchemaChangeDetail(normalized.raw) : null;
 
   const header = document.createElement("div");
   header.className = "inspector-detail-header";
@@ -2328,60 +2372,78 @@ function renderEventInspector(precomputed) {
   header.appendChild(tsText);
   detailEl.appendChild(header);
 
-  const diffRows = computeDiffRows(normalized.before || {}, normalized.after || {});
-
-  const diffWrap = document.createElement("div");
-  diffWrap.className = "inspector-diff";
-
-  const diffHead = document.createElement("div");
-  diffHead.className = "inspector-diff-row diff-head";
-  const headKey = document.createElement("span"); headKey.textContent = "Field"; diffHead.appendChild(headKey);
-  const headBefore = document.createElement("span"); headBefore.textContent = "Before"; diffHead.appendChild(headBefore);
-  const headAfter = document.createElement("span"); headAfter.textContent = "After"; diffHead.appendChild(headAfter);
-  diffWrap.appendChild(diffHead);
-
-  const pkFields = new Set(getPrimaryKeyFields());
-  diffRows.forEach(row => {
-    const diffRow = document.createElement("div");
-    diffRow.className = `inspector-diff-row diff-${row.status}`;
-    if (pkFields.has(row.key)) diffRow.classList.add("is-pk");
-
-    const keyCell = document.createElement("div");
-    keyCell.className = "diff-key";
-    keyCell.textContent = row.key;
-    if (pkFields.has(row.key)) {
-      const pkBadge = document.createElement("span");
-      pkBadge.className = "diff-tag";
-      pkBadge.textContent = "PK";
-      keyCell.appendChild(pkBadge);
-    }
-
-    const beforeCell = document.createElement("div");
-    beforeCell.className = "diff-before";
-    beforeCell.appendChild(createValueCell(row.before));
-
-    const afterCell = document.createElement("div");
-    afterCell.className = "diff-after";
-    afterCell.appendChild(createValueCell(row.after));
-
-    diffRow.appendChild(keyCell);
-    diffRow.appendChild(beforeCell);
-    diffRow.appendChild(afterCell);
-    diffWrap.appendChild(diffRow);
-  });
-
-  if (!diffRows.length) {
-    const empty = document.createElement("p");
-    empty.className = "inspector-empty";
-    empty.textContent = "No field-level changes.";
-    diffWrap.appendChild(empty);
+  if (schemaChange) {
+    const schemaNote = document.createElement("p");
+    schemaNote.className = "inspector-schema-change";
+    const action = schemaChange.kind === "SCHEMA_DROP_COL" ? "Dropping" : "Adding";
+    const columnName = schemaChange.column?.name ?? "column";
+    const columnType = schemaChange.column?.type ? ` (${schemaChange.column.type})` : "";
+    const version = schemaChange.schemaVersion ?? state.schemaVersion;
+    schemaNote.textContent = `${action} ${columnName}${columnType}. Schema version ${version}.`;
+    detailEl.appendChild(schemaNote);
   }
 
-  detailEl.appendChild(diffWrap);
+  if (schemaChange) {
+    const empty = document.createElement("p");
+    empty.className = "inspector-empty";
+    empty.textContent = "Schema events do not include before/after row data.";
+    detailEl.appendChild(empty);
+  } else {
+    const diffRows = computeDiffRows(normalized.before || {}, normalized.after || {});
+
+    const diffWrap = document.createElement("div");
+    diffWrap.className = "inspector-diff";
+
+    const diffHead = document.createElement("div");
+    diffHead.className = "inspector-diff-row diff-head";
+    const headKey = document.createElement("span"); headKey.textContent = "Field"; diffHead.appendChild(headKey);
+    const headBefore = document.createElement("span"); headBefore.textContent = "Before"; diffHead.appendChild(headBefore);
+    const headAfter = document.createElement("span"); headAfter.textContent = "After"; diffHead.appendChild(headAfter);
+    diffWrap.appendChild(diffHead);
+
+    const pkFields = new Set(getPrimaryKeyFields());
+    diffRows.forEach(row => {
+      const diffRow = document.createElement("div");
+      diffRow.className = `inspector-diff-row diff-${row.status}`;
+      if (pkFields.has(row.key)) diffRow.classList.add("is-pk");
+
+      const keyCell = document.createElement("div");
+      keyCell.className = "diff-key";
+      keyCell.textContent = row.key;
+      if (pkFields.has(row.key)) {
+        const pkBadge = document.createElement("span");
+        pkBadge.className = "diff-tag";
+        pkBadge.textContent = "PK";
+        keyCell.appendChild(pkBadge);
+      }
+
+      const beforeCell = document.createElement("div");
+      beforeCell.className = "diff-before";
+      beforeCell.appendChild(createValueCell(row.before));
+
+      const afterCell = document.createElement("div");
+      afterCell.className = "diff-after";
+      afterCell.appendChild(createValueCell(row.after));
+
+      diffRow.appendChild(keyCell);
+      diffRow.appendChild(beforeCell);
+      diffRow.appendChild(afterCell);
+      diffWrap.appendChild(diffRow);
+    });
+
+    if (!diffRows.length) {
+      const empty = document.createElement("p");
+      empty.className = "inspector-empty";
+      empty.textContent = "No field-level changes.";
+      diffWrap.appendChild(empty);
+    }
+
+    detailEl.appendChild(diffWrap);
+  }
 
   if (els.inspectorPrev) els.inspectorPrev.disabled = activeIdx <= 0;
   if (els.inspectorNext) els.inspectorNext.disabled = activeIdx >= items.length - 1;
-  if (els.inspectorReplay) els.inspectorReplay.disabled = !items.length;
+  if (els.inspectorReplay) els.inspectorReplay.disabled = !items.length || normalized.op === "s";
 
   const activeButton = listEl.querySelector(".inspector-item.is-active");
 
@@ -2707,6 +2769,7 @@ function addColumn({ name, type, pk }) {
 
   state.schema.push({ name: normalized, type, pk: !!pk });
   for (const r of state.rows) if (!(normalized in r)) r[normalized] = null;
+  recordSchemaChange("SCHEMA_ADD_COL", { name: normalized, type, pk: !!pk });
   save();
   renderSchema();
   renderEditor();
@@ -2719,13 +2782,58 @@ function addColumn({ name, type, pk }) {
 function removeColumn(name) {
   const idx = state.schema.findIndex(c => c.name === name);
   if (idx === -1) return;
+  const removed = state.schema[idx];
   state.schema.splice(idx, 1);
   for (const r of state.rows) delete r[name];
+  recordSchemaChange("SCHEMA_DROP_COL", { name, type: removed?.type ?? "string" });
   save();
   renderSchema();
   renderEditor();
   renderTable();
   refreshSchemaStatus(`Removed column "${name}".`, state.schema.length ? "muted" : "success");
+}
+
+function recordSchemaChange(kind, column) {
+  state.schemaVersion = Number.isFinite(state.schemaVersion)
+    ? Math.max(1, Number(state.schemaVersion)) + 1
+    : 1;
+  const version = state.schemaVersion;
+  const ts = nowTs();
+  const topic = state.scenarioId ? `cdc.${state.scenarioId}.schema` : "cdc.workspace.schema";
+  const event = {
+    id: `schema-${version}-${Math.random().toString(16).slice(2)}`,
+    kind,
+    op: "s",
+    table: "schema",
+    schemaVersion: version,
+    commitTs: ts,
+    column: column ? { ...column } : null,
+    topic,
+    partition: 0,
+  };
+
+  if (els.debzWrap?.checked) {
+    event.payload = {
+      schema: {
+        version,
+        change: {
+          kind,
+          column,
+        },
+      },
+      source: { name: "playground", version: "0.1.0" },
+      op: "s",
+      ts_ms: ts,
+    };
+  } else {
+    event.ts_ms = ts;
+  }
+
+  state.events.push(event);
+  renderJSONLog();
+  selectLastEvent();
+  broadcastComparatorState();
+  refreshSchemaStatus();
 }
 
 function renderSchema() {
@@ -2854,7 +2962,15 @@ function setCrudButtonsDisabled(disabled) {
   const effective = disabled || comparatorPaused;
   ["opInsert", "opUpdate", "opDelete", "btnAutofillRow"].forEach(id => {
     const btn = document.getElementById(id);
-    if (btn) btn.disabled = effective;
+    if (!btn) return;
+    btn.disabled = effective;
+    if (comparatorPaused) {
+      btn.dataset.consumerPaused = "true";
+      if (!btn.title) btn.title = "Resume apply to run operations.";
+    } else {
+      btn.removeAttribute("data-consumer-paused");
+      if (!disabled) btn.removeAttribute("title");
+    }
   });
 }
 
@@ -3112,6 +3228,7 @@ function importScenario(file) {
       const scenarioPayload = payload && payload.schema ? payload : { schema: [], rows: [], events: [] };
 
       state.schema = scenarioPayload.schema || [];
+      state.schemaVersion = Number(scenarioPayload.schemaVersion) || 1;
       state.rows   = scenarioPayload.rows   || [];
       state.events = scenarioPayload.events || [];
       state.scenarioId = scenarioPayload.scenarioId || null;
@@ -3709,3 +3826,6 @@ function autofillRowAndInsert() {
   emitSparkleTrail("c");
   if (isOfficeSchemaActive()) emitOfficeConfetti();
 }
+
+updateApplyPausedBanner(false, 0);
+setCrudButtonsDisabled(false);
