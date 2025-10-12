@@ -2,6 +2,8 @@
 // Now with Appwrite Realtime.
 // State is in-memory + localStorage snapshot.
 
+import crypto from "crypto";
+
 const STORAGE_KEYS = Object.freeze({
   state: "cdc_playground",
   onboarding: "cdc_playground_onboarding_v1",
@@ -3454,7 +3456,8 @@ function pickRandom(list) {
 function randomRecentIso(maxHoursBack) {
   const horizon = typeof maxHoursBack === "number" && maxHoursBack > 0 ? maxHoursBack : 24;
   const now = Date.now();
-  const offset = Math.floor(Math.random() * horizon * 60 * 60 * 1000);
+  const range = horizon * 60 * 60 * 1000;
+  const offset = crypto.randomInt(0, range);
   return new Date(now - offset).toISOString();
 }
 
@@ -3462,10 +3465,10 @@ function generateScenarioOrdersRow() {
   const status = pickRandom(["pending", "processing", "packed", "shipped", "cancelled", "delivered"]) || "processing";
   const methods = ["Expedited", "Standard", "Same Day", "Store Pickup", "Locker Pickup"];
   return {
-    order_id: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
-    customer_id: `C-${Math.floor(Math.random() * 900 + 100)}`,
+    order_id: `ORD-${crypto.randomInt(1000, 10000)}`,
+    customer_id: `C-${crypto.randomInt(100, 1000)}`,
     status,
-    subtotal: Number((Math.random() * 350 + 35).toFixed(2)),
+    subtotal: Number((crypto.randomInt(0, 35000) / 100 + 35).toFixed(2)),
     shipping_method: pickRandom(methods) || "Standard",
     updated_at: randomRecentIso(72),
   };
@@ -3477,14 +3480,14 @@ function generateScenarioPaymentsRow() {
   let capturedAt = null;
   if (status === "captured") {
     const base = Date.parse(authorizedAt);
-    const deltaMinutes = Math.floor(Math.random() * 20) + 2;
+    const deltaMinutes = crypto.randomInt(2, 22);
     capturedAt = new Date(base + deltaMinutes * 60000).toISOString();
   }
   return {
-    transaction_id: `PAY-${Math.floor(Math.random() * 90000 + 10000)}`,
-    account_id: `ACC-${Math.floor(Math.random() * 9000 + 1000)}`,
+    transaction_id: `PAY-${crypto.randomInt(10000, 100000)}`,
+    account_id: `ACC-${crypto.randomInt(1000, 10000)}`,
     payment_method: pickRandom(["card", "wallet", "bank_transfer", "ach", "apple_pay"]) || "card",
-    amount: Number((Math.random() * 475 + 10).toFixed(2)),
+    amount: Number((crypto.randomInt(0, 47500) / 100 + 10).toFixed(2)),
     status,
     authorized_at: authorizedAt,
     captured_at: capturedAt,
@@ -3493,19 +3496,19 @@ function generateScenarioPaymentsRow() {
 
 function generateScenarioTelemetryRow() {
   const status = pickRandom(["nominal", "warning", "alert"]) || "nominal";
-  const deviceSuffix = String(Math.floor(Math.random() * 18) + 1).padStart(2, "0");
-  const baseTemp = Number((Math.random() * 5 + 18).toFixed(1));
+  const deviceSuffix = String(crypto.randomInt(1, 19)).padStart(2, "0");
+  const baseTemp = Number((crypto.randomInt(0, 50) / 10 + 18).toFixed(1));
   let temperature = baseTemp;
   if (status === "warning") {
-    temperature = Number((baseTemp + Math.random() * 1.5 + 0.5).toFixed(1));
+    temperature = Number((baseTemp + (crypto.randomInt(0, 15) / 10) + 0.5).toFixed(1));
   } else if (status === "alert") {
-    temperature = Number((baseTemp + Math.random() * 2.5 + 1.5).toFixed(1));
+    temperature = Number((baseTemp + (crypto.randomInt(0, 25) / 10) + 1.5).toFixed(1));
   }
   const pressure = status === "alert"
-    ? Number((Math.random() * 2 + 98).toFixed(1))
-    : Number((Math.random() * 1.5 + 99).toFixed(1));
+    ? Number((crypto.randomInt(0, 20) / 10 + 98).toFixed(1))
+    : Number((crypto.randomInt(0, 15) / 10 + 99).toFixed(1));
   return {
-    reading_id: `READ-${Math.floor(Math.random() * 900 + 100)}`,
+    reading_id: `READ-${crypto.randomInt(100, 1000)}`,
     device_id: `THERM-${deviceSuffix}`,
     temperature_c: temperature,
     pressure_kpa: pressure,
