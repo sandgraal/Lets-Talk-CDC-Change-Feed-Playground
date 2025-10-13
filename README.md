@@ -2,8 +2,6 @@
 
 [![Harness Nightly](https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground/actions/workflows/harness-nightly.yml/badge.svg)](https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground/actions/workflows/harness-nightly.yml)
 
-> Live playground: [https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/](https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/)
-
 A zero-dependency web app that simulates CDC operations and emits Debezium-style events.
 
 ## Run locally
@@ -81,10 +79,7 @@ Zip the files:
 - `index.html`
 - `assets/styles.css`
 - `assets/app.js`
-
-Upload the zip in Appwrite Console → **Sites** → **Manual upload**.
-The GitHub Pages deployment now lives at `https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/`; the Appwrite Sites workflow is kept here for historical reference.
-
+  
 ## Roadmap
 - Realtime stream via Appwrite Realtime (broadcast ops to multiple clients).
 - Save/load scenarios in Appwrite Databases (multi-device).
