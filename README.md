@@ -69,7 +69,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Follow the contribution workflow described in `CONTRIBUTING.md` so pull requests can be reviewed and merged quickly.
 
 ## Contributing
-We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
+We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) and the day-to-day [`Development Playbook`](docs/development.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
 
 ## Deploy to GitHub Pages
 - Run `npm run build:web` to refresh the Vite bundle under `assets/generated/`.

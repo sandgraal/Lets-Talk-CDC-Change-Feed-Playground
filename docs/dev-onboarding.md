@@ -6,6 +6,7 @@ npm install
 ```
 
 ## Common workflows
+- Review the day-to-day checklist in `../development.md` for the branching + PR process.
 - Run the React comparator + simulator side-by-side: `npm run dev:all` (spawns `npm run dev:sim` and `npm run dev:web` in parallel).
 - Focus on the comparator shell only: `npm run dev:web` (ensure you have a fresh `npm run build:sim` first).
 - Property-test the engines: `npm run test:sim`.
