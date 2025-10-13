@@ -1043,6 +1043,7 @@ const comparatorState = {
   diffs: [],
   tags: [],
   preset: null,
+  overlay: [],
 };
 const save   = () => {
   try {
@@ -1177,6 +1178,20 @@ function buildComparatorExport() {
   let diffs = comparatorState.diffs;
   let tags = comparatorState.tags;
   let preset = comparatorState.preset;
+  let overlay = null;
+  try {
+    if (Array.isArray(comparatorState.overlay)) {
+      overlay = comparatorState.overlay.map(entry => ({
+        method: entry.method,
+        label: entry.label,
+        totals: entry.totals,
+        issues: entry.issues,
+        lag: entry.lag,
+      }));
+    }
+  } catch {
+    overlay = null;
+  }
   try {
     summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
     analytics = analytics ? JSON.parse(JSON.stringify(analytics)) : [];
@@ -1189,6 +1204,7 @@ function buildComparatorExport() {
     diffs = [];
     tags = [];
     preset = null;
+    overlay = null;
   }
   return {
     preferences: preferences || null,
@@ -1197,6 +1213,7 @@ function buildComparatorExport() {
     diffs,
     tags,
     preset,
+    overlay,
   };
 }
 
@@ -2158,6 +2175,7 @@ function renderComparatorFeedback(detail) {
     comparatorState.diffs = [];
     comparatorState.tags = [];
     comparatorState.preset = null;
+    comparatorState.overlay = [];
     return;
   }
 
@@ -2170,12 +2188,25 @@ function renderComparatorFeedback(detail) {
     comparatorState.diffs = detail.diffs ? JSON.parse(JSON.stringify(detail.diffs)) : [];
     comparatorState.tags = Array.isArray(detail.tags) ? [...detail.tags] : [];
     comparatorState.preset = preset ? JSON.parse(JSON.stringify(preset)) : null;
+    comparatorState.overlay = Array.isArray(detail.overlay)
+      ? detail.overlay.map(entry => ({
+          method: entry.method,
+          label: entry.label || entry.method,
+          totals: { ...entry.totals },
+          lag: {
+            max: entry.lag?.max ?? 0,
+            samples: Array.isArray(entry.lag?.samples) ? entry.lag.samples.slice(0, 10) : [],
+          },
+          issues: Array.isArray(entry.issues) ? entry.issues.slice(0, 10) : [],
+        }))
+      : [];
   } catch {
     comparatorState.summary = null;
     comparatorState.analytics = [];
     comparatorState.diffs = [];
     comparatorState.tags = [];
     comparatorState.preset = null;
+    comparatorState.overlay = [];
   }
 
   const bestLag = summary.bestLag;
@@ -2257,6 +2288,37 @@ function renderComparatorFeedback(detail) {
     `
     : "";
 
+  const overlayRows = Array.isArray(comparatorState.overlay)
+    ? comparatorState.overlay
+        .map(entry => {
+          const label = escapeHtml(entry.label || entry.method || "Lane");
+          const chips = [];
+          const missing = entry.totals?.missing ?? 0;
+          const extra = entry.totals?.extra ?? 0;
+          const ordering = entry.totals?.ordering ?? 0;
+          const lagMax = entry.lag?.max ?? 0;
+          if (missing > 0) {
+            chips.push(`<span class="comparator-feedback__overlay-chip comparator-feedback__overlay-chip--missing">${missing} missing</span>`);
+          }
+          if (extra > 0) {
+            chips.push(`<span class="comparator-feedback__overlay-chip comparator-feedback__overlay-chip--extra">${extra} extra</span>`);
+          }
+          if (ordering > 0) {
+            chips.push(`<span class="comparator-feedback__overlay-chip comparator-feedback__overlay-chip--ordering">${ordering} ordering</span>`);
+          }
+          if (lagMax > 0) {
+            chips.push(`<span class="comparator-feedback__overlay-chip comparator-feedback__overlay-chip--lag">${Math.round(lagMax)}ms lag</span>`);
+          }
+          if (!chips.length) return "";
+          return `<div class="comparator-feedback__overlay-row"><strong>${label}</strong><span class="comparator-feedback__overlay-chips">${chips.join("")}</span></div>`;
+        })
+        .filter(Boolean)
+    : [];
+
+  const overlaySection = overlayRows.length
+    ? `<div class="comparator-feedback__overlay"><p class="comparator-feedback__overlay-heading">Lane checks</p>${overlayRows.join("")}</div>`
+    : "";
+
   const triggerLine = summary.triggerWriteAmplification
     ? `<li><strong${triggerTooltipAttr}>Trigger overhead:</strong> ${escapeHtml(summary.triggerWriteAmplification.label)} at ${(summary.triggerWriteAmplification.value ?? 0).toFixed(1)}x</li>`
     : "";
@@ -2273,6 +2335,7 @@ function renderComparatorFeedback(detail) {
     <p class="comparator-feedback__title">${escapeHtml(title)}</p>
     <p class="comparator-feedback__meta">${isLive ? "Live workspace" : "Scenario preview"}</p>
     ${presetSection}
+    ${overlaySection}
     <ul>
       <li><strong${lagTooltipAttr}>Lag:</strong> ${lagText}</li>
       <li><strong${deleteTooltipAttr}>Deletes:</strong> ${deleteText}</li>

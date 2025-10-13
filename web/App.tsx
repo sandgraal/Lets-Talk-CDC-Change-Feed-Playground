@@ -1817,6 +1817,29 @@ export function App() {
       };
     });
 
+    const overlayDetail = activeMethods.map(method => {
+      const diff = laneDiffs.get(method);
+      if (!diff) {
+        return {
+          method,
+          label: methodCopy[method].label,
+          totals: { missing: 0, extra: 0, ordering: 0 },
+          issues: [],
+          lag: { max: 0, samples: [] },
+        };
+      }
+      return {
+        method,
+        label: methodCopy[method].label,
+        totals: diff.totals,
+        issues: diff.issues.slice(0, 10),
+        lag: {
+          max: diff.lag.max,
+          samples: diff.lag.samples.slice(0, 10),
+        },
+      };
+    });
+
     window.dispatchEvent(
       new CustomEvent("cdc:comparator-summary", {
         detail: {
@@ -1831,10 +1854,11 @@ export function App() {
           tags: scenarioTags,
           preset: presetDetail,
           diffs: diffsDetail,
+          overlay: overlayDetail,
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs, methodCopy, preset]);
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs, methodCopy, preset, activeMethods]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
