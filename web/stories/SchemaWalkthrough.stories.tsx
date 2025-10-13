@@ -6,6 +6,8 @@ export const Default = () => (
     columnName="priority_flag"
     onAdd={() => console.info("schema.add")}
     onDrop={() => console.info("schema.drop")}
+    status="v2 · column present"
+    disableAdd
   />
 );
 

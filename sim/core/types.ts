@@ -11,10 +11,17 @@ export type SourceOp =
   | { t: number; op: "update"; table: string; pk: { id: string }; after: Record<string, any> }
   | { t: number; op: "delete"; table: string; pk: { id: string } };
 
+export type SchemaChangeMeta = {
+  action: "ADD_COLUMN" | "DROP_COLUMN";
+  column: { name: string; type: string; nullable?: boolean };
+  previousVersion: number;
+  nextVersion: number;
+};
+
 export type CdcEvent = {
   source: string;
   table: string;
-  op: "c" | "u" | "d";
+  op: "c" | "u" | "d" | "s";
   pk: { id: string };
   before: Record<string, any> | null;
   after: Record<string, any> | null;
@@ -22,6 +29,7 @@ export type CdcEvent = {
   tx: { id: string; lsn: number | null };
   seq: number;
   meta: { method: "polling" | "trigger" | "log" };
+  schemaChange?: SchemaChangeMeta | null;
 };
 
 export type AuditRow = {

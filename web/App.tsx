@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SourceOp, Event as EngineEvent, VendorPresetId } from "../src";
+import type { SourceOp, Event as EngineEvent, VendorPresetId, SchemaColumn } from "../src";
 import type { CdcEvent, LaneDiffResult } from "../sim";
 import type { MethodEngine } from "../sim";
 import {
@@ -65,9 +65,9 @@ type Metrics = {
   writeAmplification?: number;
 };
 
-const SCHEMA_DEMO_COLUMN = {
+const SCHEMA_DEMO_COLUMN: SchemaColumn = {
   name: "priority_flag",
-  type: "Boolean",
+  type: "bool",
 };
 
 function computeTriggerWriteAmplification(
@@ -116,9 +116,12 @@ type PartialMethodConfigMap = Partial<{
   log: Partial<LogConfig>;
 }>;
 
-type EventOp = "c" | "u" | "d";
+type EventOp = "c" | "u" | "d" | "s";
+
+const DEFAULT_EVENT_OPS: readonly EventOp[] = ["c", "u", "d", "s"];
 
 const DEFAULT_PRESET_ID: VendorPresetId = "MYSQL_DEBEZIUM";
+const DEFAULT_EVENT_OPS = ["c", "u", "d", "s"] as const;
 
 function isVendorPresetId(value: unknown): value is VendorPresetId {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(PRESETS, value);
@@ -153,12 +156,25 @@ type LaneRuntime = {
   bus: EventBus<EngineEvent>;
   metrics: MetricsStore;
   topic: string;
+  applySchemaChange?: (
+    tableName: string,
+    action: "add" | "drop",
+    column: SchemaColumn,
+    commitTs: number,
+  ) => void;
 };
 
 type LaneStats = {
   backlog: number;
   lastOffset: number;
   metrics: MetricsSnapshot;
+};
+
+type LaneDestinationSnapshot = {
+  columns: string[];
+  rows: Array<{ id: string; values: Record<string, unknown> }>;
+  schemaVersion: number;
+  hasSchemaColumn: boolean;
 };
 
 type LaneRuntimeSummary = {
@@ -181,9 +197,15 @@ type ControllerBackedEngine = MethodEngine & {
   bus: EventBus<EngineEvent>;
   metrics: MetricsStore;
   topic: string;
+  applySchemaChange?: (
+    tableName: string,
+    action: SchemaDemoAction,
+    column: SchemaColumn,
+    commitTs: number,
+  ) => void;
 };
 
-type SchemaChangeAction = "add" | "drop";
+type SchemaDemoAction = "add" | "drop";
 
 type Summary = {
   bestLag: LaneMetrics;
@@ -215,6 +237,7 @@ const TOOLTIP_COPY = tooltipCopyData;
 
 const MAX_TIMELINE_EVENTS = 200;
 const MAX_EVENT_LOG_ROWS = 2000;
+const MAX_DESTINATION_ROWS = 6;
 
 function readFeatureFlags(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -269,18 +292,64 @@ const sanitizeRecordForCdcEvent = (record: Record<string, unknown> | undefined) 
   return clone;
 };
 
-const eventToCdcEvent = (method: MethodOption, event: EngineEvent, seq: number): CdcEvent => ({
-  source: "demo-db",
-  table: event.table,
-  op: event.kind === "INSERT" ? "c" : event.kind === "UPDATE" ? "u" : "d",
-  pk: { id: String(event.after?.id ?? event.before?.id ?? "") },
-  before: sanitizeRecordForCdcEvent(event.before as Record<string, unknown> | undefined),
-  after: sanitizeRecordForCdcEvent(event.after as Record<string, unknown> | undefined),
-  ts_ms: event.commitTs,
-  tx: { id: event.txnId ?? `tx-${event.commitTs}`, lsn: typeof event.offset === "number" ? event.offset : null },
-  seq,
-  meta: { method: METHOD_META_LOOKUP[method] },
-});
+const formatDestinationValue = (value: unknown): string => {
+  if (value == null) return "—";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return Number.isFinite(value) ? value.toString() : "—";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return "[object]";
+    }
+  }
+  return String(value);
+};
+
+const eventToCdcEvent = (method: MethodOption, event: EngineEvent, seq: number): CdcEvent => {
+  const op: EventOp =
+    event.kind === "INSERT"
+      ? "c"
+      : event.kind === "UPDATE"
+        ? "u"
+        : event.kind === "DELETE"
+          ? "d"
+          : "s";
+  const schemaChange = event.schemaChange
+    ? {
+        action: event.schemaChange.action,
+        column: {
+          name: event.schemaChange.column.name,
+          type: event.schemaChange.column.type,
+          nullable: event.schemaChange.column.nullable,
+        },
+        previousVersion: event.schemaChange.previousVersion,
+        nextVersion: event.schemaChange.nextVersion,
+      }
+    : null;
+  const pkSource =
+    event.after?.id ??
+    event.before?.id ??
+    (schemaChange?.column?.name ?? null);
+  const pkId = pkSource != null ? String(pkSource) : "";
+  return {
+    source: "demo-db",
+    table: event.table,
+    op,
+    pk: { id: pkId },
+    before: sanitizeRecordForCdcEvent(event.before as Record<string, unknown> | undefined),
+    after: sanitizeRecordForCdcEvent(event.after as Record<string, unknown> | undefined),
+    ts_ms: event.commitTs,
+    tx: {
+      id: event.txnId ?? `tx-${event.commitTs}`,
+      lsn: typeof event.offset === "number" ? event.offset : null,
+    },
+    seq,
+    meta: { method: METHOD_META_LOOKUP[method] },
+    schemaChange,
+  };
+};
 
 function createControllerEngineInstance(
   method: MethodOption,
@@ -355,6 +424,10 @@ function createControllerEngineInstance(
     applySourceOp(op) {
       adapter.applySource?.(op);
     },
+    applySchemaChange(tableName, action, column, commitTs) {
+      const mapped: "ADD_COLUMN" | "DROP_COLUMN" = action === "add" ? "ADD_COLUMN" : "DROP_COLUMN";
+      adapter.applySchemaChange?.(tableName, mapped, column, commitTs);
+    },
     tick(now) {
       adapter.tick?.(now);
     },
@@ -408,14 +481,15 @@ function sanitizeActiveMethods(methods: unknown): MethodOption[] {
 }
 
 function sanitizeEventOps(ops: unknown): Set<EventOp> {
-  const defaults: EventOp[] = ["c", "u", "d"];
+  const defaults = Array.from(DEFAULT_EVENT_OPS) as EventOp[];
   if (!Array.isArray(ops) || ops.length === 0) {
     return new Set(defaults);
   }
   const active: EventOp[] = [];
   ops.forEach(op => {
-    if (op === "c" || op === "u" || op === "d") {
-      if (!active.includes(op)) active.push(op);
+    if ((DEFAULT_EVENT_OPS as readonly string[]).includes(op as string)) {
+      const typed = op as EventOp;
+      if (!active.includes(typed)) active.push(typed);
     }
   });
   return active.length ? new Set(active) : new Set(defaults);
@@ -713,7 +787,7 @@ export function App() {
   const filterEvents = useCallback(
     (source: Partial<Record<MethodOption, CdcEvent[]>>) => {
       const opsSet = new Set(eventOpsArray);
-      const hasOpFilter = opsSet.size < 3;
+      const hasOpFilter = opsSet.size < DEFAULT_EVENT_OPS.length;
       const hasSearch = eventSearchTerms.length > 0;
       const cache = eventSearchCacheRef.current;
       const results = new Map<MethodOption, CdcEvent[]>();
@@ -817,6 +891,14 @@ export function App() {
         index,
       ].filter(Boolean);
       const pk = event.pk?.id != null ? String(event.pk.id) : null;
+      const schemaMeta = event.schemaChange
+        ? (
+            <span className="sim-shell__event-log-schema">
+              {event.schemaChange.action === "ADD_COLUMN" ? "Added" : "Dropped"} column {event.schemaChange.column.name}
+              {` · v${event.schemaChange.previousVersion}→v${event.schemaChange.nextVersion}`}
+            </span>
+          )
+        : undefined;
       return {
         id: idParts.length ? idParts.join("|") : `${method}-${index}`,
         methodId: method,
@@ -830,6 +912,7 @@ export function App() {
         txnId: event.tx?.id ?? null,
         before: event.before ?? null,
         after: event.after ?? null,
+        meta: schemaMeta,
       };
     });
   }, [filteredCombinedBusEvents]);
@@ -849,7 +932,102 @@ export function App() {
     }),
     [availableEventLogTables, availableEventLogTxns],
   );
+  const laneDestinations = useMemo(() => {
+    const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
+    activeMethods.forEach(method => {
+      const events = laneEvents[method] ?? [];
+      const columnOrder: string[] = ["id"];
+      const ensureColumn = (name: string | null | undefined) => {
+        if (!name || name === "id") return;
+        if (!columnOrder.includes(name)) {
+          columnOrder.push(name);
+        }
+      };
+      const removeColumn = (name: string | null | undefined) => {
+        if (!name || name === "id") return;
+        const idx = columnOrder.indexOf(name);
+        if (idx >= 0) {
+          columnOrder.splice(idx, 1);
+        }
+      };
+      const rowsMap = new Map<string, Record<string, unknown>>();
+      let schemaVersion = 1;
+
+      events.forEach(event => {
+        if (typeof event.schemaVersion === "number" && event.schemaVersion > schemaVersion) {
+          schemaVersion = event.schemaVersion;
+        }
+
+        if (event.schemaChange) {
+          schemaVersion = Math.max(schemaVersion, event.schemaChange.nextVersion);
+          const columnName = event.schemaChange.column.name;
+          if (event.schemaChange.action === "ADD_COLUMN") {
+            ensureColumn(columnName);
+            rowsMap.forEach(row => {
+              if (!(columnName in row)) {
+                row[columnName] = null;
+              }
+            });
+          } else {
+            removeColumn(columnName);
+            rowsMap.forEach(row => {
+              if (columnName in row) {
+                delete row[columnName];
+              }
+            });
+          }
+        }
+
+        if (event.op === "s") {
+          return;
+        }
+
+        if (event.after) {
+          Object.keys(event.after).forEach(key => ensureColumn(key));
+        }
+        if (event.before) {
+          Object.keys(event.before).forEach(key => ensureColumn(key));
+        }
+
+        const pkId = event.pk?.id != null ? String(event.pk.id) : null;
+        if (!pkId) return;
+
+        if (event.op === "c" || event.op === "u") {
+          const previous = rowsMap.get(pkId) ?? { id: pkId };
+          const payload = event.after ?? {};
+          const next = { ...previous, ...payload, id: pkId };
+          rowsMap.set(pkId, next);
+        } else if (event.op === "d") {
+          rowsMap.delete(pkId);
+        }
+      });
+
+      rowsMap.forEach(row => {
+        columnOrder.forEach(column => {
+          if (column === "id") return;
+          if (!(column in row)) {
+            row[column] = null;
+          }
+        });
+      });
+
+      const rows = Array.from(rowsMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: "base" }))
+        .map(([id, values]) => ({ id, values }));
+
+      const hasSchemaColumn = columnOrder.includes(SCHEMA_DEMO_COLUMN.name);
+
+      snapshots.set(method, {
+        columns: columnOrder,
+        rows,
+        schemaVersion,
+        hasSchemaColumn,
+      });
+    });
+    return snapshots;
+  }, [activeMethods, laneEvents]);
   const isPlayingRef = useRef(isPlaying);
+  const schemaCommitRef = useRef(0);
 
   useEffect(() => {
     if (eventLogMethod && !activeMethods.includes(eventLogMethod)) {
@@ -868,6 +1046,10 @@ export function App() {
       setEventLogTxn("");
     }
   }, [availableEventLogTxns, eventLogTxn]);
+
+  useEffect(() => {
+    schemaCommitRef.current = 0;
+  }, [scenario.name]);
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
@@ -901,6 +1083,49 @@ export function App() {
     if (!scenarioOptions.length) return SCENARIOS[0];
     return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
   }, [scenarioId, scenarioOptions]);
+
+  const schemaLaneState = useMemo(() => {
+    const map = new Map<MethodOption, { present: boolean; version: number }>();
+    activeMethods.forEach(method => {
+      const snapshot = laneDestinations.get(method);
+      map.set(method, {
+        present: snapshot?.hasSchemaColumn ?? false,
+        version: snapshot?.schemaVersion ?? 1,
+      });
+    });
+    return map;
+  }, [activeMethods, laneDestinations]);
+
+  const schemaColumnPresent = useMemo(
+    () =>
+      activeMethods.length > 0
+        ? activeMethods.every(method => schemaLaneState.get(method)?.present ?? false)
+        : false,
+    [activeMethods, schemaLaneState],
+  );
+
+  const schemaMaxVersion = useMemo(() => {
+    let maxVersion = 1;
+    activeMethods.forEach(method => {
+      const entry = schemaLaneState.get(method);
+      if (entry && entry.version > maxVersion) {
+        maxVersion = entry.version;
+      }
+    });
+    return maxVersion;
+  }, [activeMethods, schemaLaneState]);
+
+  const schemaStatusText = useMemo(() => {
+    if (!scenario.tags?.includes("schema")) return null;
+    const prefix = `v${schemaMaxVersion}`;
+    return schemaColumnPresent ? `${prefix} · column present` : `${prefix} · column absent`;
+  }, [schemaColumnPresent, schemaMaxVersion, scenario.tags]);
+
+  const schemaTableName = useMemo(() => {
+    if (scenario.table) return scenario.table;
+    const opWithTable = scenario.ops.find(op => op.table);
+    return opWithTable?.table ?? "table";
+  }, [scenario.ops, scenario.table]);
 
   useEffect(() => {
     if (!summaryCopied) return;
@@ -1153,6 +1378,7 @@ export function App() {
         bus: engine.bus,
         metrics: engine.metrics,
         topic: engine.topic,
+        applySchemaChange: engine.applySchemaChange,
       };
       runtimes[method] = runtime;
 
@@ -1563,6 +1789,46 @@ export function App() {
     },
     [scenario.name],
   );
+
+  const handleSchemaChange = useCallback(
+    (action: SchemaDemoAction) => {
+      if (!scenario.tags?.includes("schema")) return;
+      const commitTs = Math.max(clock, schemaCommitRef.current + STEP_MS);
+      schemaCommitRef.current = commitTs;
+      activeMethods.forEach(method => {
+        const runtime = laneRuntimeRef.current[method];
+        runtime?.applySchemaChange?.(schemaTableName, action, SCHEMA_DEMO_COLUMN, commitTs);
+        updateLaneSnapshot(method);
+      });
+      track("comparator.schema.change", {
+        action,
+        table: schemaTableName,
+        scenario: scenario.name,
+        commitTs,
+        methods: activeMethods,
+      });
+    },
+    [activeMethods, clock, laneRuntimeRef, schemaTableName, scenario.name, scenario.tags, updateLaneSnapshot],
+  );
+
+  const schemaWalkthroughRenderer = useMemo(() => {
+    if (!scenario.tags?.includes("schema")) return undefined;
+    const primaryLane = activeMethods[0];
+    if (!primaryLane) return undefined;
+    return (laneId: string) => {
+      if (laneId !== primaryLane) return null;
+      return (
+        <SchemaWalkthrough
+          columnName={SCHEMA_DEMO_COLUMN.name}
+          onAdd={() => handleSchemaChange("add")}
+          onDrop={() => handleSchemaChange("drop")}
+          disableAdd={schemaColumnPresent}
+          disableDrop={!schemaColumnPresent}
+          status={schemaStatusText}
+        />
+      );
+    };
+  }, [activeMethods, handleSchemaChange, schemaColumnPresent, schemaStatusText, scenario.tags]);
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -1593,6 +1859,7 @@ export function App() {
         updateLaneSnapshot(method, { lastOffset: -1 });
       }
       setClock(0);
+      schemaCommitRef.current = 0;
 
       if (!options?.keepLoop) {
         runner.pause();
@@ -2046,7 +2313,7 @@ export function App() {
           />
         </label>
         <div className="sim-shell__event-ops" role="group" aria-label="Change operations">
-          {(["c", "u", "d"] as EventOp[]).map(op => (
+          {(DEFAULT_EVENT_OPS as readonly EventOp[]).map(op => (
             <button
               key={op}
               type="button"
@@ -2315,7 +2582,10 @@ export function App() {
       )}
 
       {metricsDashboardLanes.length > 0 && (
-        <MetricsDashboard lanes={metricsDashboardLanes} />
+        <MetricsDashboard
+          lanes={metricsDashboardLanes}
+          renderSchemaWalkthrough={schemaWalkthroughRenderer}
+        />
       )}
 
       <div className="sim-shell__lane-grid" data-tour-target="comparator-lanes">
@@ -2326,6 +2596,11 @@ export function App() {
           const isPrimaryLane = laneIndex === 0;
           const runtimeSummary = laneRuntimeSummaries.get(method);
           const runtime = laneRuntimeRef.current[method];
+          const destinationSnapshot = laneDestinations.get(method);
+          const destinationRows =
+            destinationSnapshot?.rows.slice(0, MAX_DESTINATION_ROWS) ?? [];
+          const destinationTruncated =
+            (destinationSnapshot?.rows.length ?? 0) > destinationRows.length;
           const writeAmplificationValue =
             method === "trigger"
               ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification ?? 0
@@ -2364,7 +2639,9 @@ export function App() {
           }
           const filteredEvents = filteredEventsByMethod.get(method) ?? events;
           const filtered =
-            filteredEvents.length !== events.length || eventSearchTerms.length > 0 || eventOpsSet.size < 3;
+            filteredEvents.length !== events.length ||
+            eventSearchTerms.length > 0 ||
+            eventOpsSet.size < DEFAULT_EVENT_OPS.length;
           const timelineTruncated = showEventList && filteredEvents.length > MAX_TIMELINE_EVENTS;
           const displayEvents = showEventList
             ? filteredEvents.slice(Math.max(filteredEvents.length - MAX_TIMELINE_EVENTS, 0))
@@ -2430,6 +2707,58 @@ export function App() {
                   {method === "polling" && (
                     <p className="sim-shell__lane-bus-warning" data-tooltip={TOOLTIP_COPY.deleteCapture}>
                       Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {destinationSnapshot && (
+                <section
+                  className="sim-shell__destination"
+                  aria-label={`${copy.label} destination snapshot`}
+                >
+                  <header>
+                    <h4>Destination snapshot</h4>
+                    <span>schema v{destinationSnapshot.schemaVersion}</span>
+                  </header>
+                  {destinationRows.length > 0 ? (
+                    <div className="sim-shell__destination-table" role="table">
+                      <table>
+                        <thead>
+                          <tr>
+                            {destinationSnapshot.columns.map(column => (
+                              <th
+                                key={column}
+                                data-highlight={
+                                  column === SCHEMA_DEMO_COLUMN.name ? "true" : undefined
+                                }
+                              >
+                                {column}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {destinationRows.map(row => (
+                            <tr key={row.id}>
+                              {destinationSnapshot.columns.map(column => (
+                                <td key={`${row.id}-${column}`}>
+                                  {formatDestinationValue(
+                                    column === "id" ? row.id : row.values[column],
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="sim-shell__destination-empty">No rows applied yet.</p>
+                  )}
+                  {destinationTruncated && (
+                    <p className="sim-shell__destination-note">
+                      Showing {destinationRows.length} of {destinationSnapshot.rows.length} rows.
                     </p>
                   )}
                 </section>

@@ -157,7 +157,82 @@ describe("Mode adapters", () => {
 
     expect(snapshot).toHaveLength(1);
     expect(snapshot[0].kind).toBe("INSERT");
-    expect(snapshot[0].schemaVersion).toBe(1);
+    expect(snapshot[0].schemaVersion).toBe(3);
     expect(snapshot[0].after?.status).toBe("seed");
+  });
+
+  it("log adapter emits schema change events and bumps schema version", () => {
+    const adapter = createLogBasedAdapter();
+    const { runtime } = createRuntime("cdc.log");
+    adapter.initialise?.(runtime);
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const column = { name: "priority_flag", type: "bool" } as const;
+
+    adapter.applySchemaChange?.("orders", "ADD_COLUMN", column, 100);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].kind).toBe("SCHEMA_ADD_COL");
+    expect(emitted[0].schemaVersion).toBe(2);
+    expect(emitted[0].schemaChange?.column.name).toBe("priority_flag");
+
+    adapter.applySchemaChange?.("orders", "DROP_COLUMN", column, 200);
+    expect(emitted).toHaveLength(2);
+    expect(emitted[1].kind).toBe("SCHEMA_DROP_COL");
+    expect(emitted[1].schemaVersion).toBe(3);
+    expect(emitted[1].schemaChange?.previousVersion).toBe(2);
+  });
+
+  it("trigger adapter drains schema change events on next extract", () => {
+    const adapter = createTriggerBasedAdapter();
+    const { runtime } = createRuntime("cdc.trigger");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ extract_interval_ms: 1, trigger_overhead_ms: 5 });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const column = { name: "priority_flag", type: "bool" } as const;
+
+    adapter.applySchemaChange?.("orders", "ADD_COLUMN", column, 100);
+    adapter.tick?.(0);
+    expect(emitted).toHaveLength(0);
+
+    adapter.tick?.(10);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].kind).toBe("SCHEMA_ADD_COL");
+    expect(emitted[0].schemaVersion).toBe(2);
+    expect(emitted[0].commitTs).toBe(105);
+  });
+
+  it("query adapter surfaces schema change on subsequent poll", () => {
+    const adapter = createQueryBasedAdapter();
+    const { runtime } = createRuntime("cdc.query");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ poll_interval_ms: 10 });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const column = { name: "priority_flag", type: "bool" } as const;
+
+    adapter.applySchemaChange?.("orders", "ADD_COLUMN", column, 50);
+    adapter.tick?.(5);
+    expect(emitted).toHaveLength(0);
+
+    adapter.tick?.(25);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].kind).toBe("SCHEMA_ADD_COL");
+    expect(emitted[0].schemaVersion).toBe(2);
   });
 });

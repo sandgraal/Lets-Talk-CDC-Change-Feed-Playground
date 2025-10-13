@@ -182,6 +182,10 @@
   gap: 0.6rem;
 }
 
+.sim-shell__schema-demo-inline {
+  margin: 0.25rem 0 0.5rem;
+}
+
 .sim-shell__metrics-dashboard-card h4 {
   margin: 0;
   font-size: 0.95rem;
@@ -645,6 +649,73 @@
   color: #475569;
 }
 
+.sim-shell__destination {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sim-shell__destination > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sim-shell__destination > header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.sim-shell__destination > header span {
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.sim-shell__destination-table {
+  overflow-x: auto;
+}
+
+.sim-shell__destination-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sim-shell__destination-table th,
+.sim-shell__destination-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sim-shell__destination-table th[data-highlight="true"] {
+  color: #1d4ed8;
+}
+
+.sim-shell__destination-table tbody tr:last-of-type td {
+  border-bottom: none;
+}
+
+.sim-shell__destination-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.sim-shell__destination-note {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #475569;
+}
+
 .sim-shell__lane-config div {
   display: grid;
   gap: 0.1rem;
@@ -986,6 +1057,12 @@
   color: #475569;
 }
 
+.sim-shell__event-log-schema {
+  font-size: 0.75rem;
+  color: #0369a1;
+  display: inline-block;
+}
+
 .sim-shell__event-log-details,
 .cdc-event-log__details {
   grid-column: 1 / -1;
@@ -1153,6 +1230,13 @@
    font-size: 0.85rem;
    color: #475569;
  }
+
+.sim-shell__schema-demo-status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #0f172a;
+  font-weight: 500;
+}
 
  .sim-shell__schema-demo-buttons {
    display: flex;

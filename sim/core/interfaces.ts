@@ -5,6 +5,7 @@ export interface MethodEngine {
   configure(opts: Record<string, any>): void;
   reset(seed: number): void;
   applySourceOp(op: SourceOp): void;
+  applySchemaChange?(table: string, action: "add" | "drop", column: { name: string; type: string; nullable?: boolean }, commitTs: number): void;
   tick(nowMs: number): void;
   onEvent(cb: (e: CdcEvent) => void): () => void;
 }

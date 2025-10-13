@@ -1,4 +1,10 @@
-import type { Event, SourceOp, Table } from "../domain/types";
+import type {
+  Event,
+  SourceOp,
+  Table,
+  SchemaChangeAction,
+  SchemaColumn,
+} from "../domain/types";
 import type { ModeAdapter, ModeRuntime, EmitFn } from "./types";
 
 type StoredRow = {
@@ -16,6 +22,15 @@ const nextEventId = () => `evt-${Date.now()}-${++eventSeq}`;
 const clonePayload = (payload: Record<string, unknown> | null | undefined) =>
   payload ? JSON.parse(JSON.stringify(payload)) : null;
 
+const makeRowKey = (tableName: string, id: string) => `${tableName}::${id}`;
+
+const columnToRow = (column: SchemaColumn, commitTs: number) => ({
+  id: column.name,
+  type: column.type,
+  nullable: column.nullable ?? false,
+  __ts: commitTs,
+});
+
 export function createQueryBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
@@ -25,25 +40,70 @@ export function createQueryBasedAdapter(): ModeAdapter {
 
   const rows = new Map<string, StoredRow>();
   const lastEmittedVersion = new Map<string, number>();
+  const schemaVersions = new Map<string, number>();
+  const pendingSchemaEvents: Event[] = [];
+
+  const ensureSchemaVersion = (tableName: string): number => {
+    const existing = schemaVersions.get(tableName);
+    if (typeof existing === "number" && existing >= 1) return existing;
+    schemaVersions.set(tableName, 1);
+    return 1;
+  };
+
+  const bumpSchemaVersion = (tableName: string): { previous: number; next: number } => {
+    const previous = ensureSchemaVersion(tableName);
+    const next = previous + 1;
+    schemaVersions.set(tableName, next);
+    return { previous, next };
+  };
 
   const buildEvent = (
-    op: SourceOp,
+    tableName: string,
+    pkId: string,
     kind: Event["kind"],
     before: Record<string, unknown> | null,
     after: Record<string, unknown> | null,
     commitTs: number,
+    txnId: string,
   ): Event => ({
     id: nextEventId(),
     kind,
-    table: op.table,
-    before: before ? { id: op.pk.id, ...before, __ts: commitTs } : undefined,
-    after: after ? { id: op.pk.id, ...after, __ts: commitTs } : undefined,
-    txnId: `tx-${commitTs}`,
+    table: tableName,
+    before: before ? { id: pkId, ...before, __ts: commitTs } : undefined,
+    after: after ? { id: pkId, ...after, __ts: commitTs } : undefined,
+    txnId,
     commitTs,
-    schemaVersion: 1,
-    topic: runtime?.topic ?? `cdc.${op.table}`,
+    schemaVersion: ensureSchemaVersion(tableName),
+    topic: runtime?.topic ?? `cdc.${tableName}`,
     partition: 0,
   });
+
+  const queueSchemaEvent = (
+    tableName: string,
+    action: SchemaChangeAction,
+    column: SchemaColumn,
+    commitTs: number,
+  ) => {
+    const { previous, next } = bumpSchemaVersion(tableName);
+    pendingSchemaEvents.push({
+      id: nextEventId(),
+      kind: action === "ADD_COLUMN" ? "SCHEMA_ADD_COL" : "SCHEMA_DROP_COL",
+      table: tableName,
+      before: action === "DROP_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      after: action === "ADD_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      txnId: `schema-${commitTs}`,
+      commitTs,
+      schemaVersion: next,
+      topic: runtime?.topic ?? `cdc.${tableName}`,
+      partition: 0,
+      schemaChange: {
+        action,
+        column,
+        previousVersion: previous,
+        nextVersion: next,
+      },
+    });
+  };
 
   const emitBatch = (events: Event[]) => {
     if (!events.length || !emitFn) return;
@@ -65,8 +125,10 @@ export function createQueryBasedAdapter(): ModeAdapter {
       emitFn = emit;
       const snapshotEvents: Event[] = [];
       tables.forEach(tableDef => {
+        const version = tableDef.schema?.version ?? 1;
+        schemaVersions.set(tableDef.name, version);
         tableDef.rows.forEach(row => {
-          const key = `${tableDef.name}::${row.id}`;
+          const key = makeRowKey(tableDef.name, row.id);
           rows.set(key, {
             id: row.id,
             table: tableDef.name,
@@ -85,7 +147,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
             after: { id, ...rest, __ts: __ts ?? 0 },
             txnId: `snapshot-${row.__ts ?? 0}`,
             commitTs: row.__ts ?? 0,
-            schemaVersion: 1,
+            schemaVersion: ensureSchemaVersion(tableDef.name),
             topic: runtime?.topic ?? `cdc.${tableDef.name}`,
             partition: 0,
           });
@@ -97,8 +159,9 @@ export function createQueryBasedAdapter(): ModeAdapter {
       emitFn = emit;
     },
     applySource(op) {
-      const key = `${op.table}::${op.pk.id}`;
+      const key = makeRowKey(op.table, op.pk.id);
       const commitTs = op.t;
+      ensureSchemaVersion(op.table);
       if (op.op === "insert") {
         rows.set(key, {
           id: op.pk.id,
@@ -131,27 +194,44 @@ export function createQueryBasedAdapter(): ModeAdapter {
         });
       }
     },
+    applySchemaChange(tableName, action, column, commitTs) {
+      ensureSchemaVersion(tableName);
+      if (action === "DROP_COLUMN") {
+        rows.forEach((row, key) => {
+          if (row.table !== tableName) return;
+          if (column.name in row.data) {
+            const nextData = { ...row.data };
+            delete nextData[column.name];
+            rows.set(key, { ...row, data: nextData });
+          }
+        });
+      }
+      queueSchemaEvent(tableName, action, column, commitTs);
+    },
     tick(nowMs) {
       if (!emitFn) return;
       if (nowMs - lastPoll < pollIntervalMs) return;
 
       const events: Event[] = [];
+      if (pendingSchemaEvents.length) {
+        events.push(...pendingSchemaEvents.splice(0, pendingSchemaEvents.length));
+      }
 
       rows.forEach((row, key) => {
         if (row.updatedAt <= lastPoll) return;
         const previousVersion = lastEmittedVersion.get(key) ?? 0;
-        const opBase: SourceOp = {
-          t: row.updatedAt,
-          table: row.table,
-          pk: { id: row.id },
-          // we'll override op/after per branch
-          op: row.deleted ? "delete" : row.version === 1 ? "insert" : "update",
-          after: row.deleted ? undefined : row.data,
-        } as SourceOp;
         if (row.deleted) {
           if (includeSoftDeletes) {
             events.push(
-              buildEvent(opBase, "DELETE", clonePayload(row.data), null, row.updatedAt),
+              buildEvent(
+                row.table,
+                row.id,
+                "DELETE",
+                clonePayload(row.data),
+                null,
+                row.updatedAt,
+                `tx-${row.updatedAt}`,
+              ),
             );
             lastEmittedVersion.set(key, row.version);
           } else {
@@ -161,16 +241,18 @@ export function createQueryBasedAdapter(): ModeAdapter {
           return;
         }
         if (row.version <= previousVersion) return;
-       const kind = previousVersion === 0 ? "INSERT" : "UPDATE";
-       events.push(
-         buildEvent(
-           opBase,
-           kind,
+        const kind: Event["kind"] = previousVersion === 0 ? "INSERT" : "UPDATE";
+        events.push(
+          buildEvent(
+            row.table,
+            row.id,
+            kind,
             null,
             clonePayload(row.data),
             row.updatedAt,
+            `tx-${row.updatedAt}`,
           ),
-       );
+        );
         lastEmittedVersion.set(key, row.version);
       });
 
@@ -180,6 +262,8 @@ export function createQueryBasedAdapter(): ModeAdapter {
     stop() {
       rows.clear();
       lastEmittedVersion.clear();
+      schemaVersions.clear();
+      pendingSchemaEvents.length = 0;
       emitFn = null;
       runtime = null;
       lastPoll = 0;

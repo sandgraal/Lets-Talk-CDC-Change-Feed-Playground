@@ -1,4 +1,11 @@
-import type { CDCMode, Event, Table, SourceOp } from "../domain/types";
+import type {
+  CDCMode,
+  Event,
+  Table,
+  SourceOp,
+  SchemaColumn,
+  SchemaChangeAction,
+} from "../domain/types";
 import type { EventBus } from "../engine/eventBus";
 import type { Scheduler } from "../engine/scheduler";
 import type { MetricsStore } from "../engine/metrics";
@@ -27,5 +34,6 @@ export interface ModeAdapter extends ModeLifecycle {
   initialise?(runtime: ModeRuntime): void;
   configure?(config: Record<string, unknown>): void;
   applySource?(op: SourceOp): void;
+  applySchemaChange?(table: string, action: SchemaChangeAction, column: SchemaColumn, commitTs: number): void;
   tick?(nowMs: number): void;
 }

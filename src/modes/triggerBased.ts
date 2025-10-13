@@ -1,4 +1,10 @@
-import type { Event, SourceOp, Table } from "../domain/types";
+import type {
+  Event,
+  SourceOp,
+  Table,
+  SchemaChangeAction,
+  SchemaColumn,
+} from "../domain/types";
 import type { ModeAdapter, ModeRuntime, EmitFn } from "./types";
 
 type StoredRow = {
@@ -20,6 +26,15 @@ const nextEventId = () => `evt-${Date.now()}-${++eventSeq}`;
 const clonePayload = (payload: Record<string, unknown> | null | undefined) =>
   payload ? JSON.parse(JSON.stringify(payload)) : null;
 
+const makeRowKey = (tableName: string, id: string) => `${tableName}::${id}`;
+
+const columnToRow = (column: SchemaColumn, commitTs: number) => ({
+  id: column.name,
+  type: column.type,
+  nullable: column.nullable ?? false,
+  __ts: commitTs,
+});
+
 export function createTriggerBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
@@ -30,6 +45,21 @@ export function createTriggerBasedAdapter(): ModeAdapter {
 
   const table = new Map<string, StoredRow>();
   const auditLog: AuditEntry[] = [];
+  const schemaVersions = new Map<string, number>();
+
+  const ensureSchemaVersion = (tableName: string): number => {
+    const existing = schemaVersions.get(tableName);
+    if (typeof existing === "number" && existing >= 1) return existing;
+    schemaVersions.set(tableName, 1);
+    return 1;
+  };
+
+  const bumpSchemaVersion = (tableName: string): { previous: number; next: number } => {
+    const previous = ensureSchemaVersion(tableName);
+    const next = previous + 1;
+    schemaVersions.set(tableName, next);
+    return { previous, next };
+  };
 
   const buildEvent = (
     op: SourceOp,
@@ -45,10 +75,38 @@ export function createTriggerBasedAdapter(): ModeAdapter {
     after: after ? { id: op.pk.id, ...after, __ts: commitTs } : undefined,
     txnId: `tx-${commitTs}`,
     commitTs,
-    schemaVersion: 1,
+    schemaVersion: ensureSchemaVersion(op.table),
     topic: runtime?.topic ?? `cdc.${op.table}`,
     partition: 0,
   });
+
+  const recordSchemaChange = (
+    tableName: string,
+    action: SchemaChangeAction,
+    column: SchemaColumn,
+    commitTs: number,
+  ) => {
+    const { previous, next } = bumpSchemaVersion(tableName);
+    const event: Event = {
+      id: nextEventId(),
+      kind: action === "ADD_COLUMN" ? "SCHEMA_ADD_COL" : "SCHEMA_DROP_COL",
+      table: tableName,
+      before: action === "DROP_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      after: action === "ADD_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      txnId: `schema-${commitTs}`,
+      commitTs,
+      schemaVersion: next,
+      topic: runtime?.topic ?? `cdc.${tableName}`,
+      partition: 0,
+      schemaChange: {
+        action,
+        column,
+        previousVersion: previous,
+        nextVersion: next,
+      },
+    };
+    auditLog.push({ event });
+  };
 
   const emitBatch = (events: Event[]) => {
     if (!events.length || !emitFn) return;
@@ -74,11 +132,13 @@ export function createTriggerBasedAdapter(): ModeAdapter {
     },
     applySource(op) {
       if (!runtime) return;
-      const key = `${op.table}::${op.pk.id}`;
-      const commitTs = op.t + triggerOverheadMs;
+      const key = makeRowKey(op.table, op.pk.id);
+      const baseCommitTs = op.t + triggerOverheadMs;
       let before: Record<string, unknown> | null = null;
       let after: Record<string, unknown> | null = null;
       let kind: Event["kind"];
+
+      ensureSchemaVersion(op.table);
 
       if (op.op === "insert") {
         kind = "INSERT";
@@ -88,7 +148,7 @@ export function createTriggerBasedAdapter(): ModeAdapter {
           table: op.table,
           data: { ...op.after },
           version: 1,
-          updatedAt: commitTs,
+          updatedAt: baseCommitTs,
           deleted: false,
         });
       } else if (op.op === "update") {
@@ -102,7 +162,7 @@ export function createTriggerBasedAdapter(): ModeAdapter {
           table: op.table,
           data: merged,
           version: (current?.version ?? 0) + 1,
-          updatedAt: commitTs,
+          updatedAt: baseCommitTs,
           deleted: false,
         });
       } else if (op.op === "delete") {
@@ -115,15 +175,49 @@ export function createTriggerBasedAdapter(): ModeAdapter {
           table: op.table,
           data: current ? { ...current.data } : {},
           version: (current?.version ?? 0) + 1,
-          updatedAt: commitTs,
+          updatedAt: baseCommitTs,
           deleted: true,
         });
       } else {
         return;
       }
 
-      auditLog.push({ event: buildEvent(op, kind, before, after, commitTs) });
+      auditLog.push({ event: buildEvent(op, kind, before, after, baseCommitTs) });
       runtime.metrics.recordWriteAmplification(1);
+    },
+    applySchemaChange(tableName, action, column, commitTs) {
+      if (!runtime) return;
+      const effectiveCommitTs = commitTs + triggerOverheadMs;
+      ensureSchemaVersion(tableName);
+      if (action === "ADD_COLUMN") {
+        table.forEach((row, key) => {
+          if (row.table !== tableName) return;
+          if (!(column.name in row.data)) {
+            const nextData = { ...row.data, [column.name]: null };
+            table.set(key, {
+              ...row,
+              data: nextData,
+              version: row.version + 1,
+              updatedAt: effectiveCommitTs,
+            });
+          }
+        });
+      } else if (action === "DROP_COLUMN") {
+        table.forEach((row, key) => {
+          if (row.table !== tableName) return;
+          if (column.name in row.data) {
+            const nextData = { ...row.data };
+            delete nextData[column.name];
+            table.set(key, {
+              ...row,
+              data: nextData,
+              version: row.version + 1,
+              updatedAt: effectiveCommitTs,
+            });
+          }
+        });
+      }
+      recordSchemaChange(tableName, action, column, effectiveCommitTs);
     },
     tick(nowMs) {
       if (!emitFn) return;
@@ -140,6 +234,7 @@ export function createTriggerBasedAdapter(): ModeAdapter {
       runtime = null;
       extractOffset = 0;
       lastExtract = 0;
+      schemaVersions.clear();
     },
   };
 }

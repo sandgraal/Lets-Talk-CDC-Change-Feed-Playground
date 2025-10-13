@@ -1,8 +1,15 @@
-import type { Event, SourceOp, Table } from "../domain/types";
+import type {
+  Event,
+  SourceOp,
+  Table,
+  SchemaChangeAction,
+  SchemaColumn,
+} from "../domain/types";
 import type { ModeAdapter, ModeRuntime, EmitFn } from "./types";
 
 type StoredRow = {
   id: string;
+  table: string;
   data: Record<string, unknown>;
   version: number;
   updatedAt: number;
@@ -12,21 +19,43 @@ type StoredRow = {
 let eventSeq = 0;
 const nextEventId = () => `evt-${Date.now()}-${++eventSeq}`;
 
-function cloneRowPayload(payload: Record<string, unknown> | null | undefined) {
-  if (!payload) return null;
-  return JSON.parse(JSON.stringify(payload));
-}
+const cloneRowPayload = (payload: Record<string, unknown> | null | undefined) =>
+  payload ? JSON.parse(JSON.stringify(payload)) : null;
+
+const makeRowKey = (tableName: string, id: string) => `${tableName}::${id}`;
+
+const columnToRow = (column: SchemaColumn, commitTs: number) => ({
+  id: column.name,
+  type: column.type,
+  nullable: column.nullable ?? false,
+  __ts: commitTs,
+});
 
 export function createLogBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
   let fetchIntervalMs = 100;
   let lastFetch = 0;
-  const table = new Map<string, StoredRow>();
+  const rows = new Map<string, StoredRow>();
   const wal: Event[] = [];
   let lastEmittedIndex = 0;
+  const schemaVersions = new Map<string, number>();
 
-  const buildEvent = (
+  const ensureSchemaVersion = (tableName: string): number => {
+    const existing = schemaVersions.get(tableName);
+    if (typeof existing === "number" && existing >= 1) return existing;
+    schemaVersions.set(tableName, 1);
+    return 1;
+  };
+
+  const bumpSchemaVersion = (tableName: string): { previous: number; next: number } => {
+    const previous = ensureSchemaVersion(tableName);
+    const next = previous + 1;
+    schemaVersions.set(tableName, next);
+    return { previous, next };
+  };
+
+  const buildRowEvent = (
     op: SourceOp,
     kind: Event["kind"],
     before: Record<string, unknown> | null,
@@ -40,10 +69,39 @@ export function createLogBasedAdapter(): ModeAdapter {
     after: after ? { id: op.pk.id, ...after, __ts: commitTs } : undefined,
     txnId: `tx-${commitTs}`,
     commitTs,
-    schemaVersion: 1,
+    schemaVersion: ensureSchemaVersion(op.table),
     topic: runtime?.topic ?? `cdc.${op.table}`,
     partition: 0,
   });
+
+  const emitSchemaEvent = (
+    tableName: string,
+    action: SchemaChangeAction,
+    column: SchemaColumn,
+    commitTs: number,
+  ) => {
+    if (!emitFn || !runtime) return;
+    const { previous, next } = bumpSchemaVersion(tableName);
+    const event: Event = {
+      id: nextEventId(),
+      kind: action === "ADD_COLUMN" ? "SCHEMA_ADD_COL" : "SCHEMA_DROP_COL",
+      table: tableName,
+      before: action === "DROP_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      after: action === "ADD_COLUMN" ? columnToRow(column, commitTs) : undefined,
+      txnId: `schema-${commitTs}`,
+      commitTs,
+      schemaVersion: next,
+      topic: runtime.topic ?? `cdc.${tableName}`,
+      partition: 0,
+      schemaChange: {
+        action,
+        column,
+        previousVersion: previous,
+        nextVersion: next,
+      },
+    };
+    emitFn([event]);
+  };
 
   return {
     id: "LOG_BASED",
@@ -60,9 +118,13 @@ export function createLogBasedAdapter(): ModeAdapter {
       emitFn = emit;
       if (!tables.length) return;
       tables.forEach(tableDef => {
+        const baseVersion = tableDef.schema?.version ?? 1;
+        schemaVersions.set(tableDef.name, baseVersion);
         tableDef.rows.forEach(row => {
-          table.set(row.id, {
+          const key = makeRowKey(tableDef.name, row.id);
+          rows.set(key, {
             id: row.id,
+            table: tableDef.name,
             data: { ...row },
             version: 1,
             updatedAt: row.__ts ?? 0,
@@ -70,19 +132,19 @@ export function createLogBasedAdapter(): ModeAdapter {
           });
         });
       });
-      if (!table.size) return;
+      if (!rows.size) return;
       const events: Event[] = [];
-      table.forEach(row => {
+      rows.forEach(stored => {
         events.push({
           id: nextEventId(),
           kind: "INSERT",
-          table: tables[0]?.name ?? "",
+          table: stored.table,
           before: undefined,
-          after: { id: row.id, ...row.data, __ts: row.updatedAt },
-          txnId: `snapshot-${row.updatedAt}`,
-          commitTs: row.updatedAt,
-          schemaVersion: 1,
-          topic: runtime?.topic ?? `cdc.${tables[0]?.name ?? ""}`,
+          after: { id: stored.id, ...stored.data, __ts: stored.updatedAt },
+          txnId: `snapshot-${stored.updatedAt}`,
+          commitTs: stored.updatedAt,
+          schemaVersion: ensureSchemaVersion(stored.table),
+          topic: runtime?.topic ?? `cdc.${stored.table}`,
           partition: 0,
         });
       });
@@ -95,44 +157,72 @@ export function createLogBasedAdapter(): ModeAdapter {
     applySource(op) {
       if (!runtime) return;
       const commitTs = op.t;
+      const key = makeRowKey(op.table, op.pk.id);
+      ensureSchemaVersion(op.table);
       if (op.op === "insert") {
-        table.set(op.pk.id, {
+        rows.set(key, {
           id: op.pk.id,
+          table: op.table,
           data: { ...op.after },
           version: 1,
           updatedAt: commitTs,
           deleted: false,
         });
         wal.push(
-          buildEvent(op, "INSERT", null, cloneRowPayload(op.after), commitTs),
+          buildRowEvent(op, "INSERT", null, cloneRowPayload(op.after), commitTs),
         );
       } else if (op.op === "update") {
-        const current = table.get(op.pk.id);
+        const current = rows.get(key);
         const before = current ? cloneRowPayload(current.data) : null;
         const merged = current ? { ...current.data, ...op.after } : { ...op.after };
-        table.set(op.pk.id, {
+        rows.set(key, {
           id: op.pk.id,
+          table: op.table,
           data: merged,
           version: (current?.version ?? 0) + 1,
           updatedAt: commitTs,
           deleted: false,
         });
         wal.push(
-          buildEvent(op, "UPDATE", before, cloneRowPayload(merged), commitTs),
+          buildRowEvent(op, "UPDATE", before, cloneRowPayload(merged), commitTs),
         );
       } else if (op.op === "delete") {
-        const current = table.get(op.pk.id);
-        table.set(op.pk.id, {
+        const current = rows.get(key);
+        rows.set(key, {
           id: op.pk.id,
+          table: op.table,
           data: current ? { ...current.data } : {},
           version: (current?.version ?? 0) + 1,
           updatedAt: commitTs,
           deleted: true,
         });
         wal.push(
-          buildEvent(op, "DELETE", current ? cloneRowPayload(current.data) : null, null, commitTs),
+          buildRowEvent(op, "DELETE", current ? cloneRowPayload(current.data) : null, null, commitTs),
         );
       }
+    },
+    applySchemaChange(tableName, action, column, commitTs) {
+      if (!runtime) return;
+      ensureSchemaVersion(tableName);
+      if (action === "ADD_COLUMN") {
+        rows.forEach((stored, key) => {
+          if (stored.table !== tableName) return;
+          if (!(column.name in stored.data)) {
+            stored.data[column.name] = null;
+            rows.set(key, { ...stored, data: { ...stored.data } });
+          }
+        });
+      } else if (action === "DROP_COLUMN") {
+        rows.forEach((stored, key) => {
+          if (stored.table !== tableName) return;
+          if (column.name in stored.data) {
+            const nextData = { ...stored.data };
+            delete nextData[column.name];
+            rows.set(key, { ...stored, data: nextData });
+          }
+        });
+      }
+      emitSchemaEvent(tableName, action, column, commitTs);
     },
     tick(nowMs) {
       if (!emitFn) return;
@@ -151,11 +241,13 @@ export function createLogBasedAdapter(): ModeAdapter {
       // no-op for now – included for symmetry with CDCController state.
     },
     stop() {
-      table.clear();
+      rows.clear();
       wal.length = 0;
       lastEmittedIndex = 0;
       emitFn = null;
       runtime = null;
+      schemaVersions.clear();
+      lastFetch = 0;
     },
   };
 }

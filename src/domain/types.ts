@@ -27,6 +27,15 @@ export type ChangeKind =
   | 'SCHEMA_ADD_COL'
   | 'SCHEMA_DROP_COL';
 
+export type SchemaChangeAction = 'ADD_COLUMN' | 'DROP_COLUMN';
+
+export type SchemaChange = {
+  action: SchemaChangeAction;
+  column: SchemaColumn;
+  previousVersion: number;
+  nextVersion: number;
+};
+
 export type Event = {
   id: string;
   kind: ChangeKind;
@@ -39,6 +48,7 @@ export type Event = {
   topic: string;
   partition: number;
   offset?: number;
+  schemaChange?: SchemaChange;
 };
 
 export type Transaction = {
