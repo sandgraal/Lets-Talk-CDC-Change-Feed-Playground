@@ -1,38 +1,109 @@
 {
-  "id": "crud-basic",
-  "name": "CRUD Basic",
-  "description": "Insert, update, and delete a single customer to highlight delete visibility.",
+  "id": "orders-transactions",
+  "name": "Orders + Items Transactions",
+  "description": "Coordinate changes across orders and order_items within the same transaction.",
+  "highlight": "Apply-on-commit keeps multi-table writes atomic across downstream lanes.",
+  "officeOptIn": false,
   "ops": [
     {
-      "t": 100,
+      "t": 120,
       "op": "insert",
-      "table": "customers",
+      "table": "orders",
       "pk": {
-        "id": "1"
+        "id": "ORD-5001"
       },
       "after": {
-        "name": "A",
-        "email": "a@example.com"
+        "status": "pending",
+        "total": 128.5
+      },
+      "txn": {
+        "id": "txn-5001",
+        "index": 0,
+        "total": 2
       }
     },
     {
-      "t": 400,
+      "t": 120,
+      "op": "insert",
+      "table": "order_items",
+      "pk": {
+        "id": "ORD-5001-1"
+      },
+      "after": {
+        "order_id": "ORD-5001",
+        "sku": "SKU-1",
+        "qty": 1
+      },
+      "txn": {
+        "id": "txn-5001",
+        "index": 1,
+        "total": 2,
+        "last": true
+      }
+    },
+    {
+      "t": 360,
       "op": "update",
-      "table": "customers",
+      "table": "orders",
       "pk": {
-        "id": "1"
+        "id": "ORD-5001"
       },
       "after": {
-        "name": "A1",
-        "email": "a@example.com"
+        "status": "fulfilled"
+      },
+      "txn": {
+        "id": "txn-5002",
+        "index": 0,
+        "total": 2
       }
     },
     {
-      "t": 700,
-      "op": "delete",
-      "table": "customers",
+      "t": 360,
+      "op": "insert",
+      "table": "order_items",
       "pk": {
-        "id": "1"
+        "id": "ORD-5001-2"
+      },
+      "after": {
+        "order_id": "ORD-5001",
+        "sku": "SKU-99",
+        "qty": 1
+      },
+      "txn": {
+        "id": "txn-5002",
+        "index": 1,
+        "total": 2,
+        "last": true
+      }
+    },
+    {
+      "t": 520,
+      "op": "delete",
+      "table": "order_items",
+      "pk": {
+        "id": "ORD-5001-1"
+      },
+      "txn": {
+        "id": "txn-5003",
+        "index": 0,
+        "total": 2
+      }
+    },
+    {
+      "t": 520,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-5001"
+      },
+      "after": {
+        "status": "partially_refunded"
+      },
+      "txn": {
+        "id": "txn-5003",
+        "index": 1,
+        "total": 2,
+        "last": true
       }
     }
   ]

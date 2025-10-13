@@ -987,6 +987,7 @@ async function saveScenarioRemote(options = {}) {
     events: clone(state.events),
     scenarioId: state.scenarioId,
     comparator: buildComparatorExport(),
+    officeOptIn: officeSchemaOptIn,
   };
 
   const reuseId = state.remoteId || uiState.lastShareId;
@@ -1092,6 +1093,16 @@ async function maybeHydrateSharedScenario() {
     if (!doc || doc.kind !== "scenario") {
       refreshSchemaStatus("Shared document is not a scenario payload.", "error");
       return;
+    }
+
+    const officePref =
+      typeof doc.officeOptIn === "boolean"
+        ? doc.officeOptIn
+        : typeof doc.officeSchemaOptIn === "boolean"
+          ? doc.officeSchemaOptIn
+          : null;
+    if (officePref !== null) {
+      setOfficeSchemaPreference(officePref);
     }
 
     state.schema = doc.schema || [];
@@ -3554,6 +3565,7 @@ function exportScenario() {
     scenarioId: state.scenarioId || null,
     remoteId: state.remoteId || null,
     comparator: buildComparatorExport(),
+    officeOptIn: officeSchemaOptIn,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -3593,6 +3605,16 @@ function importScenario(file) {
     try {
       const payload = JSON.parse(reader.result);
       const scenarioPayload = payload && payload.schema ? payload : { schema: [], rows: [], events: [] };
+
+      const officePref =
+        typeof scenarioPayload.officeOptIn === "boolean"
+          ? scenarioPayload.officeOptIn
+          : typeof scenarioPayload.officeSchemaOptIn === "boolean"
+            ? scenarioPayload.officeSchemaOptIn
+            : null;
+      if (officePref !== null) {
+        setOfficeSchemaPreference(officePref);
+      }
 
       state.schema = scenarioPayload.schema || [];
       state.schemaVersion = Number(scenarioPayload.schemaVersion) || 1;
