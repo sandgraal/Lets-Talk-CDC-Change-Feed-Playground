@@ -13,6 +13,7 @@ import {
 import { CDCController, EventBus, MetricsStore, PRESETS, Scheduler, type MetricsSnapshot } from "../src";
 import { EventLog, type EventLogFilters, type EventLogRow, type EmitFn } from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
+import harnessHistoryMd from "../docs/harness-history.md?raw";
 
 type FeatureFlagKey =
   | "ff_event_bus"
@@ -736,6 +737,7 @@ export function App() {
       return acc;
     }, {} as Record<MethodOption, MethodCopy>);
   }, [preset]);
+  const harnessHistoryContent = useMemo(() => harnessHistoryMd.trim(), []);
   const updateLaneSnapshot = useCallback(
     (method: MethodOption, options?: { lastOffset?: number }) => {
       const runtime = laneRuntimeRef.current[method];
@@ -2459,6 +2461,15 @@ export function App() {
           onCopyEvent={handleCopyEvent}
           maxVisibleEvents={MAX_EVENT_LOG_ROWS}
         />
+      )}
+
+      {harnessHistoryContent && (
+        <section className="sim-shell__harness-history" aria-label="Harness nightly history">
+          <details>
+            <summary>Harness nightly history</summary>
+            <pre>{harnessHistoryContent}</pre>
+          </details>
+        </section>
       )}
 
       <div
