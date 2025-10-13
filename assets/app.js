@@ -2,8 +2,48 @@
 // Now with Appwrite Realtime.
 // State is in-memory + localStorage snapshot.
 
-import crypto from "crypto";
 import tooltipCopy from "./tooltip-copy.js";
+
+function randomInt(min, max) {
+  const hasMax = typeof max === "number";
+  if (!hasMax) {
+    max = min;
+    min = 0;
+  }
+
+  const lower = Math.ceil(Number(min));
+  const upper = Math.floor(Number(max));
+  if (!Number.isFinite(lower) || !Number.isFinite(upper)) {
+    throw new TypeError("randomInt bounds must be finite numbers");
+  }
+
+  if (upper <= lower) {
+    if (upper === lower) return lower;
+    throw new RangeError("randomInt max must be greater than min");
+  }
+
+  const range = upper - lower;
+  const cryptoObj =
+    typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.getRandomValues === "function"
+      ? globalThis.crypto
+      : null;
+
+  if (!cryptoObj || range > 0xffffffff) {
+    return lower + Math.floor(Math.random() * range);
+  }
+
+  const maxUint32 = 0xffffffff;
+  const slice = maxUint32 - (maxUint32 % range);
+  const bucket = new Uint32Array(1);
+  let value = 0;
+
+  do {
+    cryptoObj.getRandomValues(bucket);
+    value = bucket[0];
+  } while (value >= slice);
+
+  return lower + (value % range);
+}
 
 const STORAGE_KEYS = Object.freeze({
   state: "cdc_playground",
@@ -3795,7 +3835,7 @@ function randomRecentIso(maxHoursBack) {
   const horizon = typeof maxHoursBack === "number" && maxHoursBack > 0 ? maxHoursBack : 24;
   const now = Date.now();
   const range = horizon * 60 * 60 * 1000;
-  const offset = crypto.randomInt(0, range);
+  const offset = randomInt(0, range);
   return new Date(now - offset).toISOString();
 }
 
@@ -3803,10 +3843,10 @@ function generateScenarioOrdersRow() {
   const status = pickRandom(["pending", "processing", "packed", "shipped", "cancelled", "delivered"]) || "processing";
   const methods = ["Expedited", "Standard", "Same Day", "Store Pickup", "Locker Pickup"];
   return {
-    order_id: `ORD-${crypto.randomInt(1000, 10000)}`,
-    customer_id: `C-${crypto.randomInt(100, 1000)}`,
+    order_id: `ORD-${randomInt(1000, 10000)}`,
+    customer_id: `C-${randomInt(100, 1000)}`,
     status,
-    subtotal: Number((crypto.randomInt(0, 35000) / 100 + 35).toFixed(2)),
+    subtotal: Number((randomInt(0, 35000) / 100 + 35).toFixed(2)),
     shipping_method: pickRandom(methods) || "Standard",
     updated_at: randomRecentIso(72),
   };
@@ -3818,14 +3858,14 @@ function generateScenarioPaymentsRow() {
   let capturedAt = null;
   if (status === "captured") {
     const base = Date.parse(authorizedAt);
-    const deltaMinutes = crypto.randomInt(2, 22);
+    const deltaMinutes = randomInt(2, 22);
     capturedAt = new Date(base + deltaMinutes * 60000).toISOString();
   }
   return {
-    transaction_id: `PAY-${crypto.randomInt(10000, 100000)}`,
-    account_id: `ACC-${crypto.randomInt(1000, 10000)}`,
+    transaction_id: `PAY-${randomInt(10000, 100000)}`,
+    account_id: `ACC-${randomInt(1000, 10000)}`,
     payment_method: pickRandom(["card", "wallet", "bank_transfer", "ach", "apple_pay"]) || "card",
-    amount: Number((crypto.randomInt(0, 47500) / 100 + 10).toFixed(2)),
+    amount: Number((randomInt(0, 47500) / 100 + 10).toFixed(2)),
     status,
     authorized_at: authorizedAt,
     captured_at: capturedAt,
@@ -3834,19 +3874,19 @@ function generateScenarioPaymentsRow() {
 
 function generateScenarioTelemetryRow() {
   const status = pickRandom(["nominal", "warning", "alert"]) || "nominal";
-  const deviceSuffix = String(crypto.randomInt(1, 19)).padStart(2, "0");
-  const baseTemp = Number((crypto.randomInt(0, 50) / 10 + 18).toFixed(1));
+  const deviceSuffix = String(randomInt(1, 19)).padStart(2, "0");
+  const baseTemp = Number((randomInt(0, 50) / 10 + 18).toFixed(1));
   let temperature = baseTemp;
   if (status === "warning") {
-    temperature = Number((baseTemp + (crypto.randomInt(0, 15) / 10) + 0.5).toFixed(1));
+    temperature = Number((baseTemp + (randomInt(0, 15) / 10) + 0.5).toFixed(1));
   } else if (status === "alert") {
-    temperature = Number((baseTemp + (crypto.randomInt(0, 25) / 10) + 1.5).toFixed(1));
+    temperature = Number((baseTemp + (randomInt(0, 25) / 10) + 1.5).toFixed(1));
   }
   const pressure = status === "alert"
-    ? Number((crypto.randomInt(0, 20) / 10 + 98).toFixed(1))
-    : Number((crypto.randomInt(0, 15) / 10 + 99).toFixed(1));
+    ? Number((randomInt(0, 20) / 10 + 98).toFixed(1))
+    : Number((randomInt(0, 15) / 10 + 99).toFixed(1));
   return {
-    reading_id: `READ-${crypto.randomInt(100, 1000)}`,
+    reading_id: `READ-${randomInt(100, 1000)}`,
     device_id: `THERM-${deviceSuffix}`,
     temperature_c: temperature,
     pressure_kpa: pressure,
