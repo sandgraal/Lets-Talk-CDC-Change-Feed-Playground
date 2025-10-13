@@ -1,7 +1,7 @@
 (function attachEventLogWidgetLoader(global) {
   if (global.__LetstalkCdcEventLogWidget?.load) return;
 
-  const bundleHref = "./assets/generated/event-log-widget.js";
+  const bundleHref = "./generated/event-log-widget.js";
 
   async function loadBundle() {
     if (global.__LetstalkCdcEventLogWidgetBundle) {

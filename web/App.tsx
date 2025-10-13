@@ -121,7 +121,6 @@ type EventOp = "c" | "u" | "d" | "s";
 const DEFAULT_EVENT_OPS: readonly EventOp[] = ["c", "u", "d", "s"];
 
 const DEFAULT_PRESET_ID: VendorPresetId = "MYSQL_DEBEZIUM";
-const DEFAULT_EVENT_OPS = ["c", "u", "d", "s"] as const;
 
 function isVendorPresetId(value: unknown): value is VendorPresetId {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(PRESETS, value);
@@ -1047,10 +1046,6 @@ export function App() {
     }
   }, [availableEventLogTxns, eventLogTxn]);
 
-  useEffect(() => {
-    schemaCommitRef.current = 0;
-  }, [scenario.name]);
-
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
   const scenarioOptions = useMemo(() => {
@@ -1120,6 +1115,10 @@ export function App() {
     const prefix = `v${schemaMaxVersion}`;
     return schemaColumnPresent ? `${prefix} · column present` : `${prefix} · column absent`;
   }, [schemaColumnPresent, schemaMaxVersion, scenario.tags]);
+
+  useEffect(() => {
+    schemaCommitRef.current = 0;
+  }, [scenario.name]);
 
   const schemaTableName = useMemo(() => {
     if (scenario.table) return scenario.table;
