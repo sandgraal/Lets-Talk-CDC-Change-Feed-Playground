@@ -11,6 +11,8 @@
     dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; }
     dt { font-weight: 600; }
     .issues { margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid rgba(148, 163, 184, 0.2); padding: 6px 8px; text-align: left; }
   </style>
 </head>
 <body>
@@ -25,6 +27,19 @@
       <dt>Extra</dt><dd>0</dd>
       <dt>Max lag</dt><dd>5 ms</dd>
     </dl>
+    <section class="issues">
+      <h2>Table summary</h2>
+      <table>
+        <thead><tr><th>Table</th><th>Expected rows</th><th>Actual rows</th></tr></thead>
+        <tbody><tr><td colspan="3">No tables observed.</td></tr></tbody>
+      </table>
+    </section>
+    <section class="issues">
+      <h2>State mismatches (0)</h2>
+      <ul>
+        <li>No state mismatches detected.</li>
+      </ul>
+    </section>
     <section class="issues">
       <h2>Recent events (3)</h2>
       <ul>
