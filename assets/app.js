@@ -50,6 +50,7 @@ const STORAGE_KEYS = Object.freeze({
   onboarding: "cdc_playground_onboarding_v1",
   lastTemplate: "cdc_playground_last_template_v1",
   scenarioFilter: "cdc_playground_template_filter_v1",
+  officeOptIn: "cdc_playground_office_opt_in_v1",
 });
 
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
@@ -61,6 +62,8 @@ const officeEasterEgg = {
   bankruptcyShown: false,
   megadeskActive: false,
 };
+
+let officeSchemaOptIn = true;
 
 const DEFAULT_SCHEMA = [
   { name: "id", type: "number", pk: true },
@@ -242,6 +245,7 @@ const els = {
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
+  onboardingEasterEgg: document.getElementById("onboardingEasterEgg"),
   guidedTourButton: document.getElementById("btnGuidedTour"),
   methodGuidance: document.getElementById("methodGuidance"),
   saveRemote: document.getElementById("btnSaveRemote"),
@@ -271,6 +275,7 @@ if (typeof document !== "undefined") {
     localStorage.removeItem(STORAGE_KEYS.state);
     localStorage.removeItem(STORAGE_KEYS.lastTemplate);
     localStorage.removeItem(STORAGE_KEYS.onboarding);
+    localStorage.removeItem(STORAGE_KEYS.officeOptIn);
     location.reload();
   });
 }
@@ -831,6 +836,9 @@ function showOnboarding() {
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = false;
   document.body.classList.add("is-onboarding");
+  if (els.onboardingEasterEgg) {
+    els.onboardingEasterEgg.checked = false;
+  }
   const dialog = els.onboardingOverlay.querySelector(".onboarding-dialog");
   if (dialog && typeof dialog.focus === "function") {
     dialog.focus({ preventScroll: true });
@@ -890,6 +898,47 @@ function applyScenarioTemplate(template, options = {}) {
     tags: template.tags || [],
   });
   if (options.closeOnboarding) hideOnboarding(true);
+}
+
+function startFromScratch() {
+  const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
+  setOfficeSchemaPreference(loadOffice);
+
+  officeEasterEgg.seedCount = 0;
+  officeEasterEgg.bankruptcyShown = false;
+  officeEasterEgg.megadeskActive = false;
+
+  if (loadOffice) {
+    state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
+    state.scenarioId = "default";
+  } else {
+    state.schema = [];
+    state.scenarioId = null;
+  }
+  state.schemaVersion = 1;
+  state.rows = [];
+  state.events = [];
+  state.remoteId = null;
+  uiState.selectedEventIndex = null;
+
+  localStorage.removeItem(STORAGE_KEYS.lastTemplate);
+  if (els.onboardingEasterEgg) els.onboardingEasterEgg.checked = false;
+
+  save();
+  renderSchema();
+  renderEditor();
+  renderTable();
+  renderJSONLog();
+  renderTemplateGallery();
+  syncSchemaDemoButtons();
+
+  refreshSchemaStatus(
+    loadOffice ? "Scranton schema unlocked. Dwight is watching." : "Blank workspace ready. Add a column to begin.",
+    loadOffice ? "success" : "muted"
+  );
+  updateLearning("schema");
+  trackEvent("workspace.scenario.start_from_scratch", { officeSchema: loadOffice });
+  hideOnboarding(true);
 }
 
 function resetEventSelection() {
@@ -1150,6 +1199,26 @@ const loadTemplateFilter = () => {
     uiState.scenarioFilter = localStorage.getItem(STORAGE_KEYS.scenarioFilter) || "";
   } catch {
     uiState.scenarioFilter = "";
+  }
+};
+const loadOfficeSchemaPreference = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.officeOptIn);
+    if (raw === null) {
+      officeSchemaOptIn = true;
+      return;
+    }
+    officeSchemaOptIn = raw === "true";
+  } catch {
+    officeSchemaOptIn = true;
+  }
+};
+const setOfficeSchemaPreference = (enabled) => {
+  officeSchemaOptIn = Boolean(enabled);
+  try {
+    localStorage.setItem(STORAGE_KEYS.officeOptIn, officeSchemaOptIn ? "true" : "false");
+  } catch {
+    // ignore storage failures
   }
 };
 const flashButton = (btn, msg) => {
@@ -1587,12 +1656,21 @@ function nextDocumentId() {
 function ensureDefaultSchema() {
   let mutated = false;
   if (!state.schema.length) {
-    state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
-    state.scenarioId = "default";
-    state.schemaVersion = 1;
-    officeEasterEgg.seedCount = 0;
-    officeEasterEgg.bankruptcyShown = false;
-    mutated = true;
+    if (officeSchemaOptIn) {
+      state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
+      state.scenarioId = "default";
+      state.schemaVersion = 1;
+      officeEasterEgg.seedCount = 0;
+      officeEasterEgg.bankruptcyShown = false;
+      mutated = true;
+    } else {
+      state.schema = [];
+      state.scenarioId = null;
+      state.schemaVersion = 1;
+      officeEasterEgg.seedCount = 0;
+      officeEasterEgg.bankruptcyShown = false;
+      officeEasterEgg.megadeskActive = false;
+    }
   }
   if (!state.rows.length) {
     state.rows = [];
@@ -3612,7 +3690,7 @@ function bindUiHandlers() {
     els.onboardingClose.onclick = () => hideOnboarding(true);
   }
   if (els.onboardingDismiss) {
-    els.onboardingDismiss.onclick = () => hideOnboarding(true);
+    els.onboardingDismiss.onclick = () => startFromScratch();
   }
   if (els.onboardingStart) {
     els.onboardingStart.onclick = () => {
@@ -3794,6 +3872,7 @@ async function main() {
   ensureToastHost();
   load();
   loadTemplateFilter();
+  loadOfficeSchemaPreference();
   if (state.events.length) selectLastEvent();
   let hydratedFromTemplate = false;
   if (!state.schema.length) {

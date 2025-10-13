@@ -1402,6 +1402,30 @@ select:focus {
   flex-wrap: wrap;
   gap: 12px;
 }
+.onboarding-start {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.onboarding-secret {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+.onboarding-secret:hover,
+.onboarding-secret:focus-within {
+  opacity: 1;
+  color: var(--muted-strong);
+}
+.onboarding-secret input {
+  width: 14px;
+  height: 14px;
+}
 
 body.is-onboarding {
   overflow: hidden;
