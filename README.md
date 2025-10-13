@@ -1,5 +1,7 @@
 # Lets Talk CDC – Change Feed Playground
 
+[![Harness Nightly](https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground/actions/workflows/harness-nightly.yml/badge.svg)](https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground/actions/workflows/harness-nightly.yml)
+
 > Live playground: [https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/](https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/)
 
 A zero-dependency web app that simulates CDC operations and emits Debezium-style events.
@@ -20,6 +22,7 @@ Open `index.html` in a browser. No build step.
 - Harness HTML snapshot: `npm run test:harness-report`
 - Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
 - Nightly harness: `npm run ci:harness` (runs via the **Harness Nightly** workflow and uploads HTML/JSON artifacts under Actions → Harness Nightly)
+- Harness Nightly posts PASS/FAIL to Slack via `SLACK_WEBHOOK_URL` so the multi-table verification never slips under the radar.
 
 ### Harness
 - Prepare a shared scenario: `npm run prepare:scenario -- orders`
