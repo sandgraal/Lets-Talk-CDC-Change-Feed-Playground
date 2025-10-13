@@ -29,4 +29,4 @@
 - ✅ Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
 - Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`). ✅ Vitest suite now covers adapters, controller, metrics, and lane overlays; continue expanding toward multi-table scenarios.
 - Todo: add Storybook visual regression notes for lane checks / diff overlay to keep UI states in sync with docs.
-- Begin P1 work: Multi-table + transactional demos; follow-up e2e for transaction drift once adapters support it.
+- ✅ Multi-table + transactional demo landed with apply-on-commit toggle; follow-up e2e for transaction drift still on backlog.

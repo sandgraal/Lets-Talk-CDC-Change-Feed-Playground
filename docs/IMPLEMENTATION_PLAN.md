@@ -134,7 +134,7 @@ export type Metrics = {
    - Acceptance: UI badges show schema vN -> vN+1; destination eventually aligns (LOG/TRIGGER). Playwright scenario covers walkthrough and destination snapshot behaviour; follow-up needed for QUERY drift messaging.
 
 8. **Multi-table + transactions (P1)**
-   - TODO: extend adapters and UI to preserve txn boundaries, add apply-on-commit toggle.
+   - ✅ Adapters emit transaction metadata across modes, apply-on-commit toggle keeps multi-table lanes consistent.
 
 9. **Vendor presets (labels only) (P1)**
    - ✅ Presets dropdown: MySQL + Debezium + Kafka; Postgres Logical Decoding + Kafka; SQL Server CDC + ETL; Oracle GoldenGate; MongoDB Change Streams (informational).

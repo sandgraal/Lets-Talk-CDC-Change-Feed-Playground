@@ -24,6 +24,7 @@ export class PollingEngine extends BaseEngine {
     if (op.op === "insert") {
       this.table.set(op.pk.id, {
         id: op.pk.id,
+        table: op.table,
         data: op.after,
         version: 1,
         updated_at_ms: op.t,
@@ -34,6 +35,7 @@ export class PollingEngine extends BaseEngine {
       if (!cur || cur.deleted) return;
       this.table.set(op.pk.id, {
         ...cur,
+        table: cur.table ?? op.table,
         data: { ...cur.data, ...op.after },
         version: cur.version + 1,
         updated_at_ms: op.t,
@@ -43,6 +45,7 @@ export class PollingEngine extends BaseEngine {
       if (!cur) return;
       this.table.set(op.pk.id, {
         ...cur,
+        table: cur.table ?? op.table,
         deleted: true,
         updated_at_ms: op.t,
       });
@@ -63,13 +66,13 @@ export class PollingEngine extends BaseEngine {
 
       const evt: CdcEvent = {
         source: "demo-db",
-        table: "customers",
+        table: row.table,
         op: row.deleted ? "d" : row.version > 1 ? "u" : "c",
         pk: { id: row.id },
         before: null,
         after: row.deleted ? null : row.data,
         ts_ms: row.updated_at_ms,
-        tx: { id: `tx-${row.updated_at_ms}`, lsn: null },
+        tx: { id: `tx-${row.updated_at_ms}`, lsn: null, index: 0, total: 1, last: true },
         seq: ++this.seq,
         meta: { method: "polling" },
       };

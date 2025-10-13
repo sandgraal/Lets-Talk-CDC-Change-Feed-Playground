@@ -1,5 +1,7 @@
 # Lets Talk CDC – Change Feed Playground
 
+> Live playground: [https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/](https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/)
+
 A zero-dependency web app that simulates CDC operations and emits Debezium-style events.
 
 ## Run locally
@@ -62,6 +64,12 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 ## Contributing
 We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
 
+## Deploy to GitHub Pages
+- Run `npm run build:web` to refresh the Vite bundle under `assets/generated/`.
+- Commit the updated bundle together with `index.html` and push to the default branch.
+- In the repository settings, set GitHub Pages to deploy from the root of the `main` branch.
+- The playground will publish to `https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/`, and share links use that origin via `window.APPWRITE_CFG.shareBaseUrl`.
+
 ## Deploy to Appwrite Sites
 Zip the files:
 - `index.html`
@@ -69,7 +77,7 @@ Zip the files:
 - `assets/app.js`
 
 Upload the zip in Appwrite Console → **Sites** → **Manual upload**.
-The site will be available at `https://letstalkcdc.appwrite.network/`.
+The GitHub Pages deployment now lives at `https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/`; the Appwrite Sites workflow is kept here for historical reference.
 
 ## Roadmap
 - Realtime stream via Appwrite Realtime (broadcast ops to multiple clients).

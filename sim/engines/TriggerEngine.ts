@@ -26,10 +26,17 @@ export class TriggerEngine extends BaseEngine {
 
   applySourceOp(op: SourceOp) {
     const commitTs = op.t + this.triggerOverheadMs;
+    const txnMeta = op.txn ?? { id: `tx-${commitTs}`, index: 0, total: 1, last: true };
+    const tx_id = txnMeta.id ?? `tx-${commitTs}`;
+    const tx_index = typeof txnMeta.index === "number" ? txnMeta.index : 0;
+    const tx_total = typeof txnMeta.total === "number" ? txnMeta.total : 1;
+    const tx_last =
+      typeof txnMeta.last === "boolean" ? txnMeta.last : tx_index >= tx_total - 1;
 
     if (op.op === "insert") {
       this.table.set(op.pk.id, {
         id: op.pk.id,
+        table: op.table,
         data: op.after,
         version: 1,
         updated_at_ms: commitTs,
@@ -42,7 +49,11 @@ export class TriggerEngine extends BaseEngine {
         pk: op.pk,
         before: null,
         after: op.after,
-        tx_id: `tx-${commitTs}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         commit_ts_ms: commitTs,
       });
     } else if (op.op === "update") {
@@ -52,6 +63,7 @@ export class TriggerEngine extends BaseEngine {
 
       this.table.set(op.pk.id, {
         id: op.pk.id,
+        table: cur?.table ?? op.table,
         data: next,
         version: (cur?.version ?? 0) + 1,
         updated_at_ms: commitTs,
@@ -64,12 +76,17 @@ export class TriggerEngine extends BaseEngine {
         pk: op.pk,
         before,
         after: next,
-        tx_id: `tx-${commitTs}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         commit_ts_ms: commitTs,
       });
     } else if (op.op === "delete") {
       const cur = this.table.get(op.pk.id) || {
         id: op.pk.id,
+        table: op.table,
         data: {},
         version: 0,
         updated_at_ms: commitTs,
@@ -88,7 +105,11 @@ export class TriggerEngine extends BaseEngine {
         pk: op.pk,
         before: cur ? cur.data : null,
         after: null,
-        tx_id: `tx-${commitTs}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         commit_ts_ms: commitTs,
       });
     }
@@ -102,13 +123,19 @@ export class TriggerEngine extends BaseEngine {
     for (const entry of batch) {
       const evt: CdcEvent = {
         source: "demo-db",
-        table: "customers",
+        table: entry.table,
         op: entry.op,
         pk: entry.pk,
         before: entry.before,
         after: entry.after,
         ts_ms: entry.commit_ts_ms,
-        tx: { id: entry.tx_id, lsn: null },
+        tx: {
+          id: entry.tx_id,
+          lsn: null,
+          index: entry.tx_index,
+          total: entry.tx_total,
+          last: entry.tx_last,
+        },
         seq: ++this.seq,
         meta: { method: "trigger" },
       };

@@ -13,6 +13,7 @@ export const TOOLTIP_COPY = {
   tombstone: "A delete marker event that instructs downstream systems to remove a row.",
   snapshot: "Initial bulk copy exported before switching to streaming changes.",
   transactionLog: "Ordered record of committed operations; log-based CDC tails this stream.",
+  txnAtomic: "Hold downstream apply until all events in the transaction are available to avoid partial writes.",
 };
 
 if (typeof window !== "undefined") {

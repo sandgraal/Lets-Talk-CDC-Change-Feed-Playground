@@ -138,6 +138,7 @@ type ComparatorPreferences = {
   eventLogTable?: string | null;
   eventLogTxn?: string | null;
   eventLogMethod?: MethodOption | null;
+  applyOnCommit?: boolean;
 };
 
 type LaneMetrics = {
@@ -171,7 +172,7 @@ type LaneStats = {
 
 type LaneDestinationSnapshot = {
   columns: string[];
-  rows: Array<{ id: string; values: Record<string, unknown> }>;
+  rows: Array<{ id: string; displayId: string; table: string; values: Record<string, unknown> }>;
   schemaVersion: number;
   hasSchemaColumn: boolean;
 };
@@ -343,6 +344,14 @@ const eventToCdcEvent = (method: MethodOption, event: EngineEvent, seq: number):
     tx: {
       id: event.txnId ?? `tx-${event.commitTs}`,
       lsn: typeof event.offset === "number" ? event.offset : null,
+      index: typeof event.txnIndex === "number" ? event.txnIndex : undefined,
+      total: typeof event.txnTotal === "number" ? event.txnTotal : undefined,
+      last:
+        typeof event.txnLast === "boolean"
+          ? event.txnLast
+          : typeof event.txnTotal === "number" && typeof event.txnIndex === "number"
+            ? event.txnIndex >= event.txnTotal - 1
+            : true,
     },
     seq,
     meta: { method: METHOD_META_LOOKUP[method] },
@@ -563,6 +572,7 @@ function loadPreferences(): ComparatorPreferences | null {
       eventLogTable: typeof parsed.eventLogTable === "string" ? parsed.eventLogTable : undefined,
       eventLogTxn: typeof parsed.eventLogTxn === "string" ? parsed.eventLogTxn : undefined,
       eventLogMethod: typeof parsed.eventLogMethod === "string" ? parsed.eventLogMethod : undefined,
+      applyOnCommit: typeof parsed.applyOnCommit === "boolean" ? parsed.applyOnCommit : undefined,
     };
   } catch (err) {
     console.warn("Comparator prefs load failed", err);
@@ -698,8 +708,10 @@ export function App() {
   const [eventLogTable, setEventLogTable] = useState<string | null>(storedPrefs?.eventLogTable ?? null);
   const [eventLogTxn, setEventLogTxn] = useState<string>(storedPrefs?.eventLogTxn ?? "");
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
+  const [applyOnCommit, setApplyOnCommit] = useState(storedPrefs?.applyOnCommit ?? false);
   const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
+  const pendingTxnRef = useRef<Partial<Record<MethodOption, EngineEvent[]>>>({});
   const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET_ID];
   const presetOptions = useMemo(
     () =>
@@ -935,15 +947,15 @@ export function App() {
     const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
     activeMethods.forEach(method => {
       const events = laneEvents[method] ?? [];
-      const columnOrder: string[] = ["id"];
+      const columnOrder: string[] = ["table", "id"];
       const ensureColumn = (name: string | null | undefined) => {
-        if (!name || name === "id") return;
+        if (!name || name === "id" || name === "table") return;
         if (!columnOrder.includes(name)) {
           columnOrder.push(name);
         }
       };
       const removeColumn = (name: string | null | undefined) => {
-        if (!name || name === "id") return;
+        if (!name || name === "id" || name === "table") return;
         const idx = columnOrder.indexOf(name);
         if (idx >= 0) {
           columnOrder.splice(idx, 1);
@@ -960,9 +972,11 @@ export function App() {
         if (event.schemaChange) {
           schemaVersion = Math.max(schemaVersion, event.schemaChange.nextVersion);
           const columnName = event.schemaChange.column.name;
+          const targetTable = event.table ?? "";
           if (event.schemaChange.action === "ADD_COLUMN") {
             ensureColumn(columnName);
             rowsMap.forEach(row => {
+              if ((row.table ?? "") !== targetTable) return;
               if (!(columnName in row)) {
                 row[columnName] = null;
               }
@@ -970,6 +984,7 @@ export function App() {
           } else {
             removeColumn(columnName);
             rowsMap.forEach(row => {
+              if ((row.table ?? "") !== targetTable) return;
               if (columnName in row) {
                 delete row[columnName];
               }
@@ -989,21 +1004,29 @@ export function App() {
         }
 
         const pkId = event.pk?.id != null ? String(event.pk.id) : null;
-        if (!pkId) return;
+        const tableName = event.table ?? "";
+        const rowKey = pkId ? `${tableName}::${pkId}` : null;
+
+        if (!pkId || !rowKey) return;
 
         if (event.op === "c" || event.op === "u") {
-          const previous = rowsMap.get(pkId) ?? { id: pkId };
+          const previous = rowsMap.get(rowKey) ?? { id: pkId, table: tableName };
           const payload = event.after ?? {};
-          const next = { ...previous, ...payload, id: pkId };
-          rowsMap.set(pkId, next);
+          const next = {
+            ...previous,
+            ...payload,
+            id: pkId,
+            table: tableName,
+          };
+          rowsMap.set(rowKey, next);
         } else if (event.op === "d") {
-          rowsMap.delete(pkId);
+          rowsMap.delete(rowKey);
         }
       });
 
       rowsMap.forEach(row => {
         columnOrder.forEach(column => {
-          if (column === "id") return;
+          if (column === "id" || column === "table") return;
           if (!(column in row)) {
             row[column] = null;
           }
@@ -1012,7 +1035,16 @@ export function App() {
 
       const rows = Array.from(rowsMap.entries())
         .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: "base" }))
-        .map(([id, values]) => ({ id, values }));
+        .map(([key, values]) => {
+          const tableName = typeof values.table === "string" ? values.table : "";
+          const displayId = typeof values.id === "string" ? values.id : String(values.id ?? key);
+          return {
+            id: key,
+            displayId,
+            table: tableName,
+            values,
+          };
+        });
 
       const hasSchemaColumn = columnOrder.includes(SCHEMA_DEMO_COLUMN.name);
 
@@ -1254,6 +1286,10 @@ export function App() {
       if (prefs.presetId && isVendorPresetId(prefs.presetId)) {
         setPresetId(prefs.presetId);
       }
+
+      if (typeof prefs.applyOnCommit === "boolean") {
+        setApplyOnCommit(prefs.applyOnCommit);
+      }
     };
 
     window.addEventListener("cdc:comparator-preferences-set" as string, handler);
@@ -1275,6 +1311,7 @@ export function App() {
       eventLogTable,
       eventLogTxn,
       eventLogMethod,
+      applyOnCommit,
     });
   }, [
     scenarioId,
@@ -1287,6 +1324,7 @@ export function App() {
     eventLogTable,
     eventLogTxn,
     eventLogMethod,
+    applyOnCommit,
   ]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
@@ -1302,13 +1340,75 @@ export function App() {
   const drainQueues = useCallback(() => {
     if (isConsumerPaused) return;
     const additions: Partial<Record<MethodOption, CdcEvent[]>> = {};
+
+    const getTxnId = (event: EngineEvent) => event.txnId ?? `tx-${event.commitTs}`;
+    const isTxnComplete = (events: EngineEvent[]): boolean => {
+      if (!events.length) return false;
+      const last = events[events.length - 1];
+      if (typeof last.txnLast === "boolean") return last.txnLast;
+      if (typeof last.txnIndex === "number" && typeof last.txnTotal === "number") {
+        return last.txnIndex >= last.txnTotal - 1;
+      }
+      return true;
+    };
+
+    const takeNextTransaction = (method: MethodOption, runtime: LaneRuntime): EngineEvent[] => {
+      const pending = pendingTxnRef.current[method] ?? [];
+      let working = pending.length ? [...pending] : [];
+      if (working.length) {
+        pendingTxnRef.current[method] = [];
+      }
+      if (!working.length) {
+        const firstBatch = runtime.bus.consume(runtime.topic, 1);
+        if (!firstBatch.length) return [];
+        working = firstBatch;
+      }
+
+      const targetTxn = getTxnId(working[0]);
+      while (!isTxnComplete(working)) {
+        const nextBatch = runtime.bus.consume(runtime.topic, 1);
+        if (!nextBatch.length) {
+          pendingTxnRef.current[method] = working;
+          return [];
+        }
+        const nextEvent = nextBatch[0];
+        const nextTxnId = getTxnId(nextEvent);
+        if (nextTxnId !== targetTxn) {
+          const existing = pendingTxnRef.current[method] ?? [];
+          pendingTxnRef.current[method] = [nextEvent, ...existing];
+          break;
+        }
+        working.push(nextEvent);
+      }
+
+      return working;
+    };
+
     for (const method of activeMethods) {
       const runtime = laneRuntimeRef.current[method];
       if (!runtime) continue;
-      const batch = runtime.bus.consume(runtime.topic, 50);
-      if (!batch.length) continue;
-      runtime.metrics.onConsumed(batch);
-      const converted = batch.map(event => {
+
+      let consumed: EngineEvent[] = [];
+
+      if (applyOnCommit) {
+        const txnEvents = takeNextTransaction(method, runtime);
+        if (!txnEvents.length) continue;
+        consumed = txnEvents;
+      } else {
+        const pending = pendingTxnRef.current[method] ?? [];
+        if (pending.length) {
+          consumed = [...pending];
+          pendingTxnRef.current[method] = [];
+        }
+        const batch = runtime.bus.consume(runtime.topic, 50);
+        if (batch.length) {
+          consumed = consumed.length ? consumed.concat(batch) : batch;
+        }
+        if (!consumed.length) continue;
+      }
+
+      runtime.metrics.onConsumed(consumed);
+      const converted = consumed.map(event => {
         const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
         return eventToCdcEvent(method, event, seq);
       });
@@ -1326,7 +1426,7 @@ export function App() {
       }
       return next;
     });
-  }, [activeMethods, isConsumerPaused, updateLaneSnapshot]);
+  }, [activeMethods, applyOnCommit, isConsumerPaused, updateLaneSnapshot]);
 
   const startLoop = useCallback(() => {
     stopLoop();
@@ -1346,6 +1446,7 @@ export function App() {
     setLaneEvents(emptyEventMap<CdcEvent>(activeMethods));
     setBusEvents(emptyEventMap<BusEvent>(activeMethods));
     laneRuntimeRef.current = {};
+    pendingTxnRef.current = {};
     setClock(0);
     setIsPlaying(false);
     stopLoop();
@@ -2386,6 +2487,14 @@ export function App() {
             {eventBusEnabled ? ` (${totalBacklog} queued)` : ""}
           </button>
         )}
+        <label className="sim-shell__apply-toggle" data-tooltip={TOOLTIP_COPY.txnAtomic || undefined}>
+          <input
+            type="checkbox"
+            checked={applyOnCommit}
+            onChange={event => setApplyOnCommit(event.target.checked)}
+          />
+          <span>Apply on commit</span>
+        </label>
       </div>
 
       <div className="sim-shell__controls" aria-label="Method tuning controls">
@@ -2667,6 +2776,14 @@ export function App() {
               });
             }
           }
+          if (scenario.tags?.includes("transactions")) {
+            callouts.push({
+              text: applyOnCommit
+                ? "Apply-on-commit groups transaction events before updating destinations so tables stay in sync."
+                : "Apply-on-commit is off: events apply individually, so pausing mid-transaction shows partial state.",
+              tone: applyOnCommit ? "info" : "warning",
+            });
+          }
           const filteredEvents = filteredEventsByMethod.get(method) ?? events;
           const filtered =
             filteredEvents.length !== events.length ||
@@ -2779,7 +2896,11 @@ export function App() {
                               {destinationSnapshot.columns.map(column => (
                                 <td key={`${row.id}-${column}`}>
                                   {formatDestinationValue(
-                                    column === "id" ? row.id : row.values[column],
+                                    column === "id"
+                                      ? row.displayId
+                                      : column === "table"
+                                        ? row.table
+                                        : row.values[column],
                                   )}
                                 </td>
                               ))}

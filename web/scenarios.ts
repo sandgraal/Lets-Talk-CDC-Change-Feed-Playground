@@ -111,7 +111,7 @@ export const SCENARIOS: ShellScenario[] = mapped.length
         label: "Burst Updates",
         description: "Five quick updates to expose lost intermediate writes for polling.",
         highlight: "Rapid updates test lag and ordering resilience across engines.",
-        stats: { rows: 1, ops: 6 },
+        stats: { rows: 3, ops: 6 },
         tags: ["throughput", "polling", "lag"],
         seed: 7,
         ops: [
@@ -137,6 +137,23 @@ export const SCENARIOS: ShellScenario[] = mapped.length
           { t: 340, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { priority_flag: true } },
           { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
           { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } },
+        ],
+      },
+      {
+        name: "orders-transactions",
+        label: "Orders + Items Transactions",
+        description: "Synchronise orders and order_items updates within the same transaction.",
+        highlight: "Turn on apply-on-commit to keep downstream tables aligned while events stream.",
+        stats: { rows: 3, ops: 6 },
+        tags: ["transactions", "consistency"],
+        seed: 99,
+        ops: [
+          { t: 120, op: "insert", table: "orders", pk: { id: "ORD-5001" }, after: { status: "pending", total: 128.5 }, txn: { id: "txn-5001", index: 0, total: 2 } },
+          { t: 120, op: "insert", table: "order_items", pk: { id: "ORD-5001-1" }, after: { order_id: "ORD-5001", sku: "SKU-1", qty: 1 }, txn: { id: "txn-5001", index: 1, total: 2, last: true } },
+          { t: 360, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "fulfilled" }, txn: { id: "txn-5002", index: 0, total: 2 } },
+          { t: 360, op: "insert", table: "order_items", pk: { id: "ORD-5001-2" }, after: { order_id: "ORD-5001", sku: "SKU-99", qty: 1 }, txn: { id: "txn-5002", index: 1, total: 2, last: true } },
+          { t: 520, op: "delete", table: "order_items", pk: { id: "ORD-5001-1" }, txn: { id: "txn-5003", index: 0, total: 2 } },
+          { t: 520, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "partially_refunded" }, txn: { id: "txn-5003", index: 1, total: 2, last: true } },
         ],
       },
     ];

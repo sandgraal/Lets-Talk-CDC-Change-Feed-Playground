@@ -289,6 +289,23 @@ const defaultScenarios = [
       { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
       { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } }
     ]
+  },
+  {
+    id: "orders-transactions",
+    name: "Orders + Items Transactions",
+    label: "Orders + Items Transactions",
+    description: "Coordinate changes across orders and order_items within the same transaction.",
+    highlight: "Apply-on-commit keeps multi-table writes atomic across downstream lanes.",
+    tags: ["transactions", "consistency"],
+    seed: 99,
+    ops: [
+      { t: 120, op: "insert", table: "orders", pk: { id: "ORD-5001" }, after: { status: "pending", total: 128.5 }, txn: { id: "txn-5001", index: 0, total: 2 } },
+      { t: 120, op: "insert", table: "order_items", pk: { id: "ORD-5001-1" }, after: { order_id: "ORD-5001", sku: "SKU-1", qty: 1 }, txn: { id: "txn-5001", index: 1, total: 2, last: true } },
+      { t: 360, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "fulfilled" }, txn: { id: "txn-5002", index: 0, total: 2 } },
+      { t: 360, op: "insert", table: "order_items", pk: { id: "ORD-5001-2" }, after: { order_id: "ORD-5001", sku: "SKU-99", qty: 1 }, txn: { id: "txn-5002", index: 1, total: 2, last: true } },
+      { t: 520, op: "delete", table: "order_items", pk: { id: "ORD-5001-1" }, txn: { id: "txn-5003", index: 0, total: 2 } },
+      { t: 520, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "partially_refunded" }, txn: { id: "txn-5003", index: 1, total: 2, last: true } }
+    ]
   }
 ];
 

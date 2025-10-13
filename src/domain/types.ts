@@ -43,12 +43,22 @@ export type Event = {
   before?: Row;
   after?: Row;
   txnId?: string;
+  txnIndex?: number;
+  txnTotal?: number;
+  txnLast?: boolean;
   commitTs: number;
   schemaVersion: number;
   topic: string;
   partition: number;
   offset?: number;
   schemaChange?: SchemaChange;
+};
+
+export type TransactionMeta = {
+  id: string;
+  index: number;
+  total?: number;
+  last?: boolean;
 };
 
 export type Transaction = {
@@ -82,6 +92,7 @@ export type SourceOp =
       table: string;
       pk: { id: string };
       after: Record<string, unknown>;
+      txn?: TransactionMeta;
     }
   | {
       t: number;
@@ -89,10 +100,12 @@ export type SourceOp =
       table: string;
       pk: { id: string };
       after: Record<string, unknown>;
+      txn?: TransactionMeta;
     }
   | {
       t: number;
       op: 'delete';
       table: string;
       pk: { id: string };
+      txn?: TransactionMeta;
     };

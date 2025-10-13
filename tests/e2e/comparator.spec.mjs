@@ -70,4 +70,24 @@ suite("Comparator basics", () => {
     await expect(eventLog.getByText(/Dropped column priority_flag/i).first()).toBeVisible();
     await expect(destination.locator('th[data-highlight="true"]')).toHaveCount(0);
   });
+  
+  test("transactions scenario exposes apply-on-commit toggle", async ({ page }) => {
+    await page.goto(indexUrl, { waitUntil: "load" });
+
+    const scenarioSelect = page.locator('select[aria-label="Scenario"]');
+    await scenarioSelect.waitFor({ timeout: 10000 });
+    await scenarioSelect.selectOption({ label: "Orders + Items Transactions" });
+
+    await page.evaluate(() => window.cdcComparatorClock?.play?.());
+    await page.waitForTimeout(300);
+
+    const firstLane = page.locator(".sim-shell__lane-card").first();
+    await expect(firstLane.locator("thead th", { hasText: "Table" })).toBeVisible();
+
+    const toggle = page.getByRole("checkbox", { name: "Apply on commit" });
+    await expect(toggle).toBeVisible();
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
+    await expect(toggle).toBeChecked();
+  });
 });

@@ -88,6 +88,45 @@ describe("Mode adapters", () => {
     expect(metrics.snapshot().writeAmplification).toBe(2);
   });
 
+  it("trigger adapter carries transaction boundaries", () => {
+    const adapter = createTriggerBasedAdapter();
+    const { runtime } = createRuntime("cdc.trigger");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ extract_interval_ms: 1, trigger_overhead_ms: 5 });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const insertOrder: SourceOp = {
+      t: 40,
+      op: "insert",
+      table: "orders",
+      pk: { id: "ORD-9" },
+      after: { status: "pending" },
+      txn: { id: "txn-9", index: 0, total: 2 },
+    };
+    const insertItem: SourceOp = {
+      t: 40,
+      op: "insert",
+      table: "order_items",
+      pk: { id: "ORD-9-1" },
+      after: { order_id: "ORD-9", sku: "SKU-9" },
+      txn: { id: "txn-9", index: 1, total: 2, last: true },
+    };
+
+    adapter.applySource?.(insertOrder);
+    adapter.applySource?.(insertItem);
+    adapter.tick?.(100);
+
+    expect(emitted).toHaveLength(2);
+    expect(emitted[1].txnLast).toBe(true);
+    expect(emitted[1].txnId).toBe("txn-9");
+    expect(emitted[0].txnLast).toBe(false);
+  });
+
   it("log adapter flushes WAL entries in order", () => {
     const adapter = createLogBasedAdapter();
     const { runtime } = createRuntime("cdc.log");
@@ -159,6 +198,46 @@ describe("Mode adapters", () => {
     expect(snapshot[0].kind).toBe("INSERT");
     expect(snapshot[0].schemaVersion).toBe(3);
     expect(snapshot[0].after?.status).toBe("seed");
+  });
+
+  it("log adapter preserves transaction metadata", () => {
+    const adapter = createLogBasedAdapter();
+    const { runtime } = createRuntime("cdc.log");
+    adapter.initialise?.(runtime);
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const opA: SourceOp = {
+      t: 100,
+      op: "insert",
+      table: "orders",
+      pk: { id: "ORD-1" },
+      after: { status: "pending" },
+      txn: { id: "txn-1", index: 0, total: 2 },
+    };
+    const opB: SourceOp = {
+      t: 100,
+      op: "insert",
+      table: "order_items",
+      pk: { id: "ORD-1-1" },
+      after: { order_id: "ORD-1", sku: "SKU-1" },
+      txn: { id: "txn-1", index: 1, total: 2, last: true },
+    };
+
+    adapter.applySource?.(opA);
+    adapter.applySource?.(opB);
+    adapter.tick?.(200);
+
+    expect(emitted).toHaveLength(2);
+    expect(emitted[0].txnId).toBe("txn-1");
+    expect(emitted[0].txnLast).toBe(false);
+    expect(emitted[0].txnTotal).toBe(2);
+    expect(emitted[1].txnLast).toBe(true);
+    expect(emitted[1].txnIndex).toBe(1);
   });
 
   it("log adapter emits schema change events and bumps schema version", () => {

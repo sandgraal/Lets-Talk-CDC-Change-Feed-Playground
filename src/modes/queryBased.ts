@@ -31,6 +31,26 @@ const columnToRow = (column: SchemaColumn, commitTs: number) => ({
   __ts: commitTs,
 });
 
+const deriveTxnContext = (
+  txnMeta: SourceOp["txn"] | undefined,
+  commitTs: number,
+  fallbackId = `tx-${commitTs}`,
+) => {
+  const id = txnMeta?.id ?? fallbackId;
+  const hasIndex = typeof txnMeta?.index === "number";
+  const index = hasIndex ? txnMeta!.index : undefined;
+  const total = typeof txnMeta?.total === "number" ? txnMeta.total : undefined;
+  let last: boolean;
+  if (typeof txnMeta?.last === "boolean") {
+    last = txnMeta.last;
+  } else if (hasIndex && typeof total === "number") {
+    last = index! >= total - 1;
+  } else {
+    last = txnMeta ? false : true;
+  }
+  return { id, index, total, last };
+};
+
 export function createQueryBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
@@ -65,18 +85,25 @@ export function createQueryBasedAdapter(): ModeAdapter {
     after: Record<string, unknown> | null,
     commitTs: number,
     txnId: string,
-  ): Event => ({
-    id: nextEventId(),
-    kind,
-    table: tableName,
-    before: before ? { id: pkId, ...before, __ts: commitTs } : undefined,
-    after: after ? { id: pkId, ...after, __ts: commitTs } : undefined,
-    txnId,
-    commitTs,
-    schemaVersion: ensureSchemaVersion(tableName),
-    topic: runtime?.topic ?? `cdc.${tableName}`,
-    partition: 0,
-  });
+    txn?: SourceOp["txn"],
+  ): Event => {
+    const txnMeta = deriveTxnContext(txn, commitTs, txnId);
+    return {
+      id: nextEventId(),
+      kind,
+      table: tableName,
+      before: before ? { id: pkId, ...before, __ts: commitTs } : undefined,
+      after: after ? { id: pkId, ...after, __ts: commitTs } : undefined,
+      txnId: txnMeta.id,
+      txnIndex: txnMeta.index,
+      txnTotal: txnMeta.total,
+      txnLast: txnMeta.last,
+      commitTs,
+      schemaVersion: ensureSchemaVersion(tableName),
+      topic: runtime?.topic ?? `cdc.${tableName}`,
+      partition: 0,
+    };
+  };
 
   const queueSchemaEvent = (
     tableName: string,
@@ -85,13 +112,17 @@ export function createQueryBasedAdapter(): ModeAdapter {
     commitTs: number,
   ) => {
     const { previous, next } = bumpSchemaVersion(tableName);
+     const txn = deriveTxnContext(undefined, commitTs, `schema-${commitTs}`);
     pendingSchemaEvents.push({
       id: nextEventId(),
       kind: action === "ADD_COLUMN" ? "SCHEMA_ADD_COL" : "SCHEMA_DROP_COL",
       table: tableName,
       before: action === "DROP_COLUMN" ? columnToRow(column, commitTs) : undefined,
       after: action === "ADD_COLUMN" ? columnToRow(column, commitTs) : undefined,
-      txnId: `schema-${commitTs}`,
+      txnId: txn.id,
+      txnIndex: txn.index,
+      txnTotal: txn.total,
+      txnLast: txn.last,
       commitTs,
       schemaVersion: next,
       topic: runtime?.topic ?? `cdc.${tableName}`,
@@ -146,6 +177,9 @@ export function createQueryBasedAdapter(): ModeAdapter {
             before: undefined,
             after: { id, ...rest, __ts: __ts ?? 0 },
             txnId: `snapshot-${row.__ts ?? 0}`,
+            txnIndex: 0,
+            txnTotal: 1,
+            txnLast: true,
             commitTs: row.__ts ?? 0,
             schemaVersion: ensureSchemaVersion(tableDef.name),
             topic: runtime?.topic ?? `cdc.${tableDef.name}`,

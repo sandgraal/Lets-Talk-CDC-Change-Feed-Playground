@@ -23,9 +23,17 @@ export class LogEngine extends BaseEngine {
   }
 
   applySourceOp(op: SourceOp) {
+    const txnMeta = op.txn ?? { id: `tx-${op.t}`, index: 0, total: 1, last: true };
+    const tx_id = txnMeta.id ?? `tx-${op.t}`;
+    const tx_index = typeof txnMeta.index === "number" ? txnMeta.index : 0;
+    const tx_total = typeof txnMeta.total === "number" ? txnMeta.total : 1;
+    const tx_last =
+      typeof txnMeta.last === "boolean" ? txnMeta.last : tx_index >= tx_total - 1;
+
     if (op.op === "insert") {
       this.table.set(op.pk.id, {
         id: op.pk.id,
+        table: op.table,
         data: op.after,
         version: 1,
         updated_at_ms: op.t,
@@ -33,7 +41,11 @@ export class LogEngine extends BaseEngine {
       });
       this.wal.push({
         lsn: ++this.lsn,
-        tx_id: `tx-${op.t}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         op: "c",
         pk: op.pk,
         before: null,
@@ -47,6 +59,7 @@ export class LogEngine extends BaseEngine {
 
       this.table.set(op.pk.id, {
         id: op.pk.id,
+        table: cur?.table ?? op.table,
         data: next,
         version: (cur?.version ?? 0) + 1,
         updated_at_ms: op.t,
@@ -55,7 +68,11 @@ export class LogEngine extends BaseEngine {
 
       this.wal.push({
         lsn: ++this.lsn,
-        tx_id: `tx-${op.t}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         op: "u",
         pk: op.pk,
         before,
@@ -68,7 +85,11 @@ export class LogEngine extends BaseEngine {
 
       this.wal.push({
         lsn: ++this.lsn,
-        tx_id: `tx-${op.t}`,
+        tx_id,
+        tx_index,
+        tx_total,
+        tx_last,
+        table: op.table,
         op: "d",
         pk: op.pk,
         before: cur ? cur.data : null,
@@ -86,13 +107,19 @@ export class LogEngine extends BaseEngine {
     for (const record of toEmit) {
       const evt: CdcEvent = {
         source: "demo-db",
-        table: "customers",
+        table: record.table,
         op: record.op,
         pk: record.pk,
         before: record.before,
         after: record.after,
         ts_ms: record.commit_ts_ms,
-        tx: { id: record.tx_id, lsn: record.lsn },
+        tx: {
+          id: record.tx_id,
+          lsn: record.lsn,
+          index: record.tx_index,
+          total: record.tx_total,
+          last: record.tx_last,
+        },
         seq: ++this.seq,
         meta: { method: "log" },
       };

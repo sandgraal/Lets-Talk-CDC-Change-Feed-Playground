@@ -35,6 +35,26 @@ const columnToRow = (column: SchemaColumn, commitTs: number) => ({
   __ts: commitTs,
 });
 
+const deriveTxnContext = (
+  txnMeta: SourceOp["txn"] | undefined,
+  commitTs: number,
+  fallbackId = `tx-${commitTs}`,
+) => {
+  const id = txnMeta?.id ?? fallbackId;
+  const hasIndex = typeof txnMeta?.index === "number";
+  const index = hasIndex ? txnMeta!.index : undefined;
+  const total = typeof txnMeta?.total === "number" ? txnMeta.total : undefined;
+  let last: boolean;
+  if (typeof txnMeta?.last === "boolean") {
+    last = txnMeta.last;
+  } else if (hasIndex && typeof total === "number") {
+    last = index! >= total - 1;
+  } else {
+    last = txnMeta ? false : true;
+  }
+  return { id, index, total, last };
+};
+
 export function createTriggerBasedAdapter(): ModeAdapter {
   let runtime: ModeRuntime | null = null;
   let emitFn: EmitFn | null = null;
@@ -67,18 +87,24 @@ export function createTriggerBasedAdapter(): ModeAdapter {
     before: Record<string, unknown> | null,
     after: Record<string, unknown> | null,
     commitTs: number,
-  ): Event => ({
-    id: nextEventId(),
-    kind,
-    table: op.table,
-    before: before ? { id: op.pk.id, ...before, __ts: commitTs } : undefined,
-    after: after ? { id: op.pk.id, ...after, __ts: commitTs } : undefined,
-    txnId: `tx-${commitTs}`,
-    commitTs,
-    schemaVersion: ensureSchemaVersion(op.table),
-    topic: runtime?.topic ?? `cdc.${op.table}`,
-    partition: 0,
-  });
+  ): Event => {
+    const txn = deriveTxnContext(op.txn, commitTs);
+    return {
+      id: nextEventId(),
+      kind,
+      table: op.table,
+      before: before ? { id: op.pk.id, ...before, __ts: commitTs } : undefined,
+      after: after ? { id: op.pk.id, ...after, __ts: commitTs } : undefined,
+      txnId: txn.id,
+      txnIndex: txn.index,
+      txnTotal: txn.total,
+      txnLast: txn.last,
+      commitTs,
+      schemaVersion: ensureSchemaVersion(op.table),
+      topic: runtime?.topic ?? `cdc.${op.table}`,
+      partition: 0,
+    };
+  };
 
   const recordSchemaChange = (
     tableName: string,
@@ -87,13 +113,17 @@ export function createTriggerBasedAdapter(): ModeAdapter {
     commitTs: number,
   ) => {
     const { previous, next } = bumpSchemaVersion(tableName);
+    const txn = deriveTxnContext(undefined, commitTs, `schema-${commitTs}`);
     const event: Event = {
       id: nextEventId(),
       kind: action === "ADD_COLUMN" ? "SCHEMA_ADD_COL" : "SCHEMA_DROP_COL",
       table: tableName,
       before: action === "DROP_COLUMN" ? columnToRow(column, commitTs) : undefined,
       after: action === "ADD_COLUMN" ? columnToRow(column, commitTs) : undefined,
-      txnId: `schema-${commitTs}`,
+      txnId: txn.id,
+      txnIndex: txn.index,
+      txnTotal: txn.total,
+      txnLast: txn.last,
       commitTs,
       schemaVersion: next,
       topic: runtime?.topic ?? `cdc.${tableName}`,
