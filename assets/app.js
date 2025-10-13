@@ -862,8 +862,7 @@ function maybeShowOnboarding() {
 
 function applyScenarioTemplate(template, options = {}) {
   if (!template) return;
-  officeEasterEgg.seedCount = 0;
-  officeEasterEgg.bankruptcyShown = false;
+  resetOfficeShenanigans();
   state.schema = clone(template.schema || []);
   state.schemaVersion = template.schemaVersion ? Number(template.schemaVersion) : 1;
   state.rows = clone(template.rows || []);
@@ -904,9 +903,7 @@ function startFromScratch() {
   const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
   setOfficeSchemaPreference(loadOffice);
 
-  officeEasterEgg.seedCount = 0;
-  officeEasterEgg.bankruptcyShown = false;
-  officeEasterEgg.megadeskActive = false;
+  resetOfficeShenanigans({ resetMegadesk: true });
 
   if (loadOffice) {
     state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
@@ -1455,13 +1452,31 @@ function emitOfficeStaplerTrail() {
 function toggleMegadeskMode(force) {
   const desired = typeof force === "boolean" ? force : !officeEasterEgg.megadeskActive;
   officeEasterEgg.megadeskActive = desired;
-  if (typeof document !== "undefined" && document.body) {
-    document.body.classList.toggle("megadesk-mode", desired);
+  const body = typeof document !== "undefined" ? document.body : null;
+  if (body) {
+    body.classList.toggle("megadesk-mode", desired);
+  }
+  const officeActive = isOfficeSchemaActive();
+  const useToasts = hasCrudFixFlag();
+  let rewardDisplayed = false;
+  if (desired && officeActive) {
+    launchSchruteBucks();
+    if (!officeEasterEgg.schruteToastShown) {
+      officeEasterEgg.schruteToastShown = true;
+      const reward = "Dwight issued Schrute Bucks for proper desk formation.";
+      rewardDisplayed = true;
+      if (useToasts) {
+        pushToast(reward, "success", { timeout: 3200 });
+      } else {
+        refreshSchemaStatus(reward, "success");
+        setTimeout(() => refreshSchemaStatus(), 3200);
+      }
+    }
   }
   const message = desired ? "Megadesk assembled. Productivity intensifies." : "Megadesk dismantled. Back to one desk.";
-  if (hasCrudFixFlag()) {
+  if (useToasts) {
     pushToast(message, "info", { timeout: 2600 });
-  } else {
+  } else if (!rewardDisplayed) {
     refreshSchemaStatus(message, "success");
     setTimeout(() => refreshSchemaStatus(), 3200);
   }
@@ -1600,7 +1615,7 @@ function handleOfficeBankruptcyReset() {
   state.rows = [];
   state.events = [];
   uiState.selectedEventIndex = null;
-  officeEasterEgg.seedCount = 0;
+  resetOfficeShenanigans();
   save();
   renderTable();
   renderEditor();
@@ -1671,16 +1686,13 @@ function ensureDefaultSchema() {
       state.schema = DEFAULT_SCHEMA.map(col => ({ ...col }));
       state.scenarioId = "default";
       state.schemaVersion = 1;
-      officeEasterEgg.seedCount = 0;
-      officeEasterEgg.bankruptcyShown = false;
+      resetOfficeShenanigans();
       mutated = true;
     } else {
       state.schema = [];
       state.scenarioId = null;
       state.schemaVersion = 1;
-      officeEasterEgg.seedCount = 0;
-      officeEasterEgg.bankruptcyShown = false;
-      officeEasterEgg.megadeskActive = false;
+      resetOfficeShenanigans({ resetMegadesk: true });
     }
   }
   if (!state.rows.length) {
