@@ -42,6 +42,7 @@ import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
 import methodCopyData from "../assets/method-copy.js";
+import tooltipCopyData from "../assets/tooltip-copy.js";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
 const PREFERENCES_KEY = "cdc_comparator_prefs_v1" as const;
@@ -210,6 +211,7 @@ type MethodCopy = {
 };
 
 const BASE_METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
+const TOOLTIP_COPY = tooltipCopyData;
 
 const MAX_TIMELINE_EVENTS = 200;
 const MAX_EVENT_LOG_ROWS = 2000;
@@ -2028,7 +2030,12 @@ export function App() {
           Step +{STEP_MS}ms
         </button>
         {pauseResumeEnabled && (
-          <button type="button" onClick={handleToggleConsumer} className="sim-shell__consumer-toggle">
+          <button
+            type="button"
+            onClick={handleToggleConsumer}
+            className="sim-shell__consumer-toggle"
+            data-tooltip={TOOLTIP_COPY.backlog}
+          >
             {isConsumerPaused ? "Resume apply" : "Pause apply"}
             {eventBusEnabled ? ` (${totalBacklog} queued)` : ""}
           </button>
@@ -2179,20 +2186,20 @@ export function App() {
       <div className="sim-shell__summary" aria-live="polite">
         <ul>
           <li>
-            <strong>Lag spread:</strong> {methodCopy[summary.bestLag.method].label} is leading at
+            <strong data-tooltip={TOOLTIP_COPY.lagSpread}>Lag spread:</strong> {methodCopy[summary.bestLag.method].label} is leading at
             {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
             {summary.lagSpread > 0
               ? ` — ${methodCopy[summary.worstLag.method].label} trails by ${summary.lagSpread.toFixed(0)}ms`
               : " (no spread)"}
           </li>
           <li>
-            <strong>Delete capture:</strong> {methodCopy[summary.lowestDeletes.method].label} is lowest at
+            <strong data-tooltip={TOOLTIP_COPY.deleteCapture}>Delete capture:</strong> {methodCopy[summary.lowestDeletes.method].label} is lowest at
             {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {methodCopy[summary.highestDeletes.method].label}
             {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
           </li>
           {summary.triggerWriteAmplification && (
             <li>
-              <strong>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
+              <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
               {" "}
               {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
             </li>
@@ -2303,22 +2310,28 @@ export function App() {
                     <span>{runtime?.topic ?? `cdc.${method}`}</span>
                   </header>
                   <p>
-                    Backlog <strong>{runtimeSummary?.backlog ?? 0}</strong>
-                    {isConsumerPaused ? " (apply paused)" : ""} · Last offset {runtimeSummary?.lastOffset ?? -1}
+                    <span data-tooltip={TOOLTIP_COPY.backlog}>
+                      Backlog <strong>{runtimeSummary?.backlog ?? 0}</strong>
+                      {isConsumerPaused ? " (apply paused)" : ""}
+                    </span>
+                    {" · "}
+                    <span data-tooltip={TOOLTIP_COPY.offset}>
+                      Last offset {runtimeSummary?.lastOffset ?? -1}
+                    </span>
                   </p>
                   <p>
                     Produced {runtimeSummary?.produced ?? 0} · Consumed {runtimeSummary?.consumed ?? 0}
                   </p>
-                  <p>
+                  <p data-tooltip={TOOLTIP_COPY.lagPercentile}>
                     Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
                   </p>
                   {method === "trigger" && (
-                    <p>
+                    <p data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
                       Write amplification: {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
                     </p>
                   )}
                   {method === "polling" && (
-                    <p className="sim-shell__lane-bus-warning">
+                    <p className="sim-shell__lane-bus-warning" data-tooltip={TOOLTIP_COPY.deleteCapture}>
                       Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
                     </p>
                   )}
@@ -2332,11 +2345,11 @@ export function App() {
                   <>
                   <div>
                     <dt>Poll interval</dt>
-                    <dd data-tooltip="Lower intervals reduce lag but increase source load.">{config.pollIntervalMs} ms</dd>
+                    <dd data-tooltip={TOOLTIP_COPY.pollingInterval}>{config.pollIntervalMs} ms</dd>
                   </div>
                   <div>
                     <dt>Soft deletes</dt>
-                    <dd data-tooltip="Include soft delete markers to surface tombstones." >{config.includeSoftDeletes ? "included" : "ignored"}</dd>
+                    <dd data-tooltip={TOOLTIP_COPY.pollingSoftDeletes}>{config.includeSoftDeletes ? "included" : "ignored"}</dd>
                   </div>
                 </>
                   );
@@ -2347,15 +2360,15 @@ export function App() {
                 <>
                   <div>
                     <dt>Extractor interval</dt>
-                    <dd data-tooltip="Longer intervals lower reader load but add latency.">{config.extractIntervalMs} ms</dd>
+                    <dd data-tooltip={TOOLTIP_COPY.triggerExtractorInterval}>{config.extractIntervalMs} ms</dd>
                   </div>
                   <div>
                     <dt>Trigger overhead</dt>
-                    <dd data-tooltip="Injected synchronous latency per source write.">{config.triggerOverheadMs} ms</dd>
+                    <dd data-tooltip={TOOLTIP_COPY.triggerOverhead}>{config.triggerOverheadMs} ms</dd>
                   </div>
                   <div>
                     <dt>Write amplification</dt>
-                    <dd data-tooltip="Additional audit writes compared to source operations.">
+                    <dd data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
                       {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
                     </dd>
                   </div>
@@ -2367,7 +2380,7 @@ export function App() {
                 return (
                 <div>
                   <dt>Fetch interval</dt>
-                  <dd data-tooltip="Shorter intervals decrease lag but use more resources.">{config.fetchIntervalMs} ms</dd>
+                  <dd data-tooltip={TOOLTIP_COPY.logFetchInterval}>{config.fetchIntervalMs} ms</dd>
                 </div>
                 );
               })()}

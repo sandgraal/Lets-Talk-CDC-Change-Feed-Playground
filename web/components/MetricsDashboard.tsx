@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import tooltipCopyData from "../../assets/tooltip-copy.js";
 
 export type MetricsDashboardLane = {
   id: string;
@@ -24,6 +25,7 @@ const formatLag = (value: number) =>
   Number.isFinite(value) ? `${Math.round(value)}ms` : "—";
 
 export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes, renderSchemaWalkthrough }) => {
+  const tooltips = tooltipCopyData;
   const totals = lanes.reduce(
     (acc, lane) => {
       acc.produced += lane.produced;
@@ -64,26 +66,26 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes, renderSchem
               </div>
               <div>
                 <dt>Backlog</dt>
-                <dd>{formatNumber(lane.backlog)}</dd>
+                <dd data-tooltip={tooltips.backlog}>{formatNumber(lane.backlog)}</dd>
               </div>
               <div>
                 <dt>Lag p50</dt>
-                <dd>{formatLag(lane.lagP50)}</dd>
+                <dd data-tooltip={tooltips.lagPercentile}>{formatLag(lane.lagP50)}</dd>
               </div>
               <div>
                 <dt>Lag p95</dt>
-                <dd>{formatLag(lane.lagP95)}</dd>
+                <dd data-tooltip={tooltips.lagPercentile}>{formatLag(lane.lagP95)}</dd>
               </div>
               {typeof lane.missedDeletes === "number" && (
                 <div>
                   <dt>Missed deletes</dt>
-                  <dd>{formatNumber(lane.missedDeletes)}</dd>
+                  <dd data-tooltip={tooltips.deleteCapture}>{formatNumber(lane.missedDeletes)}</dd>
                 </div>
               )}
               {typeof lane.writeAmplification === "number" && (
                 <div>
                   <dt>Write amplification</dt>
-                  <dd>{lane.writeAmplification.toFixed(1)}x</dd>
+                  <dd data-tooltip={tooltips.triggerWriteAmplification}>{lane.writeAmplification.toFixed(1)}x</dd>
                 </div>
               )}
             </dl>

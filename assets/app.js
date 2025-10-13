@@ -3,6 +3,7 @@
 // State is in-memory + localStorage snapshot.
 
 import crypto from "crypto";
+import tooltipCopy from "./tooltip-copy.js";
 
 const STORAGE_KEYS = Object.freeze({
   state: "cdc_playground",
@@ -341,13 +342,20 @@ const GUIDED_TOUR_STEPS = [
     id: "workspace-events",
     selector: "#change-feed",
     title: "Stream events",
-    description: "Trigger inserts, updates, deletes, or schema changes here. Watch the event log classify snapshots and schema updates.",
+    description: "Trigger inserts, updates, deletes, or schema changes here. Watch offsets climb and tombstones land when deletes fire.",
   },
   {
     id: "workspace-schema-demo",
     selector: ".schema-demo-actions",
     title: "Schema walkthrough",
     description: "Use these helpers to add or drop the demo column while events stream. Schema change events land alongside CDC operations.",
+  },
+  {
+    id: "comparator-preset",
+    selector: ".sim-shell__preset-row",
+    title: "Pick a vendor preset",
+    timeout: TOUR_COMPARATOR_TIMEOUT,
+    description: "Choose the pipeline you want to mirror. The badges reveal source, capture, transport, and sink terminology for the walkthrough.",
   },
   {
     id: "comparator-callouts",
@@ -2175,6 +2183,15 @@ function renderComparatorFeedback(detail) {
   const lowestDeletes = summary.lowestDeletes;
   const highestDeletes = summary.highestDeletes;
   const orderingIssues = Array.isArray(summary.orderingIssues) ? summary.orderingIssues : [];
+  const lagTooltipAttr = tooltipCopy?.lagPercentile
+    ? ` data-tooltip="${escapeHtml(tooltipCopy.lagPercentile)}"`
+    : "";
+  const deleteTooltipAttr = tooltipCopy?.deleteCapture
+    ? ` data-tooltip="${escapeHtml(tooltipCopy.deleteCapture)}"`
+    : "";
+  const triggerTooltipAttr = tooltipCopy?.triggerWriteAmplification
+    ? ` data-tooltip="${escapeHtml(tooltipCopy.triggerWriteAmplification)}"`
+    : "";
 
   const lagText = bestLag && worstLag
     ? `${escapeHtml(bestLag.label)} leads at ${Math.round(bestLag.metrics.lagMs)}ms` +
@@ -2240,6 +2257,10 @@ function renderComparatorFeedback(detail) {
     `
     : "";
 
+  const triggerLine = summary.triggerWriteAmplification
+    ? `<li><strong${triggerTooltipAttr}>Trigger overhead:</strong> ${escapeHtml(summary.triggerWriteAmplification.label)} at ${(summary.triggerWriteAmplification.value ?? 0).toFixed(1)}x</li>`
+    : "";
+
   trackEvent("comparator.summary.received", {
     scenario: scenarioName,
     label: scenarioLabel,
@@ -2253,8 +2274,9 @@ function renderComparatorFeedback(detail) {
     <p class="comparator-feedback__meta">${isLive ? "Live workspace" : "Scenario preview"}</p>
     ${presetSection}
     <ul>
-      <li><strong>Lag:</strong> ${lagText}</li>
-      <li><strong>Deletes:</strong> ${deleteText}</li>
+      <li><strong${lagTooltipAttr}>Lag:</strong> ${lagText}</li>
+      <li><strong${deleteTooltipAttr}>Deletes:</strong> ${deleteText}</li>
+      ${triggerLine}
       <li><strong>Ordering:</strong> ${orderingText}</li>
     </ul>
   `;
