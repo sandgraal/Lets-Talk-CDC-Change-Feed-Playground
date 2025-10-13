@@ -5,6 +5,12 @@ type LaneDiffOverlayProps = {
   diff: LaneDiffResult | null;
   scenarioName: string;
   laneId?: string;
+  schemaStatus?: {
+    version: number;
+    expectedVersion: number;
+    hasColumn: boolean;
+    columnName: string;
+  };
 };
 
 function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
@@ -22,15 +28,24 @@ function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
   return `Out-of-order ${op} pk=${pk} (expected ${expectedIndex ?? "?"} before actual ${actualIndex ?? "?"})`;
 }
 
-export function LaneDiffOverlay({ diff, scenarioName, laneId }: LaneDiffOverlayProps) {
+export function LaneDiffOverlay({ diff, scenarioName, laneId, schemaStatus }: LaneDiffOverlayProps) {
   if (!diff) return null;
 
   const { totals, issues, lag } = diff;
   const hasIssues = totals.missing > 0 || totals.extra > 0 || totals.ordering > 0;
   const surfaceIssues = issues.slice(0, 6);
+  let schemaNotice: string | null = null;
+
+  if (schemaStatus) {
+    if (!schemaStatus.hasColumn) {
+      schemaNotice = `${schemaStatus.columnName} column missing in destination`;
+    } else if (schemaStatus.version < schemaStatus.expectedVersion) {
+      schemaNotice = `Schema behind: v${schemaStatus.version} (expected v${schemaStatus.expectedVersion})`;
+    }
+  }
 
   if (!hasIssues && lag.max <= 0) {
-    return null;
+    if (!schemaNotice) return null;
   }
 
   return (
@@ -63,6 +78,7 @@ export function LaneDiffOverlay({ diff, scenarioName, laneId }: LaneDiffOverlayP
           </span>
         )}
       </div>
+      {schemaNotice && <p className="sim-shell__lane-diff-schema">{schemaNotice}</p>}
 
       {(surfaceIssues.length > 0 || lag.samples.length > 0) && (
         <details

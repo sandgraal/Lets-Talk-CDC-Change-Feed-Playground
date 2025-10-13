@@ -1110,11 +1110,13 @@ export function App() {
     return maxVersion;
   }, [activeMethods, schemaLaneState]);
 
+  const scenarioHasSchema = useMemo(() => Boolean(scenario.tags?.includes("schema")), [scenario.tags]);
+
   const schemaStatusText = useMemo(() => {
-    if (!scenario.tags?.includes("schema")) return null;
+    if (!scenarioHasSchema) return null;
     const prefix = `v${schemaMaxVersion}`;
     return schemaColumnPresent ? `${prefix} · column present` : `${prefix} · column absent`;
-  }, [schemaColumnPresent, schemaMaxVersion, scenario.tags]);
+  }, [schemaColumnPresent, schemaMaxVersion, scenarioHasSchema]);
 
   useEffect(() => {
     schemaCommitRef.current = 0;
@@ -1713,11 +1715,24 @@ export function App() {
         const label = methodCopy[method].label;
         const totals = diff?.totals ?? { missing: 0, extra: 0, ordering: 0 };
         const maxLag = diff?.lag?.max ?? 0;
-        const chips: Array<{ key: string; text: string; tone: "missing" | "extra" | "ordering" | "lag" | "ok" }> = [];
+        const chips: Array<{ key: string; text: string; tone: "missing" | "extra" | "ordering" | "lag" | "schema" | "ok" }> = [];
         if (totals.missing > 0) chips.push({ key: "missing", text: `${totals.missing} missing`, tone: "missing" });
         if (totals.extra > 0) chips.push({ key: "extra", text: `${totals.extra} extra`, tone: "extra" });
         if (totals.ordering > 0) chips.push({ key: "ordering", text: `${totals.ordering} ordering`, tone: "ordering" });
         if (maxLag > 0) chips.push({ key: "lag", text: `${Math.round(maxLag)}ms lag`, tone: "lag" });
+        if (scenarioHasSchema) {
+          const snapshot = laneDestinations.get(method);
+          const schemaVersion = snapshot?.schemaVersion ?? 1;
+          if (snapshot && !snapshot.hasSchemaColumn) {
+            chips.push({ key: "schema-missing", text: `${SCHEMA_DEMO_COLUMN.name} missing`, tone: "schema" });
+          } else if (schemaVersion < schemaMaxVersion) {
+            chips.push({
+              key: "schema-behind",
+              text: `Schema v${schemaVersion}/${schemaMaxVersion}`,
+              tone: "schema",
+            });
+          }
+        }
         if (chips.length === 0) {
           chips.push({ key: "ok", text: "Aligned", tone: "ok" });
         }
@@ -1730,7 +1745,7 @@ export function App() {
           hasDetails,
         };
       }),
-    [activeMethods, laneDiffs, methodCopy],
+    [activeMethods, laneDestinations, laneDiffs, methodCopy, schemaMaxVersion, scenarioHasSchema],
   );
 
   useEffect(() => {
@@ -2600,6 +2615,22 @@ export function App() {
             destinationSnapshot?.rows.slice(0, MAX_DESTINATION_ROWS) ?? [];
           const destinationTruncated =
             (destinationSnapshot?.rows.length ?? 0) > destinationRows.length;
+          const schemaStatus =
+            scenarioHasSchema && destinationSnapshot
+              ? {
+                  version: destinationSnapshot.schemaVersion,
+                  expectedVersion: schemaMaxVersion,
+                  hasColumn: destinationSnapshot.hasSchemaColumn,
+                  columnName: SCHEMA_DEMO_COLUMN.name,
+                }
+              : scenarioHasSchema
+                ? {
+                    version: 0,
+                    expectedVersion: schemaMaxVersion,
+                    hasColumn: false,
+                    columnName: SCHEMA_DEMO_COLUMN.name,
+                  }
+                : undefined;
           const writeAmplificationValue =
             method === "trigger"
               ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification ?? 0
@@ -2670,7 +2701,12 @@ export function App() {
                 <MetricsStrip {...metrics} />
               </div>
 
-              <LaneDiffOverlay diff={diff} scenarioName={scenario.name} laneId={method} />
+              <LaneDiffOverlay
+                diff={diff}
+                scenarioName={scenario.name}
+                laneId={method}
+                schemaStatus={schemaStatus}
+              />
 
               {eventBusEnabled && (
                 <section

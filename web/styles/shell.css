@@ -426,6 +426,10 @@
   background: rgba(37, 99, 235, 0.12);
   color: #1d4ed8;
 }
+.sim-shell__lane-diff-chip--schema {
+  background: rgba(16, 185, 129, 0.15);
+  color: #0f766e;
+}
 .sim-shell__lane-diff-chip--ok {
   background: rgba(16, 185, 129, 0.12);
   color: #047857;
@@ -462,6 +466,12 @@
   padding-left: 1.1rem;
   display: grid;
   gap: 0.3rem;
+}
+
+.sim-shell__lane-diff-schema {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #0f766e;
 }
 
 .sim-shell__method-toggle {
