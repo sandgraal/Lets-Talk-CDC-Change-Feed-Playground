@@ -10,7 +10,7 @@
     "database.dbname": "demo",
     "database.server.name": "dbserver1",
     "schema.include.list": "public",
-    "table.include.list": "public.customers",
+    "table.include.list": "public.customers,public.orders,public.order_items",
     "tombstones.on.delete": "true",
     "plugin.name": "pgoutput",
     "slot.name": "cdc_slot",

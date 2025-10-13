@@ -3,7 +3,11 @@ export function renderHtml(report, events = []) {
   const recent = events.slice(-10);
   const recentMarkup = recent.length
     ? recent
-        .map(evt => `<li>${evt.op.toUpperCase()} pk=${evt.pk ?? "∅"} ts=${evt.ts_ms}</li>`)
+        .map(evt => {
+          const pk = typeof evt.pk === "object" ? evt.pk?.id : evt.pk;
+          const table = evt.table ? ` table=${evt.table}` : "";
+          return `<li>${evt.op.toUpperCase()} pk=${pk ?? "∅"}${table} ts=${evt.ts_ms}</li>`;
+        })
         .join("")
     : "<li>No events captured yet.</li>";
 

@@ -6,7 +6,11 @@ import { diffLane } from "./diff.js";
 import { renderHtml } from "./report.js";
 
 const brokers = (process.env.KAFKA_BROKERS || "localhost:9092").split(",");
-const topic = process.env.TOPIC || "dbserver1.public.customers";
+const topicPrefix = process.env.TOPIC_PREFIX || "dbserver1.public";
+const explicitTopics = (process.env.TOPIC_LIST || process.env.TOPIC || "")
+  .split(",")
+  .map(value => value.trim())
+  .filter(Boolean);
 const scenarioPath = process.env.SCENARIO_PATH || path.resolve(process.cwd(), "../scenario.json");
 
 if (!fs.existsSync(scenarioPath)) {
@@ -17,6 +21,18 @@ if (!fs.existsSync(scenarioPath)) {
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));
 const expectedOps = Array.isArray(scenario.ops) ? scenario.ops : [];
 const expectedDeletes = expectedOps.filter(op => op.op === "delete").length;
+const expectedTables = new Set(
+  expectedOps
+    .map(op => op.table)
+    .filter(table => typeof table === "string" && table.length)
+    .map(table => table.toLowerCase()),
+);
+
+const topics = explicitTopics.length
+  ? explicitTopics
+  : expectedTables.size
+    ? [...expectedTables].map(table => `${topicPrefix}.${table}`)
+    : [`${topicPrefix}.customers`];
 
 const kafka = new Kafka({ clientId: "verifier", brokers });
 const consumer = kafka.consumer({ groupId: "verifier" });
@@ -65,19 +81,51 @@ function serveReport() {
   });
 }
 
+(function attachProcessHandlers() {
+  const shutdown = async () => {
+    try {
+      await consumer.disconnect();
+    } catch (err) {
+      console.warn("verifier shutdown warning", err);
+    }
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+})();
+
+function deriveTableFromTopic(topicName) {
+  if (!topicName) return "";
+  const parts = topicName.split(".");
+  return parts.length ? parts[parts.length - 1]?.toLowerCase() ?? "" : "";
+}
+
 (async () => {
   await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: true });
+  for (const t of topics) {
+    console.log(`subscribing to topic ${t}`);
+    await consumer.subscribe({ topic: t, fromBeginning: true });
+  }
   await consumer.run({
-    eachMessage: async ({ message }) => {
+    eachMessage: async ({ message, topic: msgTopic }) => {
       try {
         const val = message.value?.toString();
         if (!val) return;
         const parsed = JSON.parse(val);
-        const op = parsed.op === "c" ? "c" : parsed.op === "u" ? "u" : parsed.op === "d" ? "d" : "r";
-        const lsn = parsed?.source?.lsn || parsed?.source?.sequence || null;
-        const pk = (parsed.after?.id ?? parsed.before?.id ?? parsed?.payload?.op ?? "") || null;
-        received.push({ op, ts_ms: parsed.ts_ms || Date.now(), tx: { lsn }, pk });
+        const envelope = parsed?.payload && typeof parsed.payload === "object" ? parsed.payload : parsed;
+        const opCode = envelope.op;
+        if (!opCode || !["c", "u", "d", "r"].includes(opCode)) return;
+        const source = envelope.source || {};
+        const table = (source.table || deriveTableFromTopic(msgTopic) || "").toLowerCase();
+        if (expectedTables.size && table && !expectedTables.has(table)) {
+          return;
+        }
+        const pkValue = envelope.after?.id ?? envelope.before?.id ?? envelope.key ?? null;
+        const pk = pkValue != null ? String(pkValue) : null;
+        const op = opCode === "c" ? "c" : opCode === "u" ? "u" : opCode === "d" ? "d" : "r";
+        if (op === "r") return;
+        const ts_ms = envelope.ts_ms || parsed.ts_ms || Date.now();
+        const lsn = source.lsn || source.sequence || null;
+        received.push({ op, table, ts_ms, tx: { lsn }, pk: { id: pk } });
       } catch (err) {
         console.warn("verifier parse error", err);
       }

@@ -11,5 +11,5 @@
 - Support macro update: remind agents to ask whether Apply-on-commit is enabled when troubleshooting transaction drift.
 
 ## QA / Verification
-- CI now runs the full Playwright comparator smoke. Manual spot check: run `npm run test:e2e` locally after `npm run build`.
-- Add a quick harness sanity sweep (`make status`) if demoing with external datasets.
+- CI now runs the full Playwright comparator smoke plus the dockerised harness (`npm run ci:harness`) to validate the Orders + Items Transactions scenario end-to-end.
+- For manual validation, run `npm run test:e2e` followed by `SCENARIO=orders-transactions make up` and `make status` if you want to observe the Debezium stream locally.

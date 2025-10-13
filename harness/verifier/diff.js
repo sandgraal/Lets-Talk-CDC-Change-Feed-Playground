@@ -7,6 +7,7 @@ export function diffLane(method, scenarioOps, events) {
   missing.forEach(item => {
     issues.push({
       type: "missing",
+      table: item.table,
       op: item.op,
       pk: item.pk,
       expectedIndex: item.index,
@@ -16,6 +17,7 @@ export function diffLane(method, scenarioOps, events) {
   extra.forEach(item => {
     issues.push({
       type: "extra",
+      table: item.table,
       op: item.op,
       pk: item.pk,
       actualIndex: item.index,
@@ -66,9 +68,11 @@ function buildExpected(ops) {
     .map((op, index) => {
       const code = mapOp(op.op);
       if (!code) return null;
+      const table = op.table ? String(op.table) : "";
       const pk = op.pk?.id != null ? String(op.pk.id) : "";
       return {
-        key: `${code}::${pk}`,
+        key: `${table}::${code}::${pk}`,
+        table,
         op: code,
         pk,
         index,
@@ -83,9 +87,11 @@ function buildActual(events) {
     .map((event, index) => {
       const code = event.op;
       if (!code || !["c", "u", "d"].includes(code)) return null;
+      const table = event.table ? String(event.table) : "";
       const pk = event.pk?.id != null ? String(event.pk.id) : "";
       return {
-        key: `${code}::${pk}`,
+        key: `${table}::${code}::${pk}`,
+        table,
         op: code,
         pk,
         index,
@@ -146,13 +152,16 @@ function bucketByKey(entries) {
 
 function detectOrderingIssues(matched) {
   const issues = [];
-  const ordered = [...matched].sort((a, b) => a.actual.index - b.actual.index);
+  const ordered = [...matched].sort((a, b) => a.actual.index - b.actual.index || a.actual.table.localeCompare(b.actual.table));
   let lastExpectedIndex = -Infinity;
+  let lastTable = "";
 
   ordered.forEach(pair => {
-    if (pair.expected.index < lastExpectedIndex) {
+    const sameTable = pair.actual.table === lastTable;
+    if (sameTable && pair.expected.index < lastExpectedIndex) {
       issues.push({
         type: "ordering",
+        table: pair.expected.table,
         op: pair.expected.op,
         pk: pair.expected.pk,
         expectedIndex: pair.expected.index,
@@ -162,6 +171,7 @@ function detectOrderingIssues(matched) {
       });
     } else {
       lastExpectedIndex = pair.expected.index;
+      lastTable = pair.actual.table;
     }
   });
 
