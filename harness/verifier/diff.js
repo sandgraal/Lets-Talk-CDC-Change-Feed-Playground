@@ -88,7 +88,7 @@ function buildActual(events) {
       const code = event.op;
       if (!code || !["c", "u", "d"].includes(code)) return null;
       const table = event.table ? String(event.table) : "";
-      const pk = event.pk?.id != null ? String(event.pk.id) : "";
+      const pk = event.pk != null ? String(event.pk) : "";
       return {
         key: `${table}::${code}::${pk}`,
         table,

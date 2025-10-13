@@ -85,6 +85,22 @@ async function main() {
     });
 
     console.log(`[harness] PASS events=${report.total_events} maxLag=${report.max_lag_ms}`);
+
+    if (process.env.HARNESS_REPORT_JSON) {
+      const jsonPath = path.resolve(projectRoot, process.env.HARNESS_REPORT_JSON);
+      fs.mkdirSync(path.dirname(jsonPath), { recursive: true });
+      fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2));
+    }
+
+    if (process.env.HARNESS_REPORT_HTML) {
+      const htmlResponse = await fetch(reportUrl.replace("/report", "/"));
+      if (htmlResponse.ok) {
+        const html = await htmlResponse.text();
+        const htmlPath = path.resolve(projectRoot, process.env.HARNESS_REPORT_HTML);
+        fs.mkdirSync(path.dirname(htmlPath), { recursive: true });
+        fs.writeFileSync(htmlPath, html);
+      }
+    }
   } finally {
     await run("docker", ["compose", ...composeArgs, "down", "--volumes"]);
   }
