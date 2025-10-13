@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lets Talk CDC – Change Feed Playground</title>
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
+
 <body>
   <header class="topbar">
     <div class="brand">
@@ -13,12 +15,8 @@
       <span class="brand-title">Change Feed Playground</span>
     </div>
     <div class="topbar-actions">
-      <a
-        class="badge badge-hacktoberfest"
-        href="https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a class="badge badge-hacktoberfest" href="https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground"
+        target="_blank" rel="noopener noreferrer">
         <span class="badge-hacktoberfest__glow" aria-hidden="true"></span>
         <span class="badge-hacktoberfest__spark" aria-hidden="true">★</span>
         Hacktoberfest 2025 Submission
@@ -28,8 +26,10 @@
         <input type="file" id="importFile" accept="application/json" />
         <span>Import Scenario</span>
       </label>
-      <button id="btnShareLink" type="button" disabled>Copy Share Link</button>
-      <button id="btnReset" class="danger" type="button">Reset</button>
+      <div class="topbar-buttons">
+        <button id="btnShareLink" type="button" disabled>Copy Share Link</button>
+        <button id="btnReset" class="danger" type="button">Reset</button>
+      </div>
     </div>
   </header>
 
@@ -43,7 +43,8 @@
       <div class="hero-copy">
         <span class="eyebrow">Plan · Practice · Share</span>
         <h1>Prototype change data capture without leaving the browser.</h1>
-        <p class="hero-lead">Create a lightweight schema, act on rows, and watch the resulting change feed update in real time.</p>
+        <p class="hero-lead">Create a lightweight schema, act on rows, and watch the resulting change feed update in
+          real time.</p>
       </div>
       <div class="hero-templates" aria-labelledby="templateTitle">
         <header class="hero-templates-header">
@@ -101,7 +102,8 @@
     <section class="workspace" id="playground">
       <aside class="sidebar" aria-labelledby="learningTitle">
         <h2 id="learningTitle">Learning path</h2>
-        <p class="sidebar-intro">Work through each step to understand how change data capture scenarios are assembled.</p>
+        <p class="sidebar-intro">Work through each step to understand how change data capture scenarios are assembled.
+        </p>
         <ol class="learning-steps" id="learningSteps">
           <li>
             <button type="button" class="learning-step" data-step="schema" data-target="#schema">
@@ -144,7 +146,8 @@
             <span class="step-badge">Step 1</span>
             <div>
               <h2>Model your schema</h2>
-              <p class="card-intro">Add columns, choose types, and mark primary keys so downstream operations know how to locate rows.</p>
+              <p class="card-intro">Add columns, choose types, and mark primary keys so downstream operations know how
+                to locate rows.</p>
             </div>
           </header>
           <div class="schema">
@@ -224,7 +227,8 @@
             <button id="emitSnapshot" type="button">Emit Snapshot</button>
             <button id="clearEvents" type="button">Clear events</button>
             <label class="checkbox"><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
-            <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on updates/deletes</label>
+            <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on
+              updates/deletes</label>
           </div>
           <div class="filter-actions">
             <label class="checkbox"><input type="checkbox" id="filterC" checked /> Inserts</label>
@@ -273,11 +277,13 @@
     <span>Built for Appwrite Hacktoberfest · Deployed on <strong>Sites</strong></span>
   </footer>
 
-  <div id="onboardingOverlay" class="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" hidden>
+  <div id="onboardingOverlay" class="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle"
+    hidden>
     <div class="onboarding-dialog" tabindex="-1">
       <button type="button" class="onboarding-close" id="onboardingClose" aria-label="Close onboarding">x</button>
       <h2 id="onboardingTitle">Welcome to the CDC Change Feed Playground</h2>
-      <p class="onboarding-lead">Prototype change stream scenarios from your browser and share them with collaborators.</p>
+      <p class="onboarding-lead">Prototype change stream scenarios from your browser and share them with collaborators.
+      </p>
       <ol class="onboarding-steps">
         <li><strong>Model</strong> your table: define columns and choose primary keys.</li>
         <li><strong>Populate</strong> rows: seed realistic data or insert your own samples.</li>
@@ -296,9 +302,11 @@
     </div>
   </div>
 
-  <div id="scenarioPreviewModal" class="preview-modal" role="dialog" aria-modal="true" aria-labelledby="scenarioPreviewTitle" hidden>
+  <div id="scenarioPreviewModal" class="preview-modal" role="dialog" aria-modal="true"
+    aria-labelledby="scenarioPreviewTitle" hidden>
     <div class="preview-modal__dialog">
-      <button type="button" class="preview-modal__close" id="scenarioPreviewClose" aria-label="Close scenario preview">×</button>
+      <button type="button" class="preview-modal__close" id="scenarioPreviewClose"
+        aria-label="Close scenario preview">×</button>
       <h3 id="scenarioPreviewTitle"></h3>
       <p id="scenarioPreviewDescription" class="preview-modal__description"></p>
       <div id="scenarioPreviewTags" class="preview-modal__tags" aria-label="Scenario tags"></div>
@@ -349,4 +357,5 @@
   <script src="assets/tooltips.js"></script>
   <script src="assets/ui-shell-loader.js"></script>
 </body>
+
 </html>
