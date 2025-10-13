@@ -25,7 +25,8 @@
 - Schedule mid-sprint review to demo Event Log, Pause/Resume, and Query mode warning behaviors. 🔄
 
 ## Near-Term Priorities (handoff)
-- Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries.
+- Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries. ✅ Lane checks panel now surfaces diff + lag chips; next up is threshold tuning and tests.
 - ✅ Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
 - Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`). 🔄 scaffold Vitest under `/src/test`.
+- Todo: add Storybook visual regression notes for lane checks / diff overlay to keep UI states in sync with docs.
 - Begin P1 work: Trigger mode walkthrough + schema change demo once adapter metrics solid.

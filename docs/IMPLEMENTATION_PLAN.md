@@ -137,16 +137,17 @@ export type Metrics = {
    - TODO: extend adapters and UI to preserve txn boundaries, add apply-on-commit toggle.
 
 9. **Vendor presets (labels only) (P1)**
-   - Presets dropdown: MySQL + Debezium + Kafka; Postgres Logical Decoding + Kafka; SQL Server CDC + ETL; Oracle GoldenGate; MongoDB Change Streams (informational).
-   - Changes labels/icons/tooltips; mechanics unchanged.
-   - Acceptance: switching presets updates terminology across UI + glossary.
+   - ✅ Presets dropdown: MySQL + Debezium + Kafka; Postgres Logical Decoding + Kafka; SQL Server CDC + ETL; Oracle GoldenGate; MongoDB Change Streams (informational).
+   - ✅ Pipeline badges summarise Source → Capture → Transport → Sink terminology with preset-specific tooltips and external docs links.
+   - Acceptance: switching presets updates terminology across UI + glossary. (Met – comparator + guided tour mirror copy.)
 
 10. **Metrics & Lag dashboard (P1)**
-    - Metrics plumbing ready (shared `MetricsStore`). Need `/src/ui/components/Metrics.tsx` to visualise produced/consumed/backlog and lag percentiles.
+    - ✅ Metrics plumbing ready (shared `MetricsStore`). Dashboard visualises produced/consumed/backlog and lag percentiles per lane.
+    - ✅ Lane “checks” summary surfaces diff overlays (missing/extra/ordering/lag) with quick inspect controls tied to telemetry.
 
 11. **Guided tooltips + glossary (P1)**
-    - One-time walkthrough: Start CDC -> Snapshot -> Tailing. Differences per mode explained inline.
-    - Hover terms: "transaction log", "polling", "tombstone", "offset", "backlog".
+    - ✅ One-time walkthrough: Start CDC -> Snapshot -> Tailing. Differences per mode explained inline, now aligned with preset copy.
+    - ✅ Hover terms: "transaction log", "polling", "tombstone", "offset", "backlog" (centralised in shared tooltip copy).
     - Acceptance: tooltips can be toggled off; stored in localStorage.
 
 12. **High-volume generator + replay (optional P2)**
@@ -176,6 +177,7 @@ export type Metrics = {
 - Counters: produced, consumed, backlog, `missedDeletes`, `writeAmplification`, `snapshotRows`, errors.
 - Lag: produce time = `event.commitTs`; consume time = when applied; lag = now - commitTs; maintain rolling p50/p95 (simple reservoir).
 - Developer toggle to emit these to Appwrite/console in dev.
+- Comparator CTA emits `comparator.overlay.inspect` when lane checks drill into diff details (mirrors `comparator.diff.opened`).
 
 ## Testing
 - **Unit** (`/src/test/unit` – to author):

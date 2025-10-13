@@ -4,6 +4,7 @@ import { track } from "../telemetry";
 type LaneDiffOverlayProps = {
   diff: LaneDiffResult | null;
   scenarioName: string;
+  laneId?: string;
 };
 
 function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
@@ -21,7 +22,7 @@ function formatIssueLabel(issue: LaneDiffResult["issues"][number]): string {
   return `Out-of-order ${op} pk=${pk} (expected ${expectedIndex ?? "?"} before actual ${actualIndex ?? "?"})`;
 }
 
-export function LaneDiffOverlay({ diff, scenarioName }: LaneDiffOverlayProps) {
+export function LaneDiffOverlay({ diff, scenarioName, laneId }: LaneDiffOverlayProps) {
   if (!diff) return null;
 
   const { totals, issues, lag } = diff;
@@ -65,6 +66,7 @@ export function LaneDiffOverlay({ diff, scenarioName }: LaneDiffOverlayProps) {
 
       {(surfaceIssues.length > 0 || lag.samples.length > 0) && (
         <details
+          id={laneId ? `lane-diff-${laneId}` : undefined}
           className="sim-shell__lane-diff-details"
           onToggle={event => {
             if ((event.target as HTMLDetailsElement).open) {

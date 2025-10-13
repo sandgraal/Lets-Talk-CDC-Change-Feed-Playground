@@ -1481,6 +1481,33 @@ export function App() {
     }),
   [activeMethods, laneRuntimeSummaries, methodCopy]);
 
+  const laneOverlaySummary = useMemo(
+    () =>
+      activeMethods.map(method => {
+        const diff = laneDiffs.get(method);
+        const label = methodCopy[method].label;
+        const totals = diff?.totals ?? { missing: 0, extra: 0, ordering: 0 };
+        const maxLag = diff?.lag?.max ?? 0;
+        const chips: Array<{ key: string; text: string; tone: "missing" | "extra" | "ordering" | "lag" | "ok" }> = [];
+        if (totals.missing > 0) chips.push({ key: "missing", text: `${totals.missing} missing`, tone: "missing" });
+        if (totals.extra > 0) chips.push({ key: "extra", text: `${totals.extra} extra`, tone: "extra" });
+        if (totals.ordering > 0) chips.push({ key: "ordering", text: `${totals.ordering} ordering`, tone: "ordering" });
+        if (maxLag > 0) chips.push({ key: "lag", text: `${Math.round(maxLag)}ms lag`, tone: "lag" });
+        if (chips.length === 0) {
+          chips.push({ key: "ok", text: "Aligned", tone: "ok" });
+        }
+        const hasDetails =
+          Boolean(diff?.issues.length) || (diff?.lag?.samples?.length ?? 0) > 0 || (diff?.lag?.max ?? 0) > 0;
+        return {
+          method,
+          label,
+          chips,
+          hasDetails,
+        };
+      }),
+    [activeMethods, laneDiffs, methodCopy],
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(
@@ -1522,6 +1549,20 @@ export function App() {
       methods: activeMethods,
     });
   }, [summary, scenario, activeMethods, methodCopy]);
+
+  const handleLaneOverlayInspect = useCallback(
+    (method: MethodOption) => {
+      track("comparator.overlay.inspect", { method, scenario: scenario.name });
+      const details = document.getElementById(`lane-diff-${method}`);
+      if (details instanceof HTMLDetailsElement) {
+        details.open = true;
+        details.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (details) {
+        details.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    },
+    [scenario.name],
+  );
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -2241,6 +2282,38 @@ export function App() {
         </div>
       )}
 
+      {laneOverlaySummary.length > 0 && (
+        <section className="sim-shell__overlay-summary" aria-label="Lane checks">
+          <header>
+            <h3>Lane checks</h3>
+            <p>Quick glance at diff findings and lag hotspots across active capture methods.</p>
+          </header>
+          <ul>
+            {laneOverlaySummary.map(entry => (
+              <li key={entry.method} className="sim-shell__overlay-row">
+                <div className="sim-shell__overlay-label">{entry.label}</div>
+                <div className="sim-shell__overlay-chips">
+                  {entry.chips.map(chip => (
+                    <span key={`${entry.method}-${chip.key}`} className={`sim-shell__overlay-chip sim-shell__overlay-chip--${chip.tone}`}>
+                      {chip.text}
+                    </span>
+                  ))}
+                </div>
+                {entry.hasDetails && (
+                  <button
+                    type="button"
+                    className="sim-shell__overlay-action"
+                    onClick={() => handleLaneOverlayInspect(entry.method)}
+                  >
+                    Inspect
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {metricsDashboardLanes.length > 0 && (
         <MetricsDashboard lanes={metricsDashboardLanes} />
       )}
@@ -2321,7 +2394,7 @@ export function App() {
                 <MetricsStrip {...metrics} />
               </div>
 
-              <LaneDiffOverlay diff={diff} scenarioName={scenario.name} />
+              <LaneDiffOverlay diff={diff} scenarioName={scenario.name} laneId={method} />
 
               {eventBusEnabled && (
                 <section

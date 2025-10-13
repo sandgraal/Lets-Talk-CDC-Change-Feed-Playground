@@ -8,6 +8,7 @@ The in-browser telemetry client buffers events to `localStorage` (`window.teleme
 | `comparator.scenario.preview` | Activation | Preview modal opened for a template. Payload: `{ scenario, tags }` |
 | `comparator.summary.copied` | Activation | Summary callouts copied to clipboard. Payload: `{ scenario, methods, tags }` |
 | `comparator.diff.opened` | Funnel drop | Lane diff details expanded. Payload: `{ method, issues, maxLag }` |
+| `comparator.overlay.inspect` | Activation | Lane checks CTA clicked; scrolls to diff details. Payload: `{ method, scenario }` |
 | `comparator.clock.control` | Funnel drop | Guided clock control action (`play`, `pause`, `seek`, `step`, `reset`). Payload: `{ action, scenario, deltaMs? }` |
 | `tour.started` | Funnel drop | Spotlight walkthrough initiated. Payload: `{ totalSteps, source }` |
 | `tour.completed` | Activation | Spotlight completed. Payload: `{ totalSteps, durationMs }` |

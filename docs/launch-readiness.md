@@ -7,6 +7,7 @@
 
 Each gate requires:
 - Comparator diff overlays enabled without regressions (CI preflight + Playwright smoke passing).
+- Lane checks summary panel renders diff chips per method and Inspect CTA opens the detailed overlay.
 - Harness verifier PASS against shared fixtures (`make status`).
 - Documentation updates reviewed via `docs/content-review-checklist.md`.
 
