@@ -19,6 +19,7 @@ Open `index.html` in a browser. No build step.
 - Playwright smoke (CI enforced): `npm run test:e2e`
 - Harness HTML snapshot: `npm run test:harness-report`
 - Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
+- Nightly harness: `npm run ci:harness` (runs via the **Harness Nightly** workflow and uploads HTML/JSON artifacts under Actions → Harness Nightly)
 
 ### Harness
 - Prepare a shared scenario: `npm run prepare:scenario -- orders`
