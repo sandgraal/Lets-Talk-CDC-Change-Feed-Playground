@@ -7,6 +7,7 @@
 
 Each gate requires:
 - Comparator diff overlays enabled without regressions (CI preflight + Playwright smoke passing).
+- Playwright smoke (`npm run test:e2e`) executes the apply-on-commit transactions scenario end-to-end.
 - Lane checks summary panel renders diff chips per method and Inspect CTA opens the detailed overlay.
 - Harness verifier PASS against shared fixtures (`make status`).
 - Documentation updates reviewed via `docs/content-review-checklist.md`.
@@ -21,6 +22,7 @@ Each gate requires:
 
 ## Communications
 - Changelog entry drafted in `docs/enablement/loom-plan.md` outline; publish alongside Loom walkthrough.
+- Highlight the new “Orders + Items Transactions” scenario and Apply-on-commit toggle in release notes / launch materials.
 - Support macro template added to `docs/enablement/support-macros.md` (see below).
 
 ## Rollback
