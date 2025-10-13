@@ -79,6 +79,8 @@ services:
     depends_on:
       connect:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     volumes:
       - ./scripts/register-connectors.mjs:/app/register-connectors.mjs:ro
       - ./connectors:/app/connectors:ro

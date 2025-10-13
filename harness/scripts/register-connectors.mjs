@@ -11,6 +11,8 @@ const baseUrl = process.env.CONNECT_BASE_URL || "http://localhost:8083";
 const applyTimeoutMs = Number(process.env.CONNECT_APPLY_TIMEOUT_MS || 120000);
 const pollIntervalMs = Number(process.env.CONNECT_POLL_INTERVAL_MS || 3000);
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 const exit = message => {
   console.error(message);
   process.exit(1);
@@ -81,11 +83,27 @@ async function applyConnector({ name, config }) {
       console.log(`[connectors] ${name} RUNNING (${taskStates.length} task${taskStates.length === 1 ? "" : "s"})`);
       return;
     }
-    const failures = taskStates.filter(state => state === "FAILED");
-    if (connectorState === "FAILED" || failures.length) {
-      throw new Error(`Connector '${name}' failed to start. Status: ${JSON.stringify(status)}`);
+    const failedTasks = Array.isArray(status?.tasks)
+      ? status.tasks.filter(task => task.state === "FAILED").map(task => task.id)
+      : [];
+    if (connectorState === "FAILED" || failedTasks.length) {
+      console.warn(
+        `[connectors] ${name} not running yet (connector=${connectorState} tasks=${taskStates.join(",") || "none"}). Attempting restart...`,
+      );
+      try {
+        if (connectorState === "FAILED") {
+          await fetchJson(`${baseUrl}/connectors/${encodeURIComponent(name)}/restart`, { method: "POST" });
+        }
+        await Promise.all(
+          failedTasks.map(taskId =>
+            fetchJson(`${baseUrl}/connectors/${encodeURIComponent(name)}/tasks/${taskId}/restart`, { method: "POST" }),
+          ),
+        );
+      } catch (restartErr) {
+        console.warn(`[connectors] restart attempt for ${name} failed: ${restartErr.message}`);
+      }
     }
-    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+    await sleep(pollIntervalMs);
   }
   throw new Error(`Timed out waiting for connector '${name}' to become RUNNING.`);
 }
