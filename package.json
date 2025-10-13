@@ -13,7 +13,7 @@
     "preview:sim": "vite preview --mode sim",
     "preview:web": "vite preview --mode web",
     "test:sim": "node sim/tests/property-tests.mjs",
-    "test:e2e": "PLAYWRIGHT_DISABLE=1 playwright test",
+    "test:e2e": "playwright test",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:harness-report": "node tests/harness-report-snapshot.mjs",
     "lint:scenarios": "node scripts/lint-scenarios.mjs",

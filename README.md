@@ -16,7 +16,7 @@ Open `index.html` in a browser. No build step.
 ### Verification
 - Property-based invariants: `npm run test:sim` (requires a fresh `npm run build:sim` bundle)
 - Unit suite (engine adapters + UI widgets): `npm run test:unit`
-- Playwright smoke (CI enforced): `PLAYWRIGHT_DISABLE=0 npm run test:e2e`
+- Playwright smoke (CI enforced): `npm run test:e2e`
 - Harness HTML snapshot: `npm run test:harness-report`
 - Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
 
@@ -38,6 +38,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Comparator preferences (scenario, methods, knobs) persist locally so you resume where you left off
 - Exports/imports carry comparator preferences and the latest insight snapshot for consistent replays
 - Curated scenarios live in `assets/shared-scenarios.js`; update that module once to change both the template gallery and comparator demos
+- Apply-on-commit toggle delays downstream apply until every event in the transaction is present, keeping multi-table writes atomic
 - Comparator lets you push any scenario back into the workspace via the new “Load in workspace” shortcut
 - Vendor presets badge the Source → Capture → Transport → Sink pipeline with tooltip copy + docs links per stack
 - Lane diff overlays surface missing/extra/out-of-order operations and lag hotspots per method so insights link to exact events
@@ -53,6 +54,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 | Real-time Payments | Demonstrating idempotent updates or risk review flows | Trigger overhead tuning + delete capture expectations |
 | IoT Telemetry | Showing rolling measurements with anomaly flags | Highlights soft-delete vs. log consistency and clock controls |
 | Schema Evolution | Demonstrating column additions while capturing changes | Compare immediate log/trigger propagation with polling lag |
+| Orders + Items Transactions | Teaching multi-table commit semantics | Toggle apply-on-commit to keep orders/items destinations consistent |
 | CRUD Basic | Teaching delete visibility basics | Minimal ops for first-time comparator demos |
 | Burst Updates | Stressing lag/ordering behaviour under rapid updates | Highlights polling gaps and diff overlays |
 
@@ -69,7 +71,6 @@ We welcome improvements to the simulator, documentation, and learning resources.
 - Commit the updated bundle together with `index.html` and push to the default branch.
 - In the repository settings, set GitHub Pages to deploy from the root of the `main` branch.
 - The playground will publish to `https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/`, and share links use that origin via `window.APPWRITE_CFG.shareBaseUrl`.
-
 ## Deploy to Appwrite Sites
 Zip the files:
 - `index.html`

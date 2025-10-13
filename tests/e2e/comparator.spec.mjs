@@ -76,6 +76,10 @@ suite("Comparator basics", () => {
 
     const scenarioSelect = page.locator('select[aria-label="Scenario"]');
     await scenarioSelect.waitFor({ timeout: 10000 });
+    await expect(scenarioSelect).toBeVisible();
+    const optionTexts = await scenarioSelect.locator('option').allTextContents();
+    expect(optionTexts.length).toBeGreaterThan(0);
+    expect(optionTexts).toContain("Orders + Items Transactions");
     await scenarioSelect.selectOption({ label: "Orders + Items Transactions" });
 
     await page.evaluate(() => window.cdcComparatorClock?.play?.());

@@ -10,6 +10,7 @@ npm install
 - Focus on the comparator shell only: `npm run dev:web` (ensure you have a fresh `npm run build:sim` first).
 - Property-test the engines: `npm run test:sim`.
 - Type-check and unit test the shared engine/ui packages: `npx tsc --noEmit` and `npm run test:unit` (see `/src/test`).
+- Smoke the Playwright flows, including the apply-on-commit transaction scenario: `npm run test:e2e`.
 - Build artefacts for the playground: `npm run build`.
 
 ## Component stories
