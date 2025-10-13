@@ -23,6 +23,7 @@ Open `index.html` in a browser. No build step.
 - Full preflight mirror: `npm run ci:preflight` (sim/web builds + property tests + Playwright + snapshots)
 - Nightly harness: `npm run ci:harness` (runs via the **Harness Nightly** workflow and uploads HTML/JSON artifacts under Actions → Harness Nightly)
 - Harness Nightly posts PASS/FAIL to Slack via `SLACK_WEBHOOK_URL` so the multi-table verification never slips under the radar.
+- Historical summaries: `GITHUB_TOKEN=... npm run harness:history` writes `reports/harness-history.md` by aggregating recent Harness Nightly artifacts.
 
 ### Harness
 - Prepare a shared scenario: `npm run prepare:scenario -- orders`
