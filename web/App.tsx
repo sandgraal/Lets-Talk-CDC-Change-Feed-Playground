@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SourceOp, Event as EngineEvent } from "../src";
+import type { SourceOp, Event as EngineEvent, VendorPresetId } from "../src";
 import type { CdcEvent, LaneDiffResult } from "../sim";
 import type { MethodEngine } from "../sim";
 import {
@@ -10,7 +10,7 @@ import {
   type ModeIdentifier,
   type ModeRuntime,
 } from "../src";
-import { CDCController, EventBus, MetricsStore, Scheduler, type MetricsSnapshot } from "../src";
+import { CDCController, EventBus, MetricsStore, PRESETS, Scheduler, type MetricsSnapshot } from "../src";
 import { EventLog, type EventLogFilters, type EventLogRow, type EmitFn } from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
 
@@ -117,8 +117,15 @@ type PartialMethodConfigMap = Partial<{
 
 type EventOp = "c" | "u" | "d";
 
+const DEFAULT_PRESET_ID: VendorPresetId = "MYSQL_DEBEZIUM";
+
+function isVendorPresetId(value: unknown): value is VendorPresetId {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(PRESETS, value);
+}
+
 type ComparatorPreferences = {
   scenarioId?: string | null;
+  presetId?: VendorPresetId | null;
   activeMethods?: MethodOption[];
   methodConfig?: PartialMethodConfigMap;
   userPinnedScenario?: boolean;
@@ -199,9 +206,10 @@ type MethodCopy = {
   laneDescription: string;
   callout: string;
   whenToUse: string;
+  tooltip?: string;
 };
 
-const METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
+const BASE_METHOD_COPY = methodCopyData as Record<MethodOption, MethodCopy>;
 
 const MAX_TIMELINE_EVENTS = 200;
 const MAX_EVENT_LOG_ROWS = 2000;
@@ -470,6 +478,7 @@ function loadPreferences(): ComparatorPreferences | null {
     const parsed = JSON.parse(raw);
     return {
       scenarioId: typeof parsed.scenarioId === "string" ? parsed.scenarioId : undefined,
+      presetId: isVendorPresetId(parsed.presetId) ? parsed.presetId : undefined,
       activeMethods: Array.isArray(parsed.activeMethods) ? parsed.activeMethods : undefined,
       methodConfig: parsed.methodConfig ?? undefined,
       userPinnedScenario: typeof parsed.userPinnedScenario === "boolean" ? parsed.userPinnedScenario : undefined,
@@ -575,6 +584,9 @@ export function App() {
   const storedPrefs = storedPrefsRef.current || undefined;
   const initialActiveMethods = sanitizeActiveMethods(storedPrefs?.activeMethods);
   const initialMethodConfig = sanitizeMethodConfig(storedPrefs?.methodConfig);
+  const initialPresetId: VendorPresetId = storedPrefs?.presetId && isVendorPresetId(storedPrefs.presetId)
+    ? storedPrefs.presetId
+    : DEFAULT_PRESET_ID;
   const initialEventLogMethod = isMethodOption(storedPrefs?.eventLogMethod)
     ? (storedPrefs?.eventLogMethod as MethodOption)
     : null;
@@ -597,6 +609,7 @@ export function App() {
   const [laneStats, setLaneStats] = useState<Partial<Record<MethodOption, LaneStats>>>(
     () => ({}),
   );
+  const [presetId, setPresetId] = useState<VendorPresetId>(initialPresetId);
   const [clock, setClock] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isConsumerPaused, setIsConsumerPaused] = useState(false);
@@ -612,6 +625,30 @@ export function App() {
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
   const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
+  const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET_ID];
+  const presetOptions = useMemo(
+    () =>
+      Object.values(PRESETS).map(presetOption => ({
+        id: presetOption.id,
+        label: presetOption.label,
+      })),
+    [],
+  );
+  const methodCopy = useMemo(() => {
+    const overrides = preset.methodCopyOverrides ?? {};
+    return METHOD_ORDER.reduce((acc, method) => {
+      const base = BASE_METHOD_COPY[method];
+      const override = overrides[method];
+      acc[method] = {
+        label: override?.label ?? base.label,
+        laneDescription: override?.laneDescription ?? base.laneDescription,
+        callout: override?.callout ?? base.callout,
+        whenToUse: override?.whenToUse ?? base.whenToUse,
+        tooltip: override?.tooltip ?? base.tooltip,
+      };
+      return acc;
+    }, {} as Record<MethodOption, MethodCopy>);
+  }, [preset]);
   const updateLaneSnapshot = useCallback(
     (method: MethodOption, options?: { lastOffset?: number }) => {
       const runtime = laneRuntimeRef.current[method];
@@ -781,7 +818,7 @@ export function App() {
       return {
         id: idParts.length ? idParts.join("|") : `${method}-${index}`,
         methodId: method,
-        methodLabel: METHOD_COPY[method].label,
+        methodLabel: methodCopy[method].label,
         op: event.op ?? "",
         offset,
         topic: event.topic ?? null,
@@ -804,7 +841,7 @@ export function App() {
   );
   const eventLogFilterOptions = useMemo(
     () => ({
-      methods: METHOD_ORDER.map(method => ({ id: method, label: METHOD_COPY[method].label })),
+      methods: METHOD_ORDER.map(method => ({ id: method, label: methodCopy[method].label })),
       tables: availableEventLogTables,
       txns: availableEventLogTxns,
     }),
@@ -985,6 +1022,10 @@ export function App() {
       if (prefs.scenarioId) {
         setScenarioId(prefs.scenarioId);
       }
+
+      if (prefs.presetId && isVendorPresetId(prefs.presetId)) {
+        setPresetId(prefs.presetId);
+      }
     };
 
     window.addEventListener("cdc:comparator-preferences-set" as string, handler);
@@ -996,6 +1037,7 @@ export function App() {
   useEffect(() => {
     savePreferences({
       scenarioId,
+      presetId,
       activeMethods,
       methodConfig,
       userPinnedScenario: userSelectedScenarioRef.current,
@@ -1008,6 +1050,7 @@ export function App() {
     });
   }, [
     scenarioId,
+    presetId,
     activeMethods,
     methodConfig,
     showEventList,
@@ -1280,6 +1323,12 @@ export function App() {
     [scenario.name],
   );
 
+  const handlePresetSelect = useCallback((value: string) => {
+    if (!isVendorPresetId(value)) return;
+    setPresetId(value);
+    track("comparator.preset.select", { presetId: value });
+  }, []);
+
   const handleScenarioSelect = useCallback((value: string) => {
     userSelectedScenarioRef.current = true;
     setScenarioId(value);
@@ -1394,14 +1443,14 @@ export function App() {
       });
       return {
         method,
-        label: METHOD_COPY[method].label,
+        label: methodCopy[method].label,
         total: events.length,
         inserts,
         updates,
         deletes,
       };
     });
-  }, [laneMetrics]);
+  }, [laneMetrics, methodCopy]);
 
   const laneDiffs = useMemo(() => {
     const map = new Map<MethodOption, LaneDiffResult>();
@@ -1411,12 +1460,14 @@ export function App() {
     return map;
   }, [laneMetrics, scenario.ops]);
 
-  const metricsDashboardLanes = useMemo(() =>
+  const metricsDashboardLanes = useMemo(
+    () =>
     activeMethods.map(method => {
       const runtimeSummary = laneRuntimeSummaries.get(method);
       return {
         id: method,
-        label: METHOD_COPY[method].label,
+        label: methodCopy[method].label,
+        tooltip: methodCopy[method].tooltip,
         produced: runtimeSummary?.produced ?? 0,
         consumed: runtimeSummary?.consumed ?? 0,
         backlog: runtimeSummary?.backlog ?? 0,
@@ -1426,7 +1477,7 @@ export function App() {
         writeAmplification: runtimeSummary?.writeAmplification,
       };
     }),
-  [activeMethods, laneRuntimeSummaries]);
+  [activeMethods, laneRuntimeSummaries, methodCopy]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1444,20 +1495,20 @@ export function App() {
     if (!summary) return;
     const parts: string[] = [];
     parts.push(`${scenario.label}: ${scenario.description}`);
-    parts.push(`Methods: ${activeMethods.map(method => METHOD_COPY[method].label).join(", ")}`);
+    parts.push(`Methods: ${activeMethods.map(method => methodCopy[method].label).join(", ")}`);
     if (summary.bestLag) {
-      parts.push(`Fastest ${METHOD_COPY[summary.bestLag.method].label} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
+      parts.push(`Fastest ${methodCopy[summary.bestLag.method].label} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
     }
     if (summary.lagSpread > 0) {
-      parts.push(`${METHOD_COPY[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
+      parts.push(`${methodCopy[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
     }
-    parts.push(`Lowest delete capture: ${METHOD_COPY[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
+    parts.push(`Lowest delete capture: ${methodCopy[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
     if (summary.triggerWriteAmplification) {
       parts.push(
-        `Trigger write amplification: ${METHOD_COPY[summary.triggerWriteAmplification.method].label} ${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`,
+        `Trigger write amplification: ${methodCopy[summary.triggerWriteAmplification.method].label} ${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`,
       );
     }
-    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => METHOD_COPY[method].label).join(", ") : "All lanes aligned"}`);
+    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => methodCopy[method].label).join(", ") : "All lanes aligned"}`);
     if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
     navigator.clipboard
       .writeText(parts.join('\n'))
@@ -1468,7 +1519,7 @@ export function App() {
       tags: scenario.tags ?? [],
       methods: activeMethods,
     });
-  }, [summary, scenario, activeMethods]);
+  }, [summary, scenario, activeMethods, methodCopy]);
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -1658,32 +1709,32 @@ export function App() {
           lagSpread: summary.lagSpread,
           bestLag: {
             method: summary.bestLag.method,
-            label: METHOD_COPY[summary.bestLag.method].label,
+            label: methodCopy[summary.bestLag.method].label,
             metrics: summary.bestLag.metrics,
           },
           worstLag: {
             method: summary.worstLag.method,
-            label: METHOD_COPY[summary.worstLag.method].label,
+            label: methodCopy[summary.worstLag.method].label,
             metrics: summary.worstLag.metrics,
           },
           lowestDeletes: {
             method: summary.lowestDeletes.method,
-            label: METHOD_COPY[summary.lowestDeletes.method].label,
+            label: methodCopy[summary.lowestDeletes.method].label,
             metrics: summary.lowestDeletes.metrics,
           },
           highestDeletes: {
             method: summary.highestDeletes.method,
-            label: METHOD_COPY[summary.highestDeletes.method].label,
+            label: methodCopy[summary.highestDeletes.method].label,
             metrics: summary.highestDeletes.metrics,
           },
           orderingIssues: summary.orderingIssues.map(method => ({
             method,
-            label: METHOD_COPY[method].label,
+            label: methodCopy[method].label,
           })),
           triggerWriteAmplification: summary.triggerWriteAmplification
             ? {
                 method: summary.triggerWriteAmplification.method,
-                label: METHOD_COPY[summary.triggerWriteAmplification.method].label,
+                label: methodCopy[summary.triggerWriteAmplification.method].label,
                 value: summary.triggerWriteAmplification.metrics.writeAmplification ?? 0,
               }
             : null,
@@ -1692,9 +1743,59 @@ export function App() {
 
     const lanesDetail = laneMetrics.map(({ method, metrics }) => ({
       method,
-      label: METHOD_COPY[method].label,
+      label: methodCopy[method].label,
+      tooltip: methodCopy[method].tooltip,
       metrics,
     }));
+
+    const exampleTable =
+      scenario.table ??
+      (scenario.ops.find(op => op.table)?.table ?? "table");
+    let topicExample = exampleTable;
+    try {
+      topicExample = preset.topicFormat(exampleTable);
+    } catch {
+      topicExample = exampleTable;
+    }
+
+    const presetDetail = {
+      id: preset.id,
+      label: preset.label,
+      description: preset.description,
+      docsHint: preset.docsHint,
+      source: {
+        label: preset.sourceLabel,
+        tooltip: preset.sourceTooltip,
+      },
+      log: {
+        label: preset.logLabel,
+        tooltip: preset.logTooltip,
+      },
+      bus: {
+        label: preset.busLabel,
+        tooltip: preset.busTooltip,
+        exampleTopic: topicExample,
+      },
+      destination: {
+        label: preset.destinationLabel,
+        tooltip: preset.destinationTooltip,
+      },
+      methods: METHOD_ORDER.map(method => ({
+        id: method,
+        label: methodCopy[method].label,
+        tooltip: methodCopy[method].tooltip ?? null,
+      })),
+    } satisfies {
+      id: VendorPresetId;
+      label: string;
+      description: string;
+      docsHint: string;
+      source: { label: string; tooltip: string };
+      log: { label: string; tooltip: string };
+      bus: { label: string; tooltip: string; exampleTopic: string };
+      destination: { label: string; tooltip: string };
+      methods: Array<{ id: MethodOption; label: string; tooltip: string | null }>;
+    };
 
     const diffsDetail = laneMetrics.map(({ method }) => {
       const diff = laneDiffs.get(method);
@@ -1726,11 +1827,12 @@ export function App() {
           lanes: lanesDetail,
           analytics,
           tags: scenarioTags,
+          preset: presetDetail,
           diffs: diffsDetail,
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs]);
+  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs, methodCopy, preset]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
@@ -1738,10 +1840,49 @@ export function App() {
         <div>
           <h2 className="sim-shell__title">CDC Method Comparator</h2>
           <p className="sim-shell__description">
-            Load a deterministic scenario and contrast Polling, Trigger, and Log-based CDC side by side.
+            {preset.description}
+          </p>
+          <div className="sim-shell__preset-row" role="list" aria-label="Selected vendor pipeline">
+            <span className="sim-shell__preset-pill" data-tooltip={preset.sourceTooltip} role="listitem">
+              Source · {preset.sourceLabel}
+            </span>
+            <span className="sim-shell__preset-arrow" aria-hidden="true">→</span>
+            <span className="sim-shell__preset-pill" data-tooltip={preset.logTooltip} role="listitem">
+              Capture · {preset.logLabel}
+            </span>
+            <span className="sim-shell__preset-arrow" aria-hidden="true">→</span>
+            <span className="sim-shell__preset-pill" data-tooltip={preset.busTooltip} role="listitem">
+              Transport · {preset.busLabel}
+            </span>
+            <span className="sim-shell__preset-arrow" aria-hidden="true">→</span>
+            <span className="sim-shell__preset-pill" data-tooltip={preset.destinationTooltip} role="listitem">
+              Sink · {preset.destinationLabel}
+            </span>
+          </div>
+          <p className="sim-shell__description sim-shell__description--meta">
+            {preset.label}
+            {preset.docsHint ? (
+              <>
+                {" · "}
+                <a href={preset.docsHint} target="_blank" rel="noopener noreferrer">
+                  Reference
+                </a>
+              </>
+            ) : null}
           </p>
         </div>
         <div className="sim-shell__actions sim-shell__actions--scenario" role="group" aria-label="Scenario controls">
+          <select
+            aria-label="Vendor preset"
+            value={presetId}
+            onChange={event => handlePresetSelect(event.target.value)}
+          >
+            {presetOptions.map(option => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <select
             aria-label="Scenario"
             value={scenarioId}
@@ -1792,8 +1933,9 @@ export function App() {
                 className="sim-shell__method-chip"
                 aria-pressed={activeMethods.includes(method)}
                 onClick={() => toggleMethod(method)}
+                data-tooltip={methodCopy[method].tooltip || undefined}
               >
-                {METHOD_COPY[method].label}
+                {methodCopy[method].label}
               </button>
             ))}
           </div>
@@ -1906,7 +2048,7 @@ export function App() {
                 aria-labelledby={`control-${method}`}
                 data-active={active ? "true" : "false"}
               >
-                <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
+                <legend id={`control-${method}`}>{methodCopy[method].label}</legend>
                 <p className="sim-shell__control-copy">Adjust poll cadence and whether soft deletes are surfaced.</p>
                 {querySliderEnabled ? (
                   <>
@@ -1968,7 +2110,7 @@ export function App() {
                 aria-labelledby={`control-${method}`}
                 data-active={active ? "true" : "false"}
               >
-                <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
+                <legend id={`control-${method}`}>{methodCopy[method].label}</legend>
                 <p className="sim-shell__control-copy">Tune audit extractor cadence and per-write trigger overhead.</p>
                 <label className="sim-shell__control-field">
                   <span>Extractor interval (ms)</span>
@@ -2014,7 +2156,7 @@ export function App() {
               aria-labelledby={`control-${method}`}
               data-active={active ? "true" : "false"}
             >
-              <legend id={`control-${method}`}>{METHOD_COPY[method].label}</legend>
+              <legend id={`control-${method}`}>{methodCopy[method].label}</legend>
               <p className="sim-shell__control-copy">Control how frequently the WAL/Binlog fetcher polls for new records.</p>
               <label className="sim-shell__control-field">
                 <span>Fetch interval (ms)</span>
@@ -2037,20 +2179,20 @@ export function App() {
       <div className="sim-shell__summary" aria-live="polite">
         <ul>
           <li>
-            <strong>Lag spread:</strong> {METHOD_COPY[summary.bestLag.method].label} is leading at
+            <strong>Lag spread:</strong> {methodCopy[summary.bestLag.method].label} is leading at
             {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
             {summary.lagSpread > 0
-              ? ` — ${METHOD_COPY[summary.worstLag.method].label} trails by ${summary.lagSpread.toFixed(0)}ms`
+              ? ` — ${methodCopy[summary.worstLag.method].label} trails by ${summary.lagSpread.toFixed(0)}ms`
               : " (no spread)"}
           </li>
           <li>
-            <strong>Delete capture:</strong> {METHOD_COPY[summary.lowestDeletes.method].label} is lowest at
-            {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {METHOD_COPY[summary.highestDeletes.method].label}
+            <strong>Delete capture:</strong> {methodCopy[summary.lowestDeletes.method].label} is lowest at
+            {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {methodCopy[summary.highestDeletes.method].label}
             {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
           </li>
           {summary.triggerWriteAmplification && (
             <li>
-              <strong>Trigger overhead:</strong> {METHOD_COPY[summary.triggerWriteAmplification.method].label} is at
+              <strong>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
               {" "}
               {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
             </li>
@@ -2059,7 +2201,7 @@ export function App() {
             <strong>Ordering:</strong>
             {summary.orderingIssues.length === 0
               ? " All methods preserved ordering"
-              : ` Issues: ${summary.orderingIssues.map(method => METHOD_COPY[method].label).join(", ")}`}
+              : ` Issues: ${summary.orderingIssues.map(method => methodCopy[method].label).join(", ")}`}
           </li>
         </ul>
           <button type="button" className="sim-shell__summary-copy" onClick={handleCopySummary}>
@@ -2074,7 +2216,7 @@ export function App() {
 
       <div className="sim-shell__lane-grid" data-tour-target="comparator-lanes">
         {laneMetrics.map(({ method, metrics, events }, laneIndex) => {
-          const copy = METHOD_COPY[method];
+          const copy = methodCopy[method];
           const description = copy.laneDescription;
           const diff = laneDiffs.get(method) ?? null;
           const isPrimaryLane = laneIndex === 0;
@@ -2127,7 +2269,12 @@ export function App() {
             <article key={method} className="sim-shell__lane-card">
               <header className="sim-shell__lane-header">
                 <div>
-                  <h3 className="sim-shell__lane-title">{copy.label}</h3>
+                  <h3
+                    className="sim-shell__lane-title"
+                    data-tooltip={copy.tooltip || undefined}
+                  >
+                    {copy.label}
+                  </h3>
                   <p className="sim-shell__lane-copy">{description}</p>
                 </div>
                 <span className="sim-shell__lane-count">

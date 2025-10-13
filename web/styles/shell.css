@@ -17,6 +17,30 @@
   gap: 0.75rem;
 }
 
+.sim-shell__preset-row {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.sim-shell__preset-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.sim-shell__preset-arrow {
+  color: rgba(15, 23, 42, 0.45);
+  font-size: 0.85rem;
+}
+
 .sim-shell__title {
   font-size: 1.35rem;
   font-weight: 600;

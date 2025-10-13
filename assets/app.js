@@ -1034,6 +1034,7 @@ const comparatorState = {
   analytics: [],
   diffs: [],
   tags: [],
+  preset: null,
 };
 const save   = () => {
   try {
@@ -1167,16 +1168,19 @@ function buildComparatorExport() {
   let analytics = comparatorState.analytics;
   let diffs = comparatorState.diffs;
   let tags = comparatorState.tags;
+  let preset = comparatorState.preset;
   try {
     summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
     analytics = analytics ? JSON.parse(JSON.stringify(analytics)) : [];
     diffs = diffs ? JSON.parse(JSON.stringify(diffs)) : [];
     tags = Array.isArray(tags) ? [...tags] : [];
+    preset = preset ? JSON.parse(JSON.stringify(preset)) : null;
   } catch {
     summary = null;
     analytics = [];
     diffs = [];
     tags = [];
+    preset = null;
   }
   return {
     preferences: preferences || null,
@@ -1184,6 +1188,7 @@ function buildComparatorExport() {
     analytics,
     diffs,
     tags,
+    preset,
   };
 }
 
@@ -2144,21 +2149,25 @@ function renderComparatorFeedback(detail) {
     comparatorState.analytics = [];
     comparatorState.diffs = [];
     comparatorState.tags = [];
+    comparatorState.preset = null;
     return;
   }
 
   const { summary, scenarioLabel, scenarioName, isLive } = detail;
+  const preset = detail.preset || null;
 
   try {
     comparatorState.summary = summary ? JSON.parse(JSON.stringify(summary)) : null;
     comparatorState.analytics = detail.analytics ? JSON.parse(JSON.stringify(detail.analytics)) : [];
     comparatorState.diffs = detail.diffs ? JSON.parse(JSON.stringify(detail.diffs)) : [];
     comparatorState.tags = Array.isArray(detail.tags) ? [...detail.tags] : [];
+    comparatorState.preset = preset ? JSON.parse(JSON.stringify(preset)) : null;
   } catch {
     comparatorState.summary = null;
     comparatorState.analytics = [];
     comparatorState.diffs = [];
     comparatorState.tags = [];
+    comparatorState.preset = null;
   }
 
   const bestLag = summary.bestLag;
@@ -2186,6 +2195,51 @@ function renderComparatorFeedback(detail) {
 
   const title = scenarioLabel || scenarioName || "Comparator insights";
 
+  const sourceCopy = preset?.source || {};
+  const logCopy = preset?.log || {};
+  const busCopy = preset?.bus || {};
+  const sinkCopy = preset?.destination || {};
+  const presetMethods = Array.isArray(preset?.methods) ? preset.methods : [];
+  const topicCopy = typeof busCopy.exampleTopic === "string" && busCopy.exampleTopic
+    ? `
+        <p class="comparator-feedback__preset-topic">
+          Topic example: <code>${escapeHtml(busCopy.exampleTopic)}</code>
+        </p>
+      `
+    : "";
+
+  const presetSection = preset
+    ? `
+      <div class="comparator-feedback__preset">
+        <span class="comparator-feedback__pill" data-tooltip="${escapeHtml(sourceCopy.tooltip || "")}">
+          Source · ${escapeHtml(sourceCopy.label || "")}
+        </span>
+        <span class="comparator-feedback__arrow">→</span>
+        <span class="comparator-feedback__pill" data-tooltip="${escapeHtml(logCopy.tooltip || "")}">
+          Capture · ${escapeHtml(logCopy.label || "")}
+        </span>
+        <span class="comparator-feedback__arrow">→</span>
+        <span class="comparator-feedback__pill" data-tooltip="${escapeHtml(busCopy.tooltip || "")}">
+          Transport · ${escapeHtml(busCopy.label || "")}
+        </span>
+        <span class="comparator-feedback__arrow">→</span>
+        <span class="comparator-feedback__pill" data-tooltip="${escapeHtml(sinkCopy.tooltip || "")}">
+          Sink · ${escapeHtml(sinkCopy.label || "")}
+        </span>
+      </div>
+      <p class="comparator-feedback__preset-meta">
+        ${escapeHtml(preset.label || "")}
+        ${preset.docsHint ? ` · <a href="${escapeHtml(preset.docsHint)}" target="_blank" rel="noopener noreferrer">Reference</a>` : ""}
+      </p>
+      ${topicCopy}
+      ${presetMethods.length
+        ? `<p class="comparator-feedback__preset-methods">${presetMethods
+            .map(entry => escapeHtml(entry.label))
+            .join(" · ")}</p>`
+        : ""}
+    `
+    : "";
+
   trackEvent("comparator.summary.received", {
     scenario: scenarioName,
     label: scenarioLabel,
@@ -2197,6 +2251,7 @@ function renderComparatorFeedback(detail) {
   panel.innerHTML = `
     <p class="comparator-feedback__title">${escapeHtml(title)}</p>
     <p class="comparator-feedback__meta">${isLive ? "Live workspace" : "Scenario preview"}</p>
+    ${presetSection}
     <ul>
       <li><strong>Lag:</strong> ${lagText}</li>
       <li><strong>Deletes:</strong> ${deleteText}</li>

@@ -3,6 +3,7 @@ import type { FC } from "react";
 export type MetricsDashboardLane = {
   id: string;
   label: string;
+  tooltip?: string;
   produced: number;
   consumed: number;
   backlog: number;
@@ -45,7 +46,7 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({ lanes, renderSchem
         {lanes.map(lane => (
           <article key={lane.id} className="sim-shell__metrics-dashboard-card">
             <header>
-              <h4>{lane.label}</h4>
+              <h4 data-tooltip={lane.tooltip || undefined}>{lane.label}</h4>
             </header>
             {renderSchemaWalkthrough && (
               <div className="sim-shell__schema-demo-inline">

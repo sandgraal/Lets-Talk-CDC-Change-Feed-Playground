@@ -1493,6 +1493,58 @@ code {
   color: rgba(203, 213, 225, 0.85);
 }
 
+.comparator-feedback__preset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 6px;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.comparator-feedback__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 196, 0.35);
+  background: rgba(30, 41, 59, 0.55);
+}
+
+.comparator-feedback__arrow {
+  color: rgba(203, 213, 225, 0.7);
+}
+
+.comparator-feedback__preset-meta {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.comparator-feedback__preset-meta a {
+  color: #93c5fd;
+}
+
+.comparator-feedback__preset-topic {
+  margin: 2px 0 6px;
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.comparator-feedback__preset-topic code {
+  font-family: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.comparator-feedback__preset-methods {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: rgba(147, 197, 253, 0.95);
+}
+
 .comparator-feedback ul {
   margin: 0;
   padding-left: 18px;
