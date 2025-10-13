@@ -15,6 +15,9 @@ npm run prepare:scenario -- crud-basic
 cd harness
 make up
 
+# Or run the multi-table transactions demo
+SCENARIO=orders-transactions make up
+
 # Follow logs / status
 make logs
 make status    # JSON report on http://localhost:8089/report
@@ -25,6 +28,8 @@ open http://localhost:8089   # HTML summary
 - `make replay` triggers the generator again without resetting Kafka topics.
 - `make snapshots` refreshes fixtures in `harness/fixtures/` from the canonical shared scenarios.
 - `make down` tears the stack down when you’re finished.
+
+When running `orders-transactions`, open the comparator with `Apply-on-commit` toggled on and off to watch downstream parity shift between partial and atomic applies.
 
 Health checks gate the generator/verifier so they don’t run until Postgres, Kafka, and Connect are ready. Generator retries its connection loop, so you get deterministic start-up even on cold hosts.
 
