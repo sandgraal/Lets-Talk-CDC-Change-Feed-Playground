@@ -2,6 +2,16 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=4
+      - -c
+      - max_replication_slots=4
+      - -c
+      - max_connections=200
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -39,9 +49,11 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CLIENT_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
       test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
@@ -62,6 +74,7 @@ services:
       CONFIG_STORAGE_TOPIC: connect-configs
       OFFSET_STORAGE_TOPIC: connect-offsets
       STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
     healthcheck:
@@ -70,11 +83,31 @@ services:
       timeout: 5s
       retries: 10
 
+  connectors:
+    image: node:20-alpine
+    working_dir: /app
+    depends_on:
+      connect:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/register-connectors.mjs:/app/register-connectors.mjs:ro
+      - ./connectors:/app/connectors:ro
+    environment:
+      CONNECT_BASE_URL: http://connect:8083
+      CONNECTORS_DIR: /app/connectors
+      CONNECT_APPLY_TIMEOUT_MS: 120000
+    command: ["node", "register-connectors.mjs"]
+    restart: "no"
+
   generator:
     build: ./generator
     depends_on:
       postgres:
         condition: service_healthy
+      connectors:
+        condition: service_completed_successfully
     environment:
       PGHOST: postgres
       PGUSER: postgres

@@ -76,7 +76,16 @@ async function main() {
       console.warn("harness down warning", err.message);
     }
 
-    await run("docker", ["compose", ...composeArgs, "up", "--build", "-d"]);
+    try {
+      await run("docker", ["compose", ...composeArgs, "up", "--build", "-d"]);
+    } catch (err) {
+      try {
+        await run("docker", ["compose", ...composeArgs, "logs", "--no-color"], { stdio: "inherit" });
+      } catch (logsErr) {
+        console.warn("failed to stream docker compose logs", logsErr.message);
+      }
+      throw err;
+    }
 
     await waitFor(healthUrl, { timeoutMs: 120000 });
     const report = await waitFor(reportUrl, {
