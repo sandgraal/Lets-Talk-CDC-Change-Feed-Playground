@@ -128,10 +128,10 @@ export type Metrics = {
    - Next: surface write amplification in UI and integrate into guided walkthrough.
 
 7. **Schema change demo (P1)**
-   - Buttons: Add Column, Drop Column on Source.
-   - LOG/TRIGGER: include `schemaVersion` on events; Destination applies compatible changes.
+   - ✅ Buttons: Add Column, Drop Column on Source.
+   - ✅ LOG/TRIGGER: include `schemaVersion` on events; Destination applies compatible changes. Lane diff overlay highlights schema drift when destinations lag.
    - QUERY: on Add Column, show partial captures (new col defaults until next poll).
-   - Acceptance: UI badges show schema vN -> vN+1; destination eventually aligns (LOG/TRIGGER).
+   - Acceptance: UI badges show schema vN -> vN+1; destination eventually aligns (LOG/TRIGGER). Playwright scenario covers walkthrough and destination snapshot behaviour; follow-up needed for QUERY drift messaging.
 
 8. **Multi-table + transactions (P1)**
    - TODO: extend adapters and UI to preserve txn boundaries, add apply-on-commit toggle.

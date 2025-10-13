@@ -10,9 +10,9 @@
 
 ## Enablers & Platform Work
 - Add feature flags for P0 scope (`ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_crud_fix`, `ff_event_log`). ✅ incorporated in `index.html`.
-- Refresh unit/e2e test suites to cover EventBus ordering, CRUD flows, pause/resume backlog, and query-mode lossiness. 🔄 Next: author tests in `src/test` targeting adapters + controller.
+- Refresh unit/e2e test suites to cover EventBus ordering, CRUD flows, pause/resume backlog, and query-mode lossiness. ✅ Unit coverage now exists for `CDCController`, adapters, metrics widgets, and lane diff schema drift; Playwright exercises the schema walkthrough end-to-end.
 - Update developer docs (onboarding, harness guide) with the new architecture map and event bus workflow. 🔄 Pending doc refresh.
-- Prepare initial metrics telemetry hooks (in-memory only) and dashboard UI shell. 🔄 Metrics store wired, dashboard component still needed.
+- Prepare initial metrics telemetry hooks (in-memory only) and dashboard UI shell. ✅ Dashboard surfaces per-lane metrics with schema walkthrough controls in place.
 
 ## Definition of Ready
 - Implementation plan captured at `docs/IMPLEMENTATION_PLAN.md` and linked in team tooling. ✅
@@ -25,8 +25,8 @@
 - Schedule mid-sprint review to demo Event Log, Pause/Resume, and Query mode warning behaviors. 🔄
 
 ## Near-Term Priorities (handoff)
-- Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries. ✅ Lane checks panel now surfaces diff + lag chips; next up is threshold tuning and tests.
+- Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries. ✅ Lane checks panel now surfaces diff + lag chips; schema drift chips land in summary.
 - ✅ Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
-- Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`). 🔄 scaffold Vitest under `/src/test`.
+- Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`). ✅ Vitest suite now covers adapters, controller, metrics, and lane overlays; continue expanding toward multi-table scenarios.
 - Todo: add Storybook visual regression notes for lane checks / diff overlay to keep UI states in sync with docs.
-- Begin P1 work: Trigger mode walkthrough + schema change demo once adapter metrics solid.
+- Begin P1 work: Multi-table + transactional demos; follow-up e2e for transaction drift once adapters support it.
