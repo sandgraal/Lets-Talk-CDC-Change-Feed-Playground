@@ -75,7 +75,16 @@ async function applyConnector({ name, config }) {
 
   const deadline = Date.now() + applyTimeoutMs;
   while (Date.now() < deadline) {
-    const status = await fetchJson(`${baseUrl}/connectors/${encodeURIComponent(name)}/status`);
+    let status;
+    try {
+      status = await fetchJson(`${baseUrl}/connectors/${encodeURIComponent(name)}/status`);
+    } catch (err) {
+      if (err.status === 404) {
+        await sleep(pollIntervalMs);
+        continue;
+      }
+      throw err;
+    }
     const connectorState = status?.connector?.state;
     const taskStates = Array.isArray(status?.tasks) ? status.tasks.map(task => task.state) : [];
     const allRunning = connectorState === "RUNNING" && taskStates.every(state => state === "RUNNING");
