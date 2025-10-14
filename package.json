@@ -2,6 +2,7 @@
   "name": "lets-talk-cdc-playground",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "npm run build:sim && npm run build:web",
     "build:sim": "vite build --mode sim",

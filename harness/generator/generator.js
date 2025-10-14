@@ -12,6 +12,42 @@ scenario.ops = Array.isArray(scenario.ops)
   ? [...scenario.ops].sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
   : [];
 
+const connectStatusUrl = process.env.CONNECT_STATUS_URL;
+const connectWaitMs = Number(process.env.CONNECT_WAIT_MS || 180000);
+
+async function waitForConnectorReady(url, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
+        const connectorState = payload?.connector?.state;
+        const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
+        const tasksRunning = tasks.length > 0 && tasks.every(task => task?.state === "RUNNING");
+        if (connectorState === "RUNNING" && tasksRunning) {
+          return;
+        }
+        lastError = new Error(`state=${connectorState} tasks=${tasks.map(task => task?.state).join(",")}`);
+      } else {
+        lastError = new Error(`status ${response.status}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  console.error(`Connector not ready at ${url}`, lastError?.message || lastError);
+  process.exit(1);
+}
+
+if (connectStatusUrl) {
+  console.log(`waiting for connector readiness at ${connectStatusUrl}`);
+  await waitForConnectorReady(connectStatusUrl, connectWaitMs);
+  console.log("connector ready; starting scenario");
+}
+
 const TABLE_CONFIG = {
   customers: {
     columns: ["name", "email"],

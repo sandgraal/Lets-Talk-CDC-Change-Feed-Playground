@@ -3,7 +3,6 @@
   "name": "Orders + Items Transactions",
   "description": "Coordinate changes across orders and order_items within the same transaction.",
   "highlight": "Apply-on-commit keeps multi-table writes atomic across downstream lanes.",
-  "officeOptIn": false,
   "ops": [
     {
       "t": 120,

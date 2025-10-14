@@ -11,6 +11,8 @@ const scenarioScript = path.resolve(projectRoot, "harness/scripts/prepare-scenar
 const scenarioPath = path.resolve(projectRoot, "harness/scenario.json");
 const healthUrl = "http://localhost:8089/health";
 const reportUrl = "http://localhost:8089/report";
+const connectBaseUrl = process.env.HARNESS_CONNECT_URL || "http://localhost:8083";
+const connectorsDir = path.resolve(projectRoot, "harness/connectors");
 const scenarioId = process.env.HARNESS_SCENARIO || "orders-transactions";
 
 function run(command, args, options = {}) {
@@ -61,6 +63,73 @@ async function waitFor(url, { timeoutMs, validate }) {
   throw lastError ?? new Error(`Timed out waiting for ${url}`);
 }
 
+async function applyConnectors() {
+  if (!fs.existsSync(connectorsDir)) return;
+  const files = fs
+    .readdirSync(connectorsDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith(".json"))
+    .map(entry => path.resolve(connectorsDir, entry.name));
+
+  for (const filePath of files) {
+    const raw = fs.readFileSync(filePath, "utf8");
+    let definition;
+    try {
+      definition = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(`Failed to parse connector definition ${path.relative(projectRoot, filePath)}: ${err?.message || err}`);
+    }
+    const name = definition?.name;
+    const config = definition?.config;
+    if (!name || typeof name !== "string") {
+      throw new Error(`Connector file ${path.relative(projectRoot, filePath)} missing required 'name' property`);
+    }
+    if (!config || typeof config !== "object") {
+      throw new Error(`Connector file ${path.relative(projectRoot, filePath)} missing required 'config' object`);
+    }
+    await ensureConnector(name, config);
+  }
+}
+
+async function ensureConnector(name, config) {
+  const baseUrl = `${connectBaseUrl}/connectors/${encodeURIComponent(name)}`;
+  console.log(`[harness] applying connector ${name}`);
+
+  let response = await fetch(baseUrl);
+  if (response.ok) {
+    const update = await fetch(`${baseUrl}/config`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(config),
+    });
+    if (!update.ok) {
+      const body = await update.text();
+      throw new Error(`Failed to update connector ${name}: ${update.status} ${body}`);
+    }
+  } else if (response.status === 404) {
+    response = await fetch(`${connectBaseUrl}/connectors`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, config }),
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Failed to create connector ${name}: ${response.status} ${body}`);
+    }
+  } else {
+    const body = await response.text();
+    throw new Error(`Failed to query connector ${name}: ${response.status} ${body}`);
+  }
+
+  await waitFor(`${baseUrl}/status`, {
+    timeoutMs: 120000,
+    validate: payload =>
+      payload?.connector?.state === "RUNNING" &&
+      Array.isArray(payload?.tasks) &&
+      payload.tasks.length > 0 &&
+      payload.tasks.every(task => task.state === "RUNNING"),
+  });
+}
+
 async function main() {
   await run("node", [scenarioScript, scenarioId], { stdio: "inherit" });
   const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));
@@ -86,6 +155,9 @@ async function main() {
       }
       throw err;
     }
+
+    await waitFor(`${connectBaseUrl}/connectors`, { timeoutMs: 120000 });
+    await applyConnectors();
 
     await waitFor(healthUrl, { timeoutMs: 120000 });
     const report = await waitFor(reportUrl, {
