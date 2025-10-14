@@ -1,4 +1,5 @@
 :root {
+
   --bg: #0f172a;
   --bg-surface: #101b32;
   --card: rgba(16, 27, 50, 0.88);
@@ -67,12 +68,32 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 10;
+  /* Enhanced shadow for depth */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+.topbar:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
 
 .brand {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  animation: slideInLeft 0.6s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .brand-pill {
@@ -85,13 +106,27 @@ a:hover {
   color: var(--accent);
   border: 1px solid rgba(58, 184, 255, 0.45);
   background: rgba(58, 184, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.brand-pill:hover {
+  background: rgba(58, 184, 255, 0.18);
+  border-color: rgba(58, 184, 255, 0.65);
+  transform: scale(1.02);
 }
 
 .brand-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--ink);
+  transition: color 0.3s ease;
 }
+
+.brand-title:hover {
+  color: var(--accent);
+}
+
 
 .topbar-actions {
   display: flex;
@@ -99,6 +134,19 @@ a:hover {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  animation: slideInRight 0.6s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .badge {
@@ -113,26 +161,58 @@ a:hover {
   border: 1px solid transparent;
 }
 
+/* Enhanced Badge with Glow Effect */
 .badge-hacktoberfest {
   position: relative;
   overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
   background: linear-gradient(120deg, rgba(255, 216, 111, 0.2), rgba(75, 163, 255, 0.2));
-  border-color: rgba(255, 216, 111, 0.55);
+  border: 1px solid rgba(255, 216, 111, 0.55);
   color: #ffe6a3;
   font-weight: 600;
+  font-size: 12px;
   letter-spacing: 0.12em;
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 12px 24px -18px rgba(255, 216, 111, 0.6);
 }
 
 .badge-hacktoberfest:hover {
   color: #fff7cf;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 18px 32px -18px rgba(79, 172, 255, 0.8);
+  border-color: rgba(79, 172, 255, 0.75);
 }
 
-.badge-hacktoberfest:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 32px -18px rgba(79, 172, 255, 0.6);
-  border-color: rgba(79, 172, 255, 0.65);
+.badge-hacktoberfest:active {
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 8px 16px -12px rgba(79, 172, 255, 0.6);
+}
+
+.badge-hacktoberfest__spark {
+  font-size: 14px;
+  color: #fff3c4;
+  text-shadow: 0 0 8px rgba(255, 243, 196, 0.8);
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+
+  0%,
+  100% {
+    transform: rotate(-12deg) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: rotate(-12deg) scale(1.2);
+    opacity: 0.8;
+  }
 }
 
 .badge-hacktoberfest__glow {
@@ -183,19 +263,47 @@ button,
   font-weight: 500;
   font-size: 14px;
   cursor: pointer;
-  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Ripple effect on click */
+button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(75, 163, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+button:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 button:hover,
 .file span:hover,
 .btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: var(--border-strong);
-  box-shadow: 0 16px 32px -30px rgba(20, 32, 60, 0.6);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+  background: rgba(30, 50, 90, 0.9);
+}
+
+button:active,
+.file span:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 button:focus-visible,
@@ -205,15 +313,91 @@ button:focus-visible,
   outline-offset: 2px;
 }
 
+/* ===== Button interaction polish (GPU-friendly) ===== */
+button,
+.file span,
+.btn {
+  /* ensure GPU-accelerated transforms */
+  will-change: transform, box-shadow;
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+              box-shadow 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+              background-color 180ms ease,
+              border-color 180ms ease;
+}
+
+/* Hover lift + subtle scale */
+button:hover:not([disabled]),
+.file span:hover,
+.btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.16);
+}
+
+/* Pressed / click feedback */
+button:active:not([disabled]),
+.file span:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 120ms;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* Focus ring (accessibility) */
+button:focus-visible,
+.file span:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid rgba(75,163,255,0.22);
+  outline-offset: 4px;
+  box-shadow: 0 8px 22px rgba(75,163,255,0.08);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .file span,
+  .btn {
+    transition: none;
+    will-change: auto;
+  }
+
+  button:hover,
+  button:active {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Danger Button Animation */
 button.danger {
   border-color: rgba(255, 107, 107, 0.4);
   background: rgba(120, 38, 38, 0.5);
   color: #ffbcbc;
 }
 
+button.danger::before {
+  background: rgba(248, 113, 113, 0.3);
+}
+
 button.danger:hover {
   border-color: rgba(255, 107, 107, 0.75);
-  box-shadow: 0 16px 32px -32px rgba(255, 107, 107, 0.5);
+  box-shadow: 0 8px 20px rgba(248, 113, 113, 0.3);
+  background: rgba(140, 45, 45, 0.6);
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateY(-2px) translateX(0);
+  }
+
+  25% {
+    transform: translateY(-2px) translateX(-2px);
+  }
+
+  75% {
+    transform: translateY(-2px) translateX(2px);
+  }
 }
 
 .btn {
@@ -235,12 +419,17 @@ button.danger:hover {
   border-color: rgba(82, 114, 169, 0.55);
 }
 
+/* File Input Styling */
 .file {
   position: relative;
 }
 
 .file input {
   display: none;
+}
+
+.file span {
+  cursor: pointer;
 }
 
 .checkbox {
@@ -1687,16 +1876,16 @@ select:focus {
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(78,116,173,0.24);
+  border: 1px solid rgba(78, 116, 173, 0.24);
   background: rgba(17, 30, 56, 0.68);
-  word-break: break-word;  
-  white-space: normal;     
+  word-break: break-word;
+  white-space: normal;
 }
 
 @media (max-width: 500px) {
   .inspector-diff-row {
     display: flex;
-    flex-direction: column; 
+    flex-direction: column;
   }
 }
 
@@ -1862,11 +2051,13 @@ select:focus {
   flex-wrap: wrap;
   gap: 12px;
 }
+
 .onboarding-start {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+
 .onboarding-secret {
   display: inline-flex;
   align-items: center;
@@ -1877,11 +2068,13 @@ select:focus {
   cursor: pointer;
   transition: opacity 160ms ease;
 }
+
 .onboarding-secret:hover,
 .onboarding-secret:focus-within {
   opacity: 1;
   color: var(--muted-strong);
 }
+
 .onboarding-secret input {
   width: 14px;
   height: 14px;
@@ -2214,6 +2407,7 @@ code {
   gap: 0.6rem;
   padding-right: 2.2rem;
 }
+
 .office-parkour-banner::after {
   content: "🏃";
   font-size: 1rem;
@@ -2236,6 +2430,7 @@ code {
   opacity: 0;
   transform-origin: center;
 }
+
 .office-chili-splat::before {
   content: "";
   position: absolute;
@@ -2247,6 +2442,7 @@ code {
   left: 18%;
   filter: blur(0.3px);
 }
+
 .office-chili-splat::after {
   content: "";
   position: absolute;
@@ -2258,6 +2454,7 @@ code {
   right: 12%;
   box-shadow: 0 8px 16px rgba(68, 24, 4, 0.55);
 }
+
 .office-chili-label {
   position: absolute;
   top: 50%;
@@ -2298,6 +2495,7 @@ code {
   text-align: center;
   line-height: 1.2;
 }
+
 .office-schrute-buck::before {
   content: "★";
   position: absolute;
@@ -2307,6 +2505,7 @@ code {
   color: rgba(252, 211, 77, 0.85);
   text-shadow: 0 4px 6px rgba(15, 23, 42, 0.45);
 }
+
 .office-schrute-buck::after {
   content: "Payable in Schrute Bucks only";
   position: absolute;
