@@ -12,7 +12,8 @@
 .sim-shell__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  /* vertically center header content to polish alignment */
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
 }
@@ -76,6 +77,42 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: box-shadow 0.15s ease;
+}
+
+/* Header button micro-interactions */
+.sim-shell__actions button,
+.sim-shell__summary-copy,
+.sim-shell__event-toggle,
+.sim-shell__event-op {
+  transition: transform 180ms cubic-bezier(0.2,0.9,0.2,1),
+              box-shadow 180ms cubic-bezier(0.2,0.9,0.2,1),
+              background-color 160ms ease;
+  will-change: transform, box-shadow;
+}
+
+.sim-shell__actions button:hover:not([disabled]),
+.sim-shell__summary-copy:hover:not([disabled]),
+.sim-shell__event-toggle:hover:not([disabled]),
+.sim-shell__event-op:hover:not([disabled]) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+}
+
+.sim-shell__actions button:active:not([disabled]),
+.sim-shell__summary-copy:active,
+.sim-shell__event-toggle:active,
+.sim-shell__event-op:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-shell__actions button,
+  .sim-shell__summary-copy,
+  .sim-shell__event-toggle,
+  .sim-shell__event-op {
+    transition: none;
+  }
 }
 
 .sim-shell__actions button:hover:not([disabled]),
