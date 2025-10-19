@@ -1,5 +1,17 @@
 import type { SourceOp } from "../domain/types";
 
+export type SharedScenarioColumnType = "string" | "number" | "bool" | "json";
+
+export type SharedScenarioColumn = {
+  name: string;
+  type: SharedScenarioColumnType;
+  pk: boolean;
+};
+
+export type SharedScenarioRow = Record<string, unknown>;
+
+export type SharedScenarioEvent = Record<string, unknown>;
+
 export type SharedScenarioModule = {
   id: string;
   name: string;
@@ -8,9 +20,11 @@ export type SharedScenarioModule = {
   highlight?: string;
   tags?: string[];
   seed?: number;
-  schema?: unknown;
-  rows?: unknown[];
-  events?: unknown[];
+  schemaVersion?: number;
+  table?: string;
+  schema?: SharedScenarioColumn[];
+  rows?: SharedScenarioRow[];
+  events?: SharedScenarioEvent[];
   ops?: SourceOp[];
 }[];
 

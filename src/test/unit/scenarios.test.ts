@@ -105,6 +105,26 @@ describe("Scenario templates", () => {
     });
   });
 
+  it("provides snapshot rows and schema for previews", () => {
+    SCENARIO_TEMPLATES.forEach(template => {
+      expect(Array.isArray(template.rows)).toBe(true);
+      expect(template.rows.length).toBeGreaterThan(0);
+      template.rows.forEach(row => {
+        expect(row).toBeTruthy();
+        expect(typeof row).toBe("object");
+      });
+
+      expect(Array.isArray(template.schema)).toBe(true);
+      expect(template.schema.length).toBeGreaterThan(0);
+      template.schema.forEach(column => {
+        expect(column.name).toBeTruthy();
+        expect(typeof column.name).toBe("string");
+        expect(typeof column.type).toBe("string");
+        expect(typeof column.pk).toBe("boolean");
+      });
+    });
+  });
+
   it("captures delete expectations for the payments scenario", () => {
     const payments = SCENARIO_TEMPLATES.find(template => template.id === "real-time-payments");
     expect(payments).toBeTruthy();
@@ -121,10 +141,27 @@ describe("Scenario templates", () => {
     SCENARIO_TEMPLATES.forEach(template => {
       const shared = sharedById.get(template.id);
       expect(shared).toBeTruthy();
+      expect(shared?.label ?? shared?.name).toBe(template.label);
       expect(shared?.description).toBe(template.description);
       expect(shared?.highlight).toBe(template.highlight);
       expect(shared?.tags).toEqual(template.tags);
+      expect(shared?.table ?? undefined).toBe(template.table ?? undefined);
+      expect(shared?.rows?.length ?? 0).toBe(template.rows.length);
+      if (Array.isArray(shared?.rows)) {
+        expect(shared?.rows).not.toBe(template.rows);
+      }
+      expect(shared?.schema?.length ?? 0).toBe(template.schema.length);
+      if (Array.isArray(shared?.schema)) {
+        expect(shared?.schema).not.toBe(template.schema);
+      }
+      expect(shared?.events?.length ?? 0).toBe(template.events.length);
+      if (Array.isArray(shared?.events)) {
+        expect(shared?.events).not.toBe(template.events);
+      }
       expect(shared?.ops?.length).toBe(template.ops.length);
+      if (Array.isArray(shared?.ops)) {
+        expect(shared?.ops).not.toBe(template.ops);
+      }
       expect(shared?.schemaVersion ?? undefined).toBe(template.schemaVersion ?? undefined);
     });
   });
