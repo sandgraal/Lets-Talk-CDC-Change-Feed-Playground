@@ -77,18 +77,35 @@ function fallbackTimestampValue(
   return Number.isFinite(value) ? Number(value) : undefined;
 }
 
+function derivePkFromAfter(
+  op: SharedScenario["ops"] extends Array<infer T> ? T : never,
+  schema: SharedScenarioColumn[],
+): SourceOp["pk"] | undefined {
+  if (!schema.length) return undefined;
+  const pkColumn = schema.find(column => column.pk)?.name;
+  if (!pkColumn) return undefined;
+  const sourceAfter = (op as SourceOp | undefined)?.after as Record<string, unknown> | undefined;
+  if (!sourceAfter) return undefined;
+  const pkValue = sourceAfter[pkColumn];
+  if (pkValue == null) return undefined;
+  return { id: String(pkValue) };
+}
+
 function cloneOps(
   ops: SharedScenario["ops"],
   options: ScenarioNormaliseOptions,
+  schema: SharedScenarioColumn[],
+  scenarioTable: string | undefined,
 ): SourceOp[] {
   if (!Array.isArray(ops)) return [];
-  const { scenarioIndex, fallbackTimestamp, includeTxn } = options;
+  const { scenarioIndex, fallbackTimestamp, includeTxn, fallbackTable } = options;
+  const resolvedFallbackTable = scenarioTable ?? fallbackTable;
 
   return ops
     .filter(op => Boolean(op))
     .map((op, opIndex) => {
       const clone: SourceOp = { ...op } as SourceOp;
-      clone.pk = clonePk(op?.pk);
+      clone.pk = clonePk(op?.pk) ?? derivePkFromAfter(op, schema);
 
       if (op?.after) {
         clone.after = { ...op.after } as SourceOp["after"];
@@ -99,13 +116,17 @@ function cloneOps(
       }
 
       const fallbackT = fallbackTimestampValue(fallbackTimestamp, scenarioIndex, opIndex);
-      if (fallbackT !== undefined && typeof clone.t !== "number") {
+      if (fallbackT !== undefined && !Number.isFinite(clone.t)) {
         clone.t = fallbackT;
+      }
+
+      if (!clone.table && resolvedFallbackTable) {
+        clone.table = resolvedFallbackTable;
       }
 
       return clone;
     })
-    .filter((op): op is SourceOp => Boolean(op.pk));
+    .filter((op): op is SourceOp => Boolean(op.pk?.id));
 }
 
 function deriveOpsFromEvents(
@@ -117,6 +138,20 @@ function deriveOpsFromEvents(
   if (!events.length) return [];
   const pkField = schema.find(column => column.pk)?.name ?? "id";
   const resolvedTable = table ?? options.fallbackTable ?? "table";
+
+  const resolveEventTable = (event: SharedScenarioEvent): string => {
+    const payloadTable =
+      (event as any)?.table ??
+      (event as any)?.payload?.source?.table ??
+      (event as any)?.payload?.source?.tableName ??
+      (event as any)?.payload?.source?.table_name;
+
+    if (typeof payloadTable === "string" && payloadTable.trim().length > 0) {
+      return payloadTable;
+    }
+
+    return resolvedTable;
+  };
 
   return events
     .map((event, opIndex) => {
@@ -139,7 +174,7 @@ function deriveOpsFromEvents(
 
       const base: SourceOp = {
         t: Number.isFinite(ts) ? ts : fallbackT ?? opIndex * 200,
-        table: resolvedTable,
+        table: resolveEventTable(event),
         pk,
         op: "insert",
       } as SourceOp;
@@ -172,7 +207,7 @@ export function normaliseSharedScenario(
   const schema = cloneSchema(raw.schema);
   const rows = cloneRows(raw.rows);
   const events = cloneEvents(raw.events);
-  const opsFromSource = cloneOps(raw.ops, options);
+  const opsFromSource = cloneOps(raw.ops, options, schema, raw.table);
 
   const ops =
     opsFromSource.length > 0

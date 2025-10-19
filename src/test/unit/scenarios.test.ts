@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SCENARIO_TEMPLATES } from "../../features/scenarios";
 import { SCENARIOS as COMPARATOR_SCENARIOS } from "../../../web/scenarios";
-import sharedScenarios from "../../features/shared-scenarios";
+import sharedScenarios, { type SharedScenario } from "../../features/shared-scenarios";
+import { normaliseSharedScenario } from "../../features/shared-scenario-normaliser";
 
 const EXPECTED_SCENARIOS = [
   {
@@ -213,5 +214,82 @@ describe("Comparator scenarios", () => {
       expect(scenario.stats?.rows ?? 0).toBe(scenario.rows?.length ?? 0);
       expect(scenario.stats?.ops ?? 0).toBe(scenario.ops.length);
     });
+  });
+});
+
+describe("Shared scenario normaliser", () => {
+  it("fills missing metadata for source operations", () => {
+    const scenario: SharedScenario = {
+      id: "synthetic-source-fallback",
+      name: "Synthetic source fallback",
+      description: "Ensures pk and table fallbacks are derived.",
+      schema: [
+        { name: "order_ref", type: "string", pk: true },
+        { name: "status", type: "string", pk: false },
+      ],
+      rows: [],
+      ops: [
+        {
+          t: Number.NaN,
+          op: "update",
+          after: { status: "ready", order_ref: "PK-7" },
+        } as any,
+      ],
+    };
+
+    const template = normaliseSharedScenario(scenario, {
+      scenarioIndex: 5,
+      includeTxn: false,
+      allowEventsAsOps: false,
+      fallbackTable: "orders",
+      fallbackTimestamp: () => 900,
+    });
+
+    expect(template).toBeTruthy();
+    expect(template?.ops).toHaveLength(1);
+    expect(template?.ops[0].table).toBe("orders");
+    expect(template?.ops[0].pk?.id).toBe("PK-7");
+    expect(template?.ops[0].t).toBe(900);
+  });
+
+  it("derives operations from event payloads with table hints", () => {
+    const scenario: SharedScenario = {
+      id: "synthetic-event-fallback",
+      name: "Synthetic event fallback",
+      description: "Ensures event tables and payloads map to operations.",
+      table: "orders_default",
+      schema: [
+        { name: "id", type: "string", pk: true },
+        { name: "status", type: "string", pk: false },
+      ],
+      rows: [],
+      events: [
+        {
+          table: "event_orders",
+          payload: {
+            op: "u",
+            ts_ms: "1425",
+            after: { id: "ORD-142", status: "complete" },
+          },
+        },
+      ],
+    };
+
+    const template = normaliseSharedScenario(scenario, {
+      scenarioIndex: 1,
+      allowEventsAsOps: true,
+      includeTxn: false,
+      fallbackTimestamp: ({ opIndex }) => 1000 + opIndex * 25,
+      fallbackTable: "orders_fallback",
+    });
+
+    expect(template).toBeTruthy();
+    expect(template?.ops).toHaveLength(1);
+    const [op] = template!.ops;
+    expect(op.table).toBe("event_orders");
+    expect(op.op).toBe("update");
+    expect(op.pk.id).toBe("ORD-142");
+    expect(op.after).toEqual({ id: "ORD-142", status: "complete" });
+    expect(op.t).toBe(1425);
   });
 });
