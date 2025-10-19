@@ -1,312 +1,312 @@
 const defaultScenarios = [
   {
-    id: "orders",
-    name: "Omnichannel Orders",
-    label: "Omnichannel Orders",
-    description: "Track order lifecycle and fulfillment signals across channels.",
-    highlight: "Focus on status transitions, totals, and fulfillment metadata.",
-    tags: ["orders", "caching", "omnichannel"],
-    table: "orders",
-    schema: [
-      { name: "order_id", type: "string", pk: true },
-      { name: "customer_id", type: "string", pk: false },
-      { name: "status", type: "string", pk: false },
-      { name: "subtotal", type: "number", pk: false },
-      { name: "shipping_method", type: "string", pk: false },
-      { name: "updated_at", type: "string", pk: false }
-    ],
-    rows: [
-      { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" },
-      { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
-      { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" }
-    ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742472000000
-        },
-        key: { order_id: "ORD-1001" }
-      },
-      {
-        payload: {
-          before: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" },
-          after: { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742473440000
-        },
-        key: { order_id: "ORD-1001" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742472300000
-        },
-        key: { order_id: "ORD-1002" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742384520000
-        },
-        key: { order_id: "ORD-1003" }
-      },
-      {
-        payload: {
-          before: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" },
-          after: { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742391000000
-        },
-        key: { order_id: "ORD-1003" }
-      }
-    ],
-    ops: [
-      { t: 0, op: "insert", table: "orders", pk: { id: "ORD-1001" }, after: { order_id: "ORD-1001", customer_id: "C-204", status: "pending", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T14:40:00Z" } },
-      { t: 200, op: "update", table: "orders", pk: { id: "ORD-1001" }, after: { order_id: "ORD-1001", customer_id: "C-204", status: "processing", subtotal: 184.5, shipping_method: "Expedited", updated_at: "2025-03-20T15:04:00Z" } },
-      { t: 150, op: "insert", table: "orders", pk: { id: "ORD-1002" }, after: { order_id: "ORD-1002", customer_id: "C-412", status: "packed", subtotal: 92.1, shipping_method: "Standard", updated_at: "2025-03-20T14:45:00Z" } },
-      { t: 250, op: "insert", table: "orders", pk: { id: "ORD-1003" }, after: { order_id: "ORD-1003", customer_id: "C-102", status: "pending", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T19:42:00Z" } },
-      { t: 360, op: "update", table: "orders", pk: { id: "ORD-1003" }, after: { order_id: "ORD-1003", customer_id: "C-102", status: "cancelled", subtotal: 248.0, shipping_method: "Store Pickup", updated_at: "2025-03-19T21:10:00Z" } }
-    ]
-  },
-  {
-    id: "payments",
-    name: "Real-time Payments",
-    label: "Real-time Payments",
-    description: "Model authorization, capture, and decline flows for transactions.",
-    highlight: "Great for demonstrating idempotent updates and risk review.",
-    tags: ["payments", "idempotency", "risk"],
-    table: "payments",
-    schema: [
-      { name: "transaction_id", type: "string", pk: true },
-      { name: "account_id", type: "string", pk: false },
-      { name: "payment_method", type: "string", pk: false },
-      { name: "amount", type: "number", pk: false },
-      { name: "status", type: "string", pk: false },
-      { name: "authorized_at", type: "string", pk: false },
-      { name: "captured_at", type: "string", pk: false }
-    ],
-    rows: [
-      { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" },
-      { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
-      { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null }
-    ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742292240000
-        },
-        key: { transaction_id: "PAY-88341" }
-      },
-      {
-        payload: {
-          before: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null },
-          after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742292370000
-        },
-        key: { transaction_id: "PAY-88341" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742478000000
-        },
-        key: { transaction_id: "PAY-88355" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742448660000
-        },
-        key: { transaction_id: "PAY-88377" }
-      },
-      {
-        payload: {
-          before: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742449200000
-        },
-        key: { transaction_id: "PAY-88377" }
-      }
-    ],
-    ops: [
-      { t: 0, op: "insert", table: "payments", pk: { id: "PAY-88341" }, after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "authorized", authorized_at: "2025-03-18T10:04:00Z", captured_at: null } },
-      { t: 120, op: "update", table: "payments", pk: { id: "PAY-88341" }, after: { transaction_id: "PAY-88341", account_id: "ACC-0937", payment_method: "card", amount: 72.4, status: "captured", authorized_at: "2025-03-18T10:04:00Z", captured_at: "2025-03-18T10:06:10Z" } },
-      { t: 200, op: "insert", table: "payments", pk: { id: "PAY-88355" }, after: { transaction_id: "PAY-88355", account_id: "ACC-4201", payment_method: "wallet", amount: 15.0, status: "authorized", authorized_at: "2025-03-20T16:20:00Z", captured_at: null } },
-      { t: 240, op: "insert", table: "payments", pk: { id: "PAY-88377" }, after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "pending_review", authorized_at: "2025-03-20T08:11:00Z", captured_at: null } },
-      { t: 300, op: "update", table: "payments", pk: { id: "PAY-88377" }, after: { transaction_id: "PAY-88377", account_id: "ACC-0937", payment_method: "card", amount: 420.0, status: "declined", authorized_at: "2025-03-20T08:11:00Z", captured_at: null } }
-    ]
-  },
-  {
-    id: "iot",
-    name: "IoT Telemetry",
-    label: "IoT Telemetry",
-    description: "Capture rolling sensor readings with anomaly flags.",
-    highlight: "Simulate snapshots, drifts, and device alerts in edge pipelines.",
-    tags: ["iot", "telemetry", "anomaly"],
-    table: "telemetry",
-    schema: [
-      { name: "reading_id", type: "string", pk: true },
-      { name: "device_id", type: "string", pk: false },
-      { name: "temperature_c", type: "number", pk: false },
-      { name: "pressure_kpa", type: "number", pk: false },
-      { name: "status", type: "string", pk: false },
-      { name: "recorded_at", type: "string", pk: false }
-    ],
-    rows: [
-      { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" },
-      { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
-      { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" }
-    ],
-    events: [
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742471400000
-        },
-        key: { reading_id: "READ-301" }
-      },
-      {
-        payload: {
-          before: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" },
-          after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742473200000
-        },
-        key: { reading_id: "READ-301" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742474100000
-        },
-        key: { reading_id: "READ-302" }
-      },
-      {
-        payload: {
-          before: null,
-          after: { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "c",
-          ts_ms: 1742473800000
-        },
-        key: { reading_id: "READ-377" }
-      },
-      {
-        payload: {
-          before: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" },
-          after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 26.3, pressure_kpa: 100.8, status: "alert", recorded_at: "2025-03-20T15:20:00Z" },
-          source: { name: "playground", version: "0.1.0" },
-          op: "u",
-          ts_ms: 1742474400000
-        },
-        key: { reading_id: "READ-302" }
-      }
-    ],
-    ops: [
-      { t: 0, op: "insert", table: "telemetry", pk: { id: "READ-301" }, after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 19.8, pressure_kpa: 101.6, status: "nominal", recorded_at: "2025-03-20T14:30:00Z" } },
-      { t: 150, op: "update", table: "telemetry", pk: { id: "READ-301" }, after: { reading_id: "READ-301", device_id: "THERM-04", temperature_c: 21.4, pressure_kpa: 101.3, status: "nominal", recorded_at: "2025-03-20T15:00:00Z" } },
-      { t: 210, op: "insert", table: "telemetry", pk: { id: "READ-302" }, after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 24.9, pressure_kpa: 101.1, status: "warning", recorded_at: "2025-03-20T15:15:00Z" } },
-      { t: 260, op: "update", table: "telemetry", pk: { id: "READ-302" }, after: { reading_id: "READ-302", device_id: "THERM-04", temperature_c: 26.3, pressure_kpa: 100.8, status: "alert", recorded_at: "2025-03-20T15:20:00Z" } },
-      { t: 180, op: "insert", table: "telemetry", pk: { id: "READ-377" }, after: { reading_id: "READ-377", device_id: "THERM-11", temperature_c: 18.0, pressure_kpa: 99.5, status: "nominal", recorded_at: "2025-03-20T15:10:00Z" } }
-    ]
-  },
-  {
     id: "crud-basic",
     name: "CRUD Basic",
     label: "CRUD Basic",
-    description: "Insert, update, and delete a single customer to highlight delete visibility.",
-    tags: ["crud", "polling", "basics"],
+    description: "Teaching delete visibility basics.",
+    highlight: "Minimal ops for first-time comparator demos.",
+    tags: ["crud", "basics"],
     seed: 42,
+    table: "customers",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "name", type: "string", pk: false },
+      { name: "email", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "1", name: "Alice", email: "alice@contoso.io" },
+    ],
+    events: [],
     ops: [
-      { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
-      { t: 400, op: "update", table: "customers", pk: { id: "1" }, after: { name: "A1", email: "a@example.com" } },
-      { t: 700, op: "delete", table: "customers", pk: { id: "1" } }
-    ]
+      { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "Alice", email: "alice@example.com" } },
+      { t: 350, op: "update", table: "customers", pk: { id: "1" }, after: { email: "alice@contoso.io" } },
+      { t: 700, op: "delete", table: "customers", pk: { id: "1" } },
+    ],
   },
   {
-    id: "burst-updates",
-    name: "Burst Updates",
-    label: "Burst Updates",
-    description: "Five quick updates to expose lost intermediate writes for polling.",
-    tags: ["throughput", "polling", "lag"],
-    seed: 7,
+    id: "omnichannel-orders",
+    name: "Omnichannel Orders",
+    label: "Omnichannel Orders",
+    description: "Walking through status transitions and fulfilment edge cases.",
+    highlight: "Mix of inserts/updates with delete coverage; great for lag comparisons.",
+    tags: ["orders", "lag", "fulfilment"],
+    seed: 21,
+    table: "orders",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "channel", type: "string", pk: false },
+      { name: "total", type: "number", pk: false },
+      { name: "pickup_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "ORD-501", customer_id: "C-19", status: "collected", channel: "store-108", total: 189.5, pickup_ts: 420 },
+    ],
+    events: [],
     ops: [
-      { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },
-      { t: 150, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-1", email: "burst@example.com" } },
-      { t: 180, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-2", email: "burst@example.com" } },
-      { t: 210, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-3", email: "burst@example.com" } },
-      { t: 240, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-4", email: "burst@example.com" } },
-      { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final", email: "burst@example.com" } }
-    ]
+      {
+        t: 120,
+        op: "insert",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { customer_id: "C-19", status: "pending", channel: "web", total: 189.5 },
+      },
+      {
+        t: 240,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { status: "ready_for_pickup", channel: "store-108" },
+      },
+      {
+        t: 260,
+        op: "insert",
+        table: "fulfilment_events",
+        pk: { id: "FUL-501-1" },
+        after: { order_id: "ORD-501", type: "picking", associate: "EMP-88" },
+      },
+      {
+        t: 420,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { status: "collected", pickup_ts: 420 },
+      },
+      { t: 600, op: "delete", table: "fulfilment_events", pk: { id: "FUL-501-1" } },
+    ],
+  },
+  {
+    id: "real-time-payments",
+    name: "Real-time Payments",
+    label: "Real-time Payments",
+    description: "Demonstrating idempotent updates or risk review flows.",
+    highlight: "Trigger overhead tuning + delete capture expectations.",
+    tags: ["payments", "risk", "latency"],
+    seed: 73,
+    table: "payments",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "account_id", type: "string", pk: false },
+      { name: "amount", type: "number", pk: false },
+      { name: "currency", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "released_by", type: "string", pk: false },
+      { name: "settled_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "PAY-009", account_id: "AC-77", amount: 985.4, currency: "USD", status: "settled", settled_ts: 280 },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 50,
+        op: "insert",
+        table: "payments",
+        pk: { id: "PAY-009" },
+        after: { account_id: "AC-77", amount: 985.4, currency: "USD", status: "authorised" },
+      },
+      {
+        t: 95,
+        op: "insert",
+        table: "risk_reviews",
+        pk: { id: "RR-009" },
+        after: { payment_id: "PAY-009", score: 412, disposition: "manual" },
+      },
+      { t: 140, op: "update", table: "risk_reviews", pk: { id: "RR-009" }, after: { disposition: "approved" } },
+      { t: 180, op: "update", table: "payments", pk: { id: "PAY-009" }, after: { status: "released", released_by: "agent-5" } },
+      { t: 220, op: "delete", table: "risk_reviews", pk: { id: "RR-009" } },
+      { t: 280, op: "update", table: "payments", pk: { id: "PAY-009" }, after: { status: "settled", settled_ts: 280 } },
+    ],
+  },
+  {
+    id: "iot-telemetry",
+    name: "IoT Telemetry",
+    label: "IoT Telemetry",
+    description: "Showing rolling measurements with anomaly flags.",
+    highlight: "Highlights soft-delete vs. log consistency and clock controls.",
+    tags: ["iot", "telemetry", "anomaly"],
+    seed: 88,
+    table: "device_readings",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "device_id", type: "string", pk: false },
+      { name: "temp_c", type: "number", pk: false },
+      { name: "humidity", type: "number", pk: false },
+      { name: "anomaly", type: "bool", pk: false },
+      { name: "anomaly_reason", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "DEV-5@130", device_id: "DEV-5", temp_c: 19.2, humidity: 0.39, anomaly: false },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 10,
+        op: "insert",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+        after: { device_id: "DEV-5", temp_c: 18.4, humidity: 0.41, anomaly: false },
+      },
+      {
+        t: 55,
+        op: "update",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+        after: { temp_c: 28.9, anomaly: true, anomaly_reason: "spike" },
+      },
+      {
+        t: 130,
+        op: "insert",
+        table: "device_readings",
+        pk: { id: "DEV-5@130" },
+        after: { device_id: "DEV-5", temp_c: 19.2, humidity: 0.39, anomaly: false },
+      },
+      {
+        t: 200,
+        op: "delete",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+      },
+    ],
   },
   {
     id: "schema-evolution",
     name: "Schema Evolution",
     label: "Schema Evolution",
-    description: "Add a column mid-stream and observe how each capture method reacts.",
-    highlight: "Log/trigger streams forward the new column immediately; polling only sees it once rows refresh.",
-    tags: ["schema", "evolution"],
-    table: "orders",
-    seed: 21,
+    description: "Demonstrating column additions while capturing changes.",
+    highlight: "Compare immediate log/trigger propagation with polling lag.",
+    tags: ["schema", "backfill"],
+    seed: 64,
+    table: "customers",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "name", type: "string", pk: false },
+      { name: "email", type: "string", pk: false },
+      { name: "loyalty_tier", type: "string", pk: false },
+      { name: "preferences", type: "json", pk: false },
+    ],
     schemaVersion: 2,
+    rows: [
+      {
+        id: "C-881",
+        name: "Ishaan",
+        email: "ishaan@example.net",
+        loyalty_tier: "bronze",
+        preferences: { marketing_opt_in: false, locale: "en-GB" },
+      },
+    ],
+    events: [],
     ops: [
-      { t: 120, op: "insert", table: "orders", pk: { id: "ORD-2001" }, after: { status: "created", amount: 84.1 } },
-      { t: 260, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { status: "processing" } },
-      { t: 340, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { priority_flag: true } },
-      { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
-      { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } }
-    ]
+      {
+        t: 75,
+        op: "insert",
+        table: "customers",
+        pk: { id: "C-880" },
+        after: { name: "Mira", email: "mira@example.net", loyalty_tier: "silver" },
+      },
+      {
+        t: 140,
+        op: "update",
+        table: "customers",
+        pk: { id: "C-880" },
+        after: { loyalty_tier: "gold", preferences: { marketing_opt_in: true } },
+      },
+      {
+        t: 210,
+        op: "insert",
+        table: "customers",
+        pk: { id: "C-881" },
+        after: { name: "Ishaan", email: "ishaan@example.net", loyalty_tier: "bronze" },
+      },
+      {
+        t: 360,
+        op: "update",
+        table: "customers",
+        pk: { id: "C-881" },
+        after: { preferences: { marketing_opt_in: false, locale: "en-GB" } },
+      },
+    ],
   },
   {
-    id: "orders-transactions",
+    id: "orders-items-transactions",
     name: "Orders + Items Transactions",
     label: "Orders + Items Transactions",
-    description: "Coordinate changes across orders and order_items within the same transaction.",
-    highlight: "Apply-on-commit keeps multi-table writes atomic across downstream lanes.",
-    tags: ["transactions", "consistency"],
-    seed: 99,
+    description: "Teaching multi-table commit semantics.",
+    highlight: "Toggle apply-on-commit to keep orders/items destinations consistent.",
+    tags: ["transactions", "orders"],
+    seed: 58,
+    table: "orders",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "subtotal", type: "number", pk: false },
+      { name: "shipped_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "ORD-720", customer_id: "C-32", status: "shipped", subtotal: 412.5, shipped_ts: 520 },
+    ],
+    events: [],
     ops: [
-      { t: 120, op: "insert", table: "orders", pk: { id: "ORD-5001" }, after: { status: "pending", total: 128.5 }, txn: { id: "txn-5001", index: 0, total: 2 } },
-      { t: 120, op: "insert", table: "order_items", pk: { id: "ORD-5001-1" }, after: { order_id: "ORD-5001", sku: "SKU-1", qty: 1 }, txn: { id: "txn-5001", index: 1, total: 2, last: true } },
-      { t: 360, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "fulfilled" }, txn: { id: "txn-5002", index: 0, total: 2 } },
-      { t: 360, op: "insert", table: "order_items", pk: { id: "ORD-5001-2" }, after: { order_id: "ORD-5001", sku: "SKU-99", qty: 1 }, txn: { id: "txn-5002", index: 1, total: 2, last: true } },
-      { t: 520, op: "delete", table: "order_items", pk: { id: "ORD-5001-1" }, txn: { id: "txn-5003", index: 0, total: 2 } },
-      { t: 520, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "partially_refunded" }, txn: { id: "txn-5003", index: 1, total: 2, last: true } }
-    ]
-  }
+      {
+        t: 300,
+        op: "insert",
+        table: "orders",
+        pk: { id: "ORD-720" },
+        after: { customer_id: "C-32", status: "pending", subtotal: 412.5 },
+        txn: { id: "TX-720", index: 0, total: 3 },
+      },
+      {
+        t: 300,
+        op: "insert",
+        table: "order_items",
+        pk: { id: "ORD-720-1" },
+        after: { order_id: "ORD-720", sku: "SKU-9", qty: 2, price: 99.5 },
+        txn: { id: "TX-720", index: 1, total: 3 },
+      },
+      {
+        t: 300,
+        op: "insert",
+        table: "order_items",
+        pk: { id: "ORD-720-2" },
+        after: { order_id: "ORD-720", sku: "SKU-44", qty: 1, price: 213.5 },
+        txn: { id: "TX-720", index: 2, total: 3, last: true },
+      },
+      {
+        t: 520,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-720" },
+        after: { status: "shipped", shipped_ts: 520 },
+      },
+    ],
+  },
+  {
+    id: "burst-updates",
+    name: "Burst Updates",
+    label: "Burst Updates",
+    description: "Stressing lag/ordering behaviour under rapid updates.",
+    highlight: "Highlights polling gaps and diff overlays.",
+    tags: ["lag", "polling"],
+    seed: 7,
+    table: "widgets",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "status", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "W-1", status: "ready" },
+    ],
+    events: [],
+    ops: [
+      { t: 100, op: "insert", table: "widgets", pk: { id: "W-1" }, after: { status: "new" } },
+      { t: 150, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "processing" } },
+      { t: 200, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "picking" } },
+      { t: 260, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "packing" } },
+      { t: 320, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "ready" } },
+    ],
+  },
 ];
 
 if (typeof window !== "undefined") {
