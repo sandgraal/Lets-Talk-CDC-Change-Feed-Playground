@@ -391,23 +391,71 @@ const SHARED_SCENARIOS =
     ? window.CDC_SCENARIOS
     : FALLBACK_SCENARIOS;
 
+const FALLBACK_TEMPLATE_SEED_BASE = 1000;
+
+function cloneTemplateOps(ops, index) {
+  if (!Array.isArray(ops)) return [];
+  return ops
+    .filter(op => Boolean(op))
+    .map(op => {
+      const clone = { ...op };
+      if (op?.pk) {
+        clone.pk = { ...op.pk };
+      }
+      if ("after" in clone && op && "after" in op && op.after) {
+        clone.after = { ...op.after };
+      }
+      if (op?.txn) {
+        clone.txn = { ...op.txn };
+      }
+      clone.t = typeof clone.t === "number" ? clone.t : index * 200;
+      return clone;
+    });
+}
+
+function cloneTemplateRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter(row => row && typeof row === "object")
+    .map(row => ({ ...row }));
+}
+
+function cloneTemplateSchema(schema) {
+  if (!Array.isArray(schema)) return [];
+  return schema
+    .filter(column => column && typeof column.name === "string")
+    .map(column => ({ ...column }));
+}
+
+function cloneTemplateEvents(events) {
+  if (!Array.isArray(events)) return [];
+  return events
+    .filter(event => event && typeof event === "object")
+    .map(event => ({ ...event }));
+}
+
+function deriveTemplateSeed(seed, index) {
+  return typeof seed === "number" ? seed : FALLBACK_TEMPLATE_SEED_BASE + index;
+}
+
 const SCENARIO_TEMPLATES = Object.freeze(
   SHARED_SCENARIOS
-    .filter(template => Array.isArray(template.rows) && template.rows.length)
-    .map(template => ({
+    .map((template, index) => ({
       id: template.id,
       name: template.name,
       label: template.label || template.name,
       description: template.description,
       highlight: template.highlight,
       tags: Array.isArray(template.tags) ? [...template.tags] : [],
-      seed: template.seed,
-      schemaVersion: template.schemaVersion,
-      schema: template.schema,
-      rows: template.rows,
-      events: template.events || [],
-      ops: template.ops || [],
+      seed: deriveTemplateSeed(template.seed, index),
+      schemaVersion: typeof template.schemaVersion === "number" ? template.schemaVersion : undefined,
+      table: template.table,
+      schema: cloneTemplateSchema(template.schema),
+      rows: cloneTemplateRows(template.rows),
+      events: cloneTemplateEvents(template.events),
+      ops: cloneTemplateOps(template.ops, index),
     }))
+    .filter(template => template.id && template.ops.length > 0)
 );
 
 const state = {
@@ -3802,8 +3850,13 @@ function downloadScenarioTemplate(template) {
   const payload = {
     id: template.id,
     name: template.name,
+    label: template.label,
     description: template.description,
     highlight: template.highlight,
+    tags: Array.isArray(template.tags) ? [...template.tags] : [],
+    table: template.table,
+    schemaVersion: template.schemaVersion,
+    seed: template.seed,
     schema: template.schema,
     rows: template.rows,
     events: template.events,

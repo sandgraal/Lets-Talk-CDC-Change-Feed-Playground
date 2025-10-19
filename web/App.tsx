@@ -1669,11 +1669,18 @@ export function App() {
 
   const handleScenarioDownload = useCallback((target: ShellScenario) => {
     const payload = {
+      id: target.id,
       name: target.name,
       label: target.label,
       description: target.description,
       highlight: target.highlight,
+      tags: target.tags,
+      table: target.table,
+      schemaVersion: target.schemaVersion,
       seed: target.seed,
+      schema: target.schema ?? [],
+      rows: target.rows ?? [],
+      events: target.events ?? [],
       ops: target.ops,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });

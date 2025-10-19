@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SCENARIO_TEMPLATES } from "../../features/scenarios";
+import { SCENARIOS as COMPARATOR_SCENARIOS } from "../../../web/scenarios";
 import sharedScenarios from "../../features/shared-scenarios";
 
 const EXPECTED_SCENARIOS = [
@@ -133,7 +134,9 @@ describe("Scenario templates", () => {
 
   it("stays aligned with the shared scenario catalogue", () => {
     const eligibleShared = sharedScenarios.filter(
-      scenario => Array.isArray(scenario.ops) && scenario.ops.length > 0,
+      scenario =>
+        (Array.isArray(scenario.ops) && scenario.ops.length > 0) ||
+        (Array.isArray(scenario.events) && scenario.events.length > 0),
     );
     expect(eligibleShared.length).toBe(SCENARIO_TEMPLATES.length);
 
@@ -158,11 +161,57 @@ describe("Scenario templates", () => {
       if (Array.isArray(shared?.events)) {
         expect(shared?.events).not.toBe(template.events);
       }
-      expect(shared?.ops?.length).toBe(template.ops.length);
-      if (Array.isArray(shared?.ops)) {
-        expect(shared?.ops).not.toBe(template.ops);
+      const sharedOps = Array.isArray(shared?.ops) ? shared?.ops : undefined;
+      if (sharedOps) {
+        expect(sharedOps.length).toBe(template.ops.length);
+        expect(sharedOps).not.toBe(template.ops);
+      } else {
+        expect(Array.isArray(shared?.events) && shared.events.length > 0).toBe(true);
       }
       expect(shared?.schemaVersion ?? undefined).toBe(template.schemaVersion ?? undefined);
+    });
+  });
+});
+
+describe("Comparator scenarios", () => {
+  it("mirrors curated scenario coverage", () => {
+    const ids = COMPARATOR_SCENARIOS.map(scenario => scenario.id).sort();
+    const expected = SCENARIO_TEMPLATES.map(template => template.id).sort();
+    expect(ids).toEqual(expected);
+  });
+
+  it("retains metadata and preview payloads", () => {
+    const templatesById = new Map(SCENARIO_TEMPLATES.map(template => [template.id, template]));
+    COMPARATOR_SCENARIOS.forEach(scenario => {
+      const template = templatesById.get(scenario.id);
+      expect(template).toBeTruthy();
+      expect(scenario.label).toBe(template?.label);
+      expect(scenario.description).toBe(template?.description);
+      expect(scenario.highlight).toBe(template?.highlight);
+      expect(scenario.tags).toEqual(template?.tags ?? []);
+      expect(scenario.table ?? undefined).toBe(template?.table ?? undefined);
+      expect(scenario.schemaVersion ?? undefined).toBe(template?.schemaVersion ?? undefined);
+      expect(scenario.seed).toBe(template?.seed);
+
+      expect(scenario.schema?.length ?? 0).toBe(template?.schema.length ?? 0);
+      if (scenario.schema && template?.schema) {
+        expect(scenario.schema).not.toBe(template.schema);
+      }
+
+      expect(scenario.rows?.length ?? 0).toBe(template?.rows.length ?? 0);
+      if (scenario.rows && template?.rows) {
+        expect(scenario.rows).not.toBe(template.rows);
+      }
+
+      expect(scenario.events?.length ?? 0).toBe(template?.events.length ?? 0);
+      if (scenario.events && template?.events) {
+        expect(scenario.events).not.toBe(template.events);
+      }
+
+      expect(scenario.ops.length).toBe(template?.ops.length ?? 0);
+      expect(scenario.ops).not.toBe(template?.ops);
+      expect(scenario.stats?.rows ?? 0).toBe(scenario.rows?.length ?? 0);
+      expect(scenario.stats?.ops ?? 0).toBe(scenario.ops.length);
     });
   });
 });
