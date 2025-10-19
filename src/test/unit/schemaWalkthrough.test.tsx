@@ -1,6 +1,6 @@
 import { render, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SchemaWalkthrough } from "../../../web/components/SchemaWalkthrough";
+import { SchemaWalkthrough } from "../../ui/components/SchemaWalkthrough";
 
 describe("SchemaWalkthrough", () => {
   it("invokes callbacks when buttons are pressed", () => {

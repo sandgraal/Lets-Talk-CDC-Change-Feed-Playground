@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { MetricsStrip } from "../../../web/components/MetricsStrip";
+import { MetricsStrip } from "../../ui/components/MetricsStrip";
 
 describe("MetricsStrip", () => {
   it("renders key metrics and status flags", () => {
