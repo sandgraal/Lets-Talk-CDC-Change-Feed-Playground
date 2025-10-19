@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { LaneDiffOverlay } from "../../../web/components/LaneDiffOverlay";
-import type { LaneDiffResult } from "../../../sim";
+import { LaneDiffOverlay } from "../../ui/components/LaneDiffOverlay";
+import type { LaneDiffResult } from "../../ui/components/LaneDiffOverlay";
 
 describe("LaneDiffOverlay", () => {
   const baseDiff: LaneDiffResult = {

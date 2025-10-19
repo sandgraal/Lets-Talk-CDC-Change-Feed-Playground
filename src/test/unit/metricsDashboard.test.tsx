@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { MetricsDashboard } from "../../../web/components/MetricsDashboard";
+import { MetricsDashboard } from "../../ui/components/MetricsDashboard";
 
 describe("MetricsDashboard", () => {
   it("renders lane metrics with totals", () => {
