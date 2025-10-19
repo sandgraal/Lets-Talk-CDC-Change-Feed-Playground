@@ -1,7 +1,15 @@
 import sharedScenarios from "../assets/shared-scenarios.js";
 import type { Scenario, SourceOp } from "../sim";
+import type { SharedScenarioModule } from "../src/types/shared-scenarios";
+import {
+  normaliseSharedScenario,
+  type ScenarioTemplate,
+} from "../src/features/shared-scenario-normaliser";
+
+type SharedScenario = SharedScenarioModule[number];
 
 export interface ShellScenario extends Scenario {
+  id: string;
   label: string;
   description: string;
   highlight?: string;
@@ -10,150 +18,379 @@ export interface ShellScenario extends Scenario {
     ops: number;
   };
   table?: string;
-  tags?: string[];
+  tags: string[];
+  schema?: ScenarioTemplate["schema"];
+  rows?: ScenarioTemplate["rows"];
+  events?: ScenarioTemplate["events"];
+  schemaVersion?: number;
 }
 
-function deriveOpsFromEvents(raw: any): Scenario["ops"] {
-  if (!raw || !Array.isArray(raw.events)) return [];
-  const pkField = raw.schema?.find((col: any) => col?.pk)?.name || "id";
-  const table = raw.table || raw.id || "table";
-
-  const ops = raw.events
-    .map((event: any, index: number) => {
-      const payload = event?.payload ?? event;
-      if (!payload) return null;
-      const opCode = payload.op ?? event?.op;
-      const ts = Number(payload.ts_ms ?? event?.ts_ms);
-      const after = payload.after ?? event?.after ?? null;
-      const before = payload.before ?? event?.before ?? null;
-      const keyData = event?.key ?? null;
-
-      const pkValue =
-        (keyData && Object.values(keyData)[0]) ??
-        (after && after[pkField]) ??
-        (before && before[pkField]);
-
-      const pk = { id: pkValue != null ? String(pkValue) : String(index) };
-
-      const base = {
-        t: Number.isFinite(ts) ? ts : index * 200,
-        table,
-        pk,
-      } as SourceOp;
-
-      if (opCode === "c") {
-        if (!after) return null;
-        return { ...base, op: "insert", after };
-      }
-      if (opCode === "u") {
-        if (!after) return null;
-        return { ...base, op: "update", after };
-      }
-      if (opCode === "d") {
-        return { ...base, op: "delete" };
-      }
-      return null;
-    })
-    .filter((op: SourceOp | null): op is SourceOp => Boolean(op));
-
-  return ops;
+function cloneOp(op: SourceOp): SourceOp {
+  const clone: SourceOp = { ...op } as SourceOp;
+  if (op.pk) {
+    clone.pk = { ...op.pk };
+  }
+  if (op.after) {
+    clone.after = { ...op.after } as SourceOp["after"];
+  }
+  if (op.txn) {
+    clone.txn = { ...op.txn };
+  }
+  return clone;
 }
 
-function normalizeScenario(raw: any): ShellScenario | null {
-  if (!raw || !Array.isArray(raw.ops)) return null;
+function toShellScenario(template: ScenarioTemplate): ShellScenario {
   return {
-    name: raw.id || raw.name || "scenario",
-    label: raw.label || raw.name || "Scenario",
-    description: raw.description || "",
-    highlight: raw.highlight,
+    id: template.id,
+    name: template.id || template.name,
+    label: template.label,
+    description: template.description,
+    highlight: template.highlight,
     stats: {
-      rows: Array.isArray(raw.rows) ? raw.rows.length : 0,
-      ops: Array.isArray(raw.ops) ? raw.ops.length : 0,
+      rows: template.rows.length,
+      ops: template.ops.length,
     },
-    table: raw.table,
-    tags: Array.isArray(raw.tags) ? raw.tags : [],
-    seed: typeof raw.seed === "number" ? raw.seed : 1,
-    ops: raw.ops,
+    table: template.table,
+    tags: [...template.tags],
+    schema: template.schema.length ? template.schema.map(column => ({ ...column })) : undefined,
+    rows: template.rows.length ? template.rows.map(row => ({ ...row })) : undefined,
+    events: template.events.length ? template.events.map(event => ({ ...event })) : undefined,
+    schemaVersion: template.schemaVersion,
+    seed: template.seed,
+    ops: template.ops.map(cloneOp),
   };
 }
 
-const mapped = Array.isArray(sharedScenarios)
-  ? sharedScenarios
-      .map((scenario: any) => {
-        const base = { ...scenario };
-        if (!Array.isArray(base.ops) || base.ops.length === 0) {
-          base.ops = deriveOpsFromEvents(base);
-        }
-        return normalizeScenario(base);
-      })
-      .filter((scenario): scenario is ShellScenario => Boolean(scenario))
+const typedSharedScenarios: SharedScenarioModule = Array.isArray(sharedScenarios)
+  ? (sharedScenarios as SharedScenarioModule)
   : [];
+
+const mapped = typedSharedScenarios.length
+  ? typedSharedScenarios
+      .map((scenario, index) =>
+        normaliseSharedScenario(scenario, {
+          scenarioIndex: index,
+          includeTxn: true,
+          allowEventsAsOps: true,
+          fallbackTable: scenario.table ?? scenario.id,
+          fallbackTimestamp: ({ scenarioIndex, opIndex }) => scenarioIndex * 400 + opIndex * 50,
+        }),
+      )
+      .filter((template): template is ScenarioTemplate => Boolean(template))
+      .map(toShellScenario)
+  : [];
+
+const LEGACY_TEMPLATES: ScenarioTemplate[] = [
+  {
+    id: "crud-basic",
+    name: "CRUD Basic",
+    label: "CRUD Basic",
+    description: "Teaching delete visibility basics.",
+    highlight: "Minimal ops for first-time comparator demos.",
+    tags: ["crud", "basics"],
+    seed: 42,
+    table: "customers",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "name", type: "string", pk: false },
+      { name: "email", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "1", name: "Alice", email: "alice@contoso.io" },
+    ],
+    events: [],
+    ops: [
+      { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "Alice", email: "alice@example.com" } },
+      { t: 350, op: "update", table: "customers", pk: { id: "1" }, after: { email: "alice@contoso.io" } },
+      { t: 700, op: "delete", table: "customers", pk: { id: "1" } },
+    ],
+  },
+  {
+    id: "omnichannel-orders",
+    name: "Omnichannel Orders",
+    label: "Omnichannel Orders",
+    description: "Walking through status transitions and fulfilment edge cases.",
+    highlight: "Mix of inserts/updates with delete coverage; great for lag comparisons.",
+    tags: ["orders", "lag", "fulfilment"],
+    seed: 21,
+    table: "orders",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "channel", type: "string", pk: false },
+      { name: "total", type: "number", pk: false },
+      { name: "pickup_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "ORD-501", customer_id: "C-19", status: "collected", channel: "store-108", total: 189.5, pickup_ts: 420 },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 120,
+        op: "insert",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { customer_id: "C-19", status: "pending", channel: "web", total: 189.5 },
+      },
+      {
+        t: 240,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { status: "ready_for_pickup", channel: "store-108" },
+      },
+      {
+        t: 260,
+        op: "insert",
+        table: "fulfilment_events",
+        pk: { id: "FUL-501-1" },
+        after: { order_id: "ORD-501", type: "picking", associate: "EMP-88" },
+      },
+      {
+        t: 420,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-501" },
+        after: { status: "collected", pickup_ts: 420 },
+      },
+      { t: 600, op: "delete", table: "fulfilment_events", pk: { id: "FUL-501-1" } },
+    ],
+  },
+  {
+    id: "real-time-payments",
+    name: "Real-time Payments",
+    label: "Real-time Payments",
+    description: "Demonstrating idempotent updates or risk review flows.",
+    highlight: "Trigger overhead tuning + delete capture expectations.",
+    tags: ["payments", "risk", "latency"],
+    seed: 73,
+    table: "payments",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "account_id", type: "string", pk: false },
+      { name: "amount", type: "number", pk: false },
+      { name: "currency", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "released_by", type: "string", pk: false },
+      { name: "settled_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "PAY-009", account_id: "AC-77", amount: 985.4, currency: "USD", status: "settled", settled_ts: 280 },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 50,
+        op: "insert",
+        table: "payments",
+        pk: { id: "PAY-009" },
+        after: { account_id: "AC-77", amount: 985.4, currency: "USD", status: "authorised" },
+      },
+      {
+        t: 95,
+        op: "insert",
+        table: "risk_reviews",
+        pk: { id: "RR-009" },
+        after: { payment_id: "PAY-009", score: 412, disposition: "manual" },
+      },
+      { t: 140, op: "update", table: "risk_reviews", pk: { id: "RR-009" }, after: { disposition: "approved" } },
+      { t: 180, op: "update", table: "payments", pk: { id: "PAY-009" }, after: { status: "released", released_by: "agent-5" } },
+      { t: 220, op: "delete", table: "risk_reviews", pk: { id: "RR-009" } },
+      { t: 280, op: "update", table: "payments", pk: { id: "PAY-009" }, after: { status: "settled", settled_ts: 280 } },
+    ],
+  },
+  {
+    id: "iot-telemetry",
+    name: "IoT Telemetry",
+    label: "IoT Telemetry",
+    description: "Showing rolling measurements with anomaly flags.",
+    highlight: "Highlights soft-delete vs. log consistency and clock controls.",
+    tags: ["iot", "telemetry", "anomaly"],
+    seed: 88,
+    table: "device_readings",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "device_id", type: "string", pk: false },
+      { name: "temp_c", type: "number", pk: false },
+      { name: "humidity", type: "number", pk: false },
+      { name: "anomaly", type: "bool", pk: false },
+      { name: "anomaly_reason", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "DEV-5@130", device_id: "DEV-5", temp_c: 19.2, humidity: 0.39, anomaly: false },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 10,
+        op: "insert",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+        after: { device_id: "DEV-5", temp_c: 18.4, humidity: 0.41, anomaly: false },
+      },
+      {
+        t: 55,
+        op: "update",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+        after: { temp_c: 28.9, anomaly: true, anomaly_reason: "spike" },
+      },
+      {
+        t: 130,
+        op: "insert",
+        table: "device_readings",
+        pk: { id: "DEV-5@130" },
+        after: { device_id: "DEV-5", temp_c: 19.2, humidity: 0.39, anomaly: false },
+      },
+      {
+        t: 200,
+        op: "delete",
+        table: "device_readings",
+        pk: { id: "DEV-5@10" },
+      },
+    ],
+  },
+  {
+    id: "schema-evolution",
+    name: "Schema Evolution",
+    label: "Schema Evolution",
+    description: "Demonstrating column additions while capturing changes.",
+    highlight: "Compare immediate log/trigger propagation with polling lag.",
+    tags: ["schema", "backfill"],
+    seed: 64,
+    table: "customers",
+    schemaVersion: 2,
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "name", type: "string", pk: false },
+      { name: "email", type: "string", pk: false },
+      { name: "loyalty_tier", type: "string", pk: false },
+      { name: "preferences", type: "json", pk: false },
+    ],
+    rows: [
+      {
+        id: "C-881",
+        name: "Ishaan",
+        email: "ishaan@example.net",
+        loyalty_tier: "bronze",
+        preferences: { marketing_opt_in: false, locale: "en-GB" },
+      },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 75,
+        op: "insert",
+        table: "customers",
+        pk: { id: "C-880" },
+        after: { name: "Mira", email: "mira@example.net", loyalty_tier: "silver" },
+      },
+      {
+        t: 140,
+        op: "update",
+        table: "customers",
+        pk: { id: "C-880" },
+        after: { loyalty_tier: "gold", preferences: { marketing_opt_in: true } },
+      },
+      {
+        t: 210,
+        op: "insert",
+        table: "customers",
+        pk: { id: "C-881" },
+        after: { name: "Ishaan", email: "ishaan@example.net", loyalty_tier: "bronze" },
+      },
+      {
+        t: 360,
+        op: "update",
+        table: "customers",
+        pk: { id: "C-881" },
+        after: { preferences: { marketing_opt_in: false, locale: "en-GB" } },
+      },
+    ],
+  },
+  {
+    id: "orders-items-transactions",
+    name: "Orders + Items Transactions",
+    label: "Orders + Items Transactions",
+    description: "Teaching multi-table commit semantics.",
+    highlight: "Toggle apply-on-commit to keep orders/items destinations consistent.",
+    tags: ["transactions", "orders"],
+    seed: 58,
+    table: "orders",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "subtotal", type: "number", pk: false },
+      { name: "shipped_ts", type: "number", pk: false },
+    ],
+    rows: [
+      { id: "ORD-720", customer_id: "C-32", status: "shipped", subtotal: 412.5, shipped_ts: 520 },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 300,
+        op: "insert",
+        table: "orders",
+        pk: { id: "ORD-720" },
+        after: { customer_id: "C-32", status: "pending", subtotal: 412.5 },
+        txn: { id: "TX-720", index: 0, total: 3 },
+      },
+      {
+        t: 300,
+        op: "insert",
+        table: "order_items",
+        pk: { id: "ORD-720-1" },
+        after: { order_id: "ORD-720", sku: "SKU-9", qty: 2, price: 99.5 },
+        txn: { id: "TX-720", index: 1, total: 3 },
+      },
+      {
+        t: 300,
+        op: "insert",
+        table: "order_items",
+        pk: { id: "ORD-720-2" },
+        after: { order_id: "ORD-720", sku: "SKU-44", qty: 1, price: 213.5 },
+        txn: { id: "TX-720", index: 2, total: 3, last: true },
+      },
+      {
+        t: 520,
+        op: "update",
+        table: "orders",
+        pk: { id: "ORD-720" },
+        after: { status: "shipped", shipped_ts: 520 },
+      },
+    ],
+  },
+  {
+    id: "burst-updates",
+    name: "Burst Updates",
+    label: "Burst Updates",
+    description: "Stressing lag/ordering behaviour under rapid updates.",
+    highlight: "Highlights polling gaps and diff overlays.",
+    tags: ["lag", "polling"],
+    seed: 7,
+    table: "widgets",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "status", type: "string", pk: false },
+    ],
+    rows: [
+      { id: "W-1", status: "ready" },
+    ],
+    events: [],
+    ops: [
+      { t: 100, op: "insert", table: "widgets", pk: { id: "W-1" }, after: { status: "new" } },
+      { t: 150, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "processing" } },
+      { t: 200, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "picking" } },
+      { t: 260, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "packing" } },
+      { t: 320, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "ready" } },
+    ],
+  },
+];
 
 export const SCENARIOS: ShellScenario[] = mapped.length
   ? mapped
-  : [
-      {
-        name: "crud-basic",
-        label: "CRUD Basic",
-        description: "Insert, update, and delete a single customer to highlight delete visibility.",
-        highlight: "Polling misses deletes; triggers and logs keep targets in sync.",
-        stats: { rows: 1, ops: 3 },
-        tags: ["crud", "polling", "basics"],
-        seed: 42,
-        ops: [
-          { t: 100, op: "insert", table: "customers", pk: { id: "1" }, after: { name: "A", email: "a@example.com" } },
-          { t: 400, op: "update", table: "customers", pk: { id: "1" }, after: { name: "A1" } },
-          { t: 700, op: "delete", table: "customers", pk: { id: "1" } },
-        ],
-      },
-      {
-        name: "burst-updates",
-        label: "Burst Updates",
-        description: "Five quick updates to expose lost intermediate writes for polling.",
-        highlight: "Rapid updates test lag and ordering resilience across engines.",
-        stats: { rows: 3, ops: 6 },
-        tags: ["throughput", "polling", "lag"],
-        seed: 7,
-        ops: [
-          { t: 100, op: "insert", table: "customers", pk: { id: "200" }, after: { name: "Burst", email: "burst@example.com" } },
-          { t: 150, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-1" } },
-          { t: 180, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-2" } },
-          { t: 210, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-3" } },
-          { t: 240, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-4" } },
-          { t: 600, op: "update", table: "customers", pk: { id: "200" }, after: { name: "Burst-Final" } },
-        ],
-      },
-      {
-        name: "schema-evolution",
-        label: "Schema Evolution",
-        description: "Add a new column mid-stream and compare capture behaviours.",
-        highlight: "Log/trigger propagate schema immediately; polling lags until refreshed rows appear.",
-        stats: { rows: 2, ops: 5 },
-        tags: ["schema", "evolution"],
-        seed: 21,
-        ops: [
-          { t: 120, op: "insert", table: "orders", pk: { id: "ORD-2001" }, after: { status: "created", amount: 84.1 } },
-          { t: 260, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { status: "processing" } },
-          { t: 340, op: "update", table: "orders", pk: { id: "ORD-2001" }, after: { priority_flag: true } },
-          { t: 420, op: "insert", table: "orders", pk: { id: "ORD-2002" }, after: { status: "created", amount: 46.0, priority_flag: false } },
-          { t: 540, op: "update", table: "orders", pk: { id: "ORD-2002" }, after: { status: "fulfilled" } },
-        ],
-      },
-      {
-        name: "orders-transactions",
-        label: "Orders + Items Transactions",
-        description: "Synchronise orders and order_items updates within the same transaction.",
-        highlight: "Turn on apply-on-commit to keep downstream tables aligned while events stream.",
-        stats: { rows: 3, ops: 6 },
-        tags: ["transactions", "consistency"],
-        seed: 99,
-        ops: [
-          { t: 120, op: "insert", table: "orders", pk: { id: "ORD-5001" }, after: { status: "pending", total: 128.5 }, txn: { id: "txn-5001", index: 0, total: 2 } },
-          { t: 120, op: "insert", table: "order_items", pk: { id: "ORD-5001-1" }, after: { order_id: "ORD-5001", sku: "SKU-1", qty: 1 }, txn: { id: "txn-5001", index: 1, total: 2, last: true } },
-          { t: 360, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "fulfilled" }, txn: { id: "txn-5002", index: 0, total: 2 } },
-          { t: 360, op: "insert", table: "order_items", pk: { id: "ORD-5001-2" }, after: { order_id: "ORD-5001", sku: "SKU-99", qty: 1 }, txn: { id: "txn-5002", index: 1, total: 2, last: true } },
-          { t: 520, op: "delete", table: "order_items", pk: { id: "ORD-5001-1" }, txn: { id: "txn-5003", index: 0, total: 2 } },
-          { t: 520, op: "update", table: "orders", pk: { id: "ORD-5001" }, after: { status: "partially_refunded" }, txn: { id: "txn-5003", index: 1, total: 2, last: true } },
-        ],
-      },
-    ];
+  : LEGACY_TEMPLATES.map(toShellScenario);
