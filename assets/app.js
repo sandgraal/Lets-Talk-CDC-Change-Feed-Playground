@@ -2142,6 +2142,15 @@ function buildEventLogProps(rows) {
   const tables = Array.from(new Set(rows.map(row => row.table).filter(Boolean))).sort();
   const txns = Array.from(new Set(rows.map(row => row.txnId).filter(Boolean))).sort();
   const methods = rows.length ? [EVENT_LOG_METHOD] : [];
+  const opSet = new Set(
+    rows
+      .map(row => (typeof row.op === "string" ? row.op.trim().toLowerCase() : ""))
+      .filter(Boolean),
+  );
+  const prioritizedOps = ["c", "u", "d", "s"].filter(op => opSet.has(op));
+  const extraOps = Array.from(opSet).filter(op => !["c", "u", "d", "s"].includes(op));
+  extraOps.sort();
+  const ops = [...prioritizedOps, ...extraOps];
 
   return {
     className: "cdc-event-log",
@@ -2155,6 +2164,7 @@ function buildEventLogProps(rows) {
     filters: {},
     filterOptions: {
       methods,
+      ops,
       tables,
       txns,
     },

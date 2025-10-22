@@ -69,6 +69,7 @@ const baseProps = {
       { id: "trigger", label: "Trigger" },
       { id: "log", label: "Log" },
     ],
+    ops: ["c", "u", "d"],
     tables: ["orders"],
     txns: sampleEvents.map(event => event.txnId!).filter(Boolean),
   },

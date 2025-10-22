@@ -25,12 +25,14 @@ export type EventLogStats = {
 
 export type EventLogFilters = {
   methodId?: string;
+  op?: string;
   table?: string;
   txnId?: string;
 };
 
 export type EventLogFilterOptions = {
   methods: Array<{ id: string; label: string }>;
+  ops: string[];
   tables: string[];
   txns: string[];
 };
@@ -55,6 +57,7 @@ export type EventLogProps = {
 const DEFAULT_MAX_VISIBLE = 2000;
 const DEFAULT_FILTER_OPTIONS: EventLogFilterOptions = {
   methods: [],
+  ops: [],
   tables: [],
   txns: [],
 };
@@ -100,6 +103,7 @@ export const EventLog: FC<EventLogProps> = ({
 }) => {
   const appliedFilterOptions = {
     methods: filterOptions?.methods ?? DEFAULT_FILTER_OPTIONS.methods,
+    ops: filterOptions?.ops ?? DEFAULT_FILTER_OPTIONS.ops,
     tables: filterOptions?.tables ?? DEFAULT_FILTER_OPTIONS.tables,
     txns: filterOptions?.txns ?? DEFAULT_FILTER_OPTIONS.txns,
   };
@@ -145,7 +149,7 @@ export const EventLog: FC<EventLogProps> = ({
 
   const total = typeof totalCount === "number" ? totalCount : events.length;
   const hasFilters =
-    Boolean(filters.methodId) || Boolean(filters.table) || Boolean(filters.txnId);
+    Boolean(filters.methodId) || Boolean(filters.op) || Boolean(filters.table) || Boolean(filters.txnId);
   const strings = {
     empty: emptyMessage ?? DEFAULT_STRINGS.empty,
     noMatch: noMatchMessage ?? DEFAULT_STRINGS.noMatch,
@@ -155,11 +159,13 @@ export const EventLog: FC<EventLogProps> = ({
     if (!onFiltersChange) return;
     const merged: EventLogFilters = {
       methodId: partial.methodId === undefined ? filters.methodId : partial.methodId,
+      op: partial.op === undefined ? filters.op : partial.op,
       table: partial.table === undefined ? filters.table : partial.table,
       txnId: partial.txnId === undefined ? filters.txnId : partial.txnId,
     };
     const next: EventLogFilters = {
       methodId: merged.methodId || undefined,
+      op: merged.op || undefined,
       table: merged.table || undefined,
       txnId: merged.txnId || undefined,
     };
@@ -237,6 +243,21 @@ export const EventLog: FC<EventLogProps> = ({
             {appliedFilterOptions.methods.map(method => (
               <option key={method.id} value={method.id}>
                 {method.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Operation</span>
+          <select
+            value={filters.op ?? ""}
+            onChange={event => handleFilterChange({ op: event.target.value || undefined })}
+            disabled={!onFiltersChange || appliedFilterOptions.ops.length === 0}
+          >
+            <option value="">All ops</option>
+            {appliedFilterOptions.ops.map(op => (
+              <option key={op} value={op}>
+                {op.toUpperCase()}
               </option>
             ))}
           </select>
