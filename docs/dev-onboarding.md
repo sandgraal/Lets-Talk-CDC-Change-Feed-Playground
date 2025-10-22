@@ -19,6 +19,26 @@ src/
   test/          # vitest suites covering adapters + UI
 ```
 
+### Event flow overview
+
+```text
+Source ops ─▶ Mode adapter (log/query/trigger)
+             │      │
+             │      └─▶ Scheduler ticks (polling, extractor cadences)
+             ▼
+        CDCController ──▶ EventBus ──▶ MetricsStore
+             │                 │             │
+             │                 │             └─▶ UI widgets (metrics strip, dashboard, lane overlay)
+             │                 └─▶ Consumers (React comparator, NDJSON export)
+             └─▶ Feature hooks (pause/resume, apply-on-commit, schema demo)
+```
+
+1. **Adapters** translate `SourceOp` mutations into CDC events and hand them to the shared `CDCController` via its `emit` callback.
+2. **CDCController** enriches events with transport metadata, pushes them into the `EventBus`, and updates the `MetricsStore`.
+3. **EventBus** tracks per-topic offsets/backlog. The comparator drains it through pause/resume aware consumers, while export flows reuse the same stream.
+4. **MetricsStore** exposes produced/consumed counts, lag percentiles, missed delete counters, and snapshot row tallies that power UI components.
+5. **Feature hooks** (schema walkthrough, apply-on-commit, presets) hang off the controller/runtime layer so both the simulator and harness stay in sync.
+
 All CDC modes publish into a shared `EventBus` (`src/engine/eventBus.ts`). The bus assigns offsets per topic and feeds the metrics store so UI components (event log, metrics strip, lane diff overlay) can render consistent backlog/lag views. When wiring new behaviour make sure:
 
 1. The adapter invokes the provided `emit` callback from `CDCController` instead of publishing directly.

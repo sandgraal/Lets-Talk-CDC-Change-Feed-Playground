@@ -30,6 +30,18 @@ open http://localhost:8089   # HTML summary
 - **Transport parity** – Kafka topics expose offsets and partitions that line up with the simulator `EventBus`. When debugging ordering or backlog mismatches, compare the harness report offsets to the in-app Event Log.
 - **Consumer parity** – the verifier respects pause/resume semantics just like the comparator’s downstream consumer. Use it to validate backlog and lag calculations when tweaking `MetricsStore` logic.
 
+#### Event bus + metrics mapping
+
+| Harness signal | Playground source | Where to look |
+| --- | --- | --- |
+| Topic backlog / offsets | `EventBus.getBacklog()` / `getLastOffset()` | `src/engine/eventBus.ts` and `src/ui/components/MetricsStrip.tsx` |
+| Lag percentiles | `MetricsStore.observeLag()` | `src/engine/metrics.ts` and comparator metrics dashboard |
+| Produced vs consumed counts | `MetricsStore.incrementProduced()/incrementConsumed()` | Event Log header + metrics strip |
+| Snapshot row totals | `MetricsStore.recordSnapshotRows()` | Event Log header + schema walkthrough |
+| Missed deletes / write amplification | Mode-specific metrics hooks | Scenario diff overlay + metrics dashboard |
+
+When runs diverge, trace the metric pipeline: harness report → `reports/harness-history.md` → `src/ui/components/LaneDiffOverlay.tsx`. The same diff primitives render in both environments, so a regression in the harness almost always surfaces as chips or warnings in the comparator.
+
 ## Iterating
 - `make replay` triggers the generator again without resetting Kafka topics.
 - `make snapshots` refreshes fixtures in `harness/fixtures/` from the canonical shared scenarios.
