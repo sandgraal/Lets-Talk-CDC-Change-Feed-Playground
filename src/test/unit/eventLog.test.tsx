@@ -53,4 +53,32 @@ describe("EventLog", () => {
     fireEvent.click(replayButton);
     expect(onReplay).not.toHaveBeenCalled();
   });
+
+  it("lets users load additional historical events on demand", () => {
+    const events = Array.from({ length: 5 }, (_, index) => ({
+      id: `evt-${index}`,
+      op: "c",
+      table: `table-${index}`,
+    }));
+
+    render(<EventLog events={events} maxVisibleEvents={2} />);
+
+    expect(screen.getByText(/Showing latest 2 of 5 events\./i)).toBeInTheDocument();
+    expect(screen.getByText(/table table-4/i)).toBeInTheDocument();
+    expect(screen.getByText(/table table-3/i)).toBeInTheDocument();
+    expect(screen.queryByText(/table table-0/i)).not.toBeInTheDocument();
+
+    const loadMore = screen.getByRole("button", { name: "Load more" });
+    fireEvent.click(loadMore);
+
+    expect(screen.getByText(/Showing latest 4 of 5 events\./i)).toBeInTheDocument();
+    expect(screen.getByText(/table table-1/i)).toBeInTheDocument();
+    expect(screen.queryByText(/table table-0/i)).not.toBeInTheDocument();
+
+    const showLatest = screen.getByRole("button", { name: "Show latest" });
+    fireEvent.click(showLatest);
+
+    expect(screen.getByText(/Showing latest 2 of 5 events\./i)).toBeInTheDocument();
+    expect(screen.queryByText(/table table-1/i)).not.toBeInTheDocument();
+  });
 });
