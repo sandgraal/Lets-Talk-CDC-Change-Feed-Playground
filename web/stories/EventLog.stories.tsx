@@ -60,7 +60,7 @@ const sampleEvents: EventLogRow[] = [
 const baseProps = {
   className: "cdc-event-log",
   events: sampleEvents,
-  stats: { produced: 3, consumed: 3, backlog: 0 },
+  stats: { produced: 3, consumed: 3, backlog: 0, snapshotRows: 6 },
   totalCount: sampleEvents.length,
   filters: {},
   filterOptions: {
@@ -84,7 +84,7 @@ export const Empty = () => (
   <EventLog
     {...baseProps}
     events={[]}
-    stats={{ produced: 0, consumed: 0, backlog: 0 }}
+    stats={{ produced: 0, consumed: 0, backlog: 0, snapshotRows: 0 }}
     totalCount={0}
   />
 );

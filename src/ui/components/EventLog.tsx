@@ -20,6 +20,7 @@ export type EventLogStats = {
   produced: number;
   consumed: number;
   backlog: number;
+  snapshotRows?: number;
 };
 
 export type EventLogFilters = {
@@ -163,7 +164,17 @@ export const EventLog: FC<EventLogProps> = ({
           <h3>Event Log</h3>
           {stats && (
             <p className="cdc-event-log__stats">
-              Produced {stats.produced} &middot; Consumed {stats.consumed} &middot; Backlog {stats.backlog}
+              <span>Produced {stats.produced}</span>
+              {" · "}
+              <span>Consumed {stats.consumed}</span>
+              {" · "}
+              <span>Backlog {stats.backlog}</span>
+              {typeof stats.snapshotRows === "number" && (
+                <>
+                  {" · "}
+                  <span>Snapshot rows {stats.snapshotRows}</span>
+                </>
+              )}
             </p>
           )}
         </div>
