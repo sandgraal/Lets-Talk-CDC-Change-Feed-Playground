@@ -17,7 +17,7 @@ if (!TOKEN) {
 
 const headers = {
   Authorization: `Bearer ${TOKEN}`,
-  "User-Agent": `${REPO}-harness-history",
+  "User-Agent": `${REPO}-harness-history`,
   Accept: "application/vnd.github+json",
 };
 
