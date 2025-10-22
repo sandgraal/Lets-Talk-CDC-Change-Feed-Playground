@@ -1722,6 +1722,35 @@ export function App() {
     });
   }, [filteredCombinedBusEvents, scenario.name]);
 
+  const handleDownloadDestinationSnapshot = useCallback(
+    (method: MethodOption) => {
+      const storage = laneStorageRef.current[method];
+      if (!storage) return;
+      const tables = storage.snapshot();
+      const fileScenario = (scenario.name || "scenario").replace(/[^a-z0-9-_]+/gi, "-");
+      const payload = {
+        scenario: scenario.name,
+        method,
+        tables,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${fileScenario}-${method}-destination.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      const rowTotal = tables.reduce((sum, table) => sum + (table.rows?.length ?? 0), 0);
+      track("comparator.destination.download", {
+        scenario: scenario.name,
+        method,
+        tables: tables.length,
+        rows: rowTotal,
+      });
+    },
+    [scenario.name],
+  );
+
   const handleClearEventLog = useCallback(() => {
     setBusEvents(prev => {
       const next: Partial<Record<MethodOption, BusEvent[]>> = { ...prev };
@@ -3056,8 +3085,20 @@ export function App() {
                   aria-label={`${copy.label} destination snapshot`}
                 >
                   <header>
-                    <h4>Destination snapshot</h4>
-                    <span>schema v{destinationSnapshot.schemaVersion}</span>
+                    <div className="sim-shell__destination-title">
+                      <h4>Destination snapshot</h4>
+                      <span>schema v{destinationSnapshot.schemaVersion}</span>
+                    </div>
+                    <div className="sim-shell__destination-actions">
+                      <button
+                        type="button"
+                        className="sim-shell__destination-download"
+                        onClick={() => handleDownloadDestinationSnapshot(method)}
+                        disabled={destinationSnapshot.rows.length === 0}
+                      >
+                        Download JSON
+                      </button>
+                    </div>
                   </header>
                   {destinationRows.length > 0 ? (
                     <div className="sim-shell__destination-table" role="table">
