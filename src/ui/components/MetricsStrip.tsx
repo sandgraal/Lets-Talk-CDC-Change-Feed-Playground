@@ -7,6 +7,10 @@ export type MetricsStripProps = {
   orderingOk: boolean;
   consistent: boolean;
   writeAmplification?: number;
+  insertCount: number;
+  updateCount: number;
+  deleteCount: number;
+  schemaChangeCount: number;
 };
 
 export const MetricsStrip: FC<MetricsStripProps> = ({
@@ -16,6 +20,10 @@ export const MetricsStrip: FC<MetricsStripProps> = ({
   orderingOk,
   consistent,
   writeAmplification,
+  insertCount,
+  updateCount,
+  deleteCount,
+  schemaChangeCount,
 }) => {
   return (
     <div role="status" aria-live="polite">
@@ -23,6 +31,14 @@ export const MetricsStrip: FC<MetricsStripProps> = ({
       <span>Deletes: {Math.round(deletesPct)}%</span> ·
       <span>Ordering: {orderingOk ? "OK" : "KO"}</span> ·
       <span>Consistency: {consistent ? "OK" : "Drift"}</span>
+      {" "}·<span>
+        Ops C/U/D: {insertCount}/{updateCount}/{deleteCount}
+      </span>
+      {schemaChangeCount > 0 && (
+        <>
+          {" "}·<span>Schema: {schemaChangeCount}</span>
+        </>
+      )}
       {typeof writeAmplification === "number" && (
         <>
           {" "}·<span>Trigger WA: {writeAmplification.toFixed(1)}x</span>

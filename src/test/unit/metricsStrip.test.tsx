@@ -12,6 +12,10 @@ describe("MetricsStrip", () => {
         orderingOk={false}
         consistent={true}
         writeAmplification={2.5}
+        insertCount={3}
+        updateCount={4}
+        deleteCount={5}
+        schemaChangeCount={2}
       />,
     );
 
@@ -20,6 +24,8 @@ describe("MetricsStrip", () => {
     expect(screen.getByText(/Deletes: 64%/i)).toBeInTheDocument();
     expect(screen.getByText(/Ordering: KO/i)).toBeInTheDocument();
     expect(screen.getByText(/Consistency: OK/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ops C\/U\/D: 3\/4\/5/i)).toBeInTheDocument();
+    expect(screen.getByText(/Schema: 2/i)).toBeInTheDocument();
     expect(screen.getByText(/Trigger WA: 2\.5x/i)).toBeInTheDocument();
   });
 });

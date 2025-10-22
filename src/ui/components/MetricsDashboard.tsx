@@ -13,6 +13,10 @@ export type MetricsDashboardLane = {
   missedDeletes?: number;
   writeAmplification?: number;
   snapshotRows?: number;
+  inserts?: number;
+  updates?: number;
+  deletes?: number;
+  schemaChanges?: number;
 };
 
 export type MetricsDashboardProps = {
@@ -86,6 +90,19 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
                 <div>
                   <dt>Snapshot rows</dt>
                   <dd data-tooltip={TOOLTIP_COPY.snapshot}>{formatNumber(lane.snapshotRows)}</dd>
+                </div>
+              )}
+              {(typeof lane.inserts === "number" ||
+                typeof lane.updates === "number" ||
+                typeof lane.deletes === "number") && (
+                <div>
+                  <dt>Change mix</dt>
+                  <dd>
+                    C {formatNumber(lane.inserts ?? 0)} · U {formatNumber(lane.updates ?? 0)} · D {formatNumber(lane.deletes ?? 0)}
+                    {typeof lane.schemaChanges === "number" && lane.schemaChanges > 0
+                      ? ` · Schema ${formatNumber(lane.schemaChanges)}`
+                      : ""}
+                  </dd>
                 </div>
               )}
               {typeof lane.missedDeletes === "number" && (
