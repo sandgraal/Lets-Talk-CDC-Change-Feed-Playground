@@ -1746,7 +1746,7 @@ export function App() {
   const aggregateEventBusTotals = useMemo(
     () => {
       if (!eventBusEnabled) {
-        return { produced: 0, consumed: 0, backlog: 0 };
+        return { produced: 0, consumed: 0, backlog: 0, snapshotRows: 0 };
       }
       return activeMethods.reduce(
         (acc, method) => {
@@ -1755,9 +1755,10 @@ export function App() {
           acc.produced += summary.produced;
           acc.consumed += summary.consumed;
           acc.backlog += summary.backlog;
+          acc.snapshotRows += summary.snapshotRows;
           return acc;
         },
-        { produced: 0, consumed: 0, backlog: 0 },
+        { produced: 0, consumed: 0, backlog: 0, snapshotRows: 0 },
       );
     },
     [activeMethods, laneRuntimeSummaries, eventBusEnabled],
