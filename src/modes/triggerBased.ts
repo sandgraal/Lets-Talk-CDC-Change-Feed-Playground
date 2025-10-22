@@ -156,6 +156,7 @@ export function createTriggerBasedAdapter(): ModeAdapter {
     },
     startSnapshot(_tables: Table[] = [], emit) {
       emitFn = emit;
+      runtime?.metrics.recordSnapshotRows(0);
     },
     startTailing(emit) {
       emitFn = emit;

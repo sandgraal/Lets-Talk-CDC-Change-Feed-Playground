@@ -187,6 +187,8 @@ type LaneRuntimeSummary = {
   lagMsP95: number;
   missedDeletes: number;
   writeAmplification: number;
+  snapshotRows: number;
+  errors: number;
 };
 
 type CombinedBusEvent = {
@@ -1711,30 +1713,26 @@ export function App() {
     });
   }, [activeMethods, clock, laneEvents, scenario, laneStats]);
 
-  const scenarioDeleteCount = useMemo(
-    () => scenario.ops.filter(op => op.op === "delete").length,
-    [scenario.ops],
-  );
-
   const laneRuntimeSummaries = useMemo(() => {
     return activeMethods.reduce((map, method) => {
       const stats = laneStats[method];
-      const consumedEvents = laneEvents[method] ?? [];
-      const capturedDeletes = consumedEvents.filter(evt => evt.op === "d").length;
+      const metrics = stats?.metrics;
       const summary: LaneRuntimeSummary = {
         backlog: stats?.backlog ?? 0,
         lastOffset: stats?.lastOffset ?? -1,
-        produced: stats?.metrics.produced ?? 0,
-        consumed: stats?.metrics.consumed ?? 0,
-        lagMsP50: stats?.metrics.lagMsP50 ?? 0,
-        lagMsP95: stats?.metrics.lagMsP95 ?? 0,
-        missedDeletes: Math.max(scenarioDeleteCount - capturedDeletes, 0),
-        writeAmplification: stats?.metrics.writeAmplification ?? 0,
+        produced: metrics?.produced ?? 0,
+        consumed: metrics?.consumed ?? 0,
+        lagMsP50: metrics?.lagMsP50 ?? 0,
+        lagMsP95: metrics?.lagMsP95 ?? 0,
+        missedDeletes: metrics?.missedDeletes ?? 0,
+        writeAmplification: metrics?.writeAmplification ?? 0,
+        snapshotRows: metrics?.snapshotRows ?? 0,
+        errors: metrics?.errors ?? 0,
       };
       map.set(method, summary);
       return map;
     }, new Map<MethodOption, LaneRuntimeSummary>());
-  }, [activeMethods, laneEvents, laneStats, scenarioDeleteCount]);
+  }, [activeMethods, laneStats]);
 
   const totalBacklog = useMemo(
     () =>
@@ -1814,9 +1812,23 @@ export function App() {
         lagP95: runtimeSummary?.lagMsP95 ?? 0,
         missedDeletes: runtimeSummary?.missedDeletes,
         writeAmplification: runtimeSummary?.writeAmplification,
+        snapshotRows: runtimeSummary?.snapshotRows,
       };
     }),
   [activeMethods, laneRuntimeSummaries, methodCopy]);
+
+  const snapshotSummaryList = useMemo(
+    () =>
+      activeMethods
+        .map(method => {
+          const summaryMetrics = laneRuntimeSummaries.get(method);
+          const label = methodCopy[method].label;
+          const value = summaryMetrics?.snapshotRows ?? 0;
+          return `${label} ${value}`;
+        })
+        .join(", "),
+    [activeMethods, laneRuntimeSummaries, methodCopy],
+  );
 
   const laneOverlaySummary = useMemo(
     () =>
@@ -1887,6 +1899,9 @@ export function App() {
         `Trigger write amplification: ${methodCopy[summary.triggerWriteAmplification.method].label} ${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`,
       );
     }
+    if (snapshotSummaryList) {
+      parts.push(`Snapshot rows: ${snapshotSummaryList}`);
+    }
     parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => methodCopy[method].label).join(", ") : "All lanes aligned"}`);
     if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
     navigator.clipboard
@@ -1898,7 +1913,7 @@ export function App() {
       tags: scenario.tags ?? [],
       methods: activeMethods,
     });
-  }, [summary, scenario, activeMethods, methodCopy]);
+  }, [summary, scenario, activeMethods, methodCopy, snapshotSummaryList]);
 
   const handleLaneOverlayInspect = useCallback(
     (method: MethodOption) => {
@@ -2670,6 +2685,11 @@ export function App() {
             {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {methodCopy[summary.highestDeletes.method].label}
             {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
           </li>
+          {snapshotSummaryList && (
+            <li>
+              <strong data-tooltip={TOOLTIP_COPY.snapshot}>Snapshot rows:</strong> {snapshotSummaryList}
+            </li>
+          )}
           {summary.triggerWriteAmplification && (
             <li>
               <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
@@ -2866,6 +2886,9 @@ export function App() {
                   <p>
                     Produced {runtimeSummary?.produced ?? 0} · Consumed {runtimeSummary?.consumed ?? 0}
                   </p>
+                  <p data-tooltip={TOOLTIP_COPY.snapshot}>
+                    Snapshot rows {runtimeSummary?.snapshotRows ?? 0}
+                  </p>
                   <p data-tooltip={TOOLTIP_COPY.lagPercentile}>
                     Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
                   </p>
@@ -2877,6 +2900,11 @@ export function App() {
                   {method === "polling" && (
                     <p className="sim-shell__lane-bus-warning" data-tooltip={TOOLTIP_COPY.deleteCapture}>
                       Missed deletes: {runtimeSummary?.missedDeletes ?? 0}
+                    </p>
+                  )}
+                  {runtimeSummary && runtimeSummary.errors > 0 && (
+                    <p className="sim-shell__lane-bus-warning">
+                      Errors: {runtimeSummary.errors}
                     </p>
                   )}
                 </section>

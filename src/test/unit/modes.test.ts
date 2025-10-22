@@ -198,6 +198,7 @@ describe("Mode adapters", () => {
     expect(snapshot[0].kind).toBe("INSERT");
     expect(snapshot[0].schemaVersion).toBe(3);
     expect(snapshot[0].after?.status).toBe("seed");
+    expect(runtime.metrics.snapshot().snapshotRows).toBe(1);
   });
 
   it("log adapter preserves transaction metadata", () => {
@@ -313,5 +314,32 @@ describe("Mode adapters", () => {
     expect(emitted).toHaveLength(1);
     expect(emitted[0].kind).toBe("SCHEMA_ADD_COL");
     expect(emitted[0].schemaVersion).toBe(2);
+  });
+
+  it("query adapter records snapshot row counts", () => {
+    const adapter = createQueryBasedAdapter();
+    const { runtime } = createRuntime("cdc.query");
+    adapter.initialise?.(runtime);
+
+    const emitted: Event[] = [];
+    adapter.startSnapshot?.(
+      [
+        {
+          name: "users",
+          schema: { name: "users", columns: [], version: 1 },
+          rows: [
+            { id: "1", name: "Ada", __ts: 10 },
+            { id: "2", name: "Lin", __ts: 12 },
+          ],
+        },
+      ],
+      events => {
+        emitted.push(...events);
+        return events;
+      },
+    );
+
+    expect(emitted).toHaveLength(2);
+    expect(runtime.metrics.snapshot().snapshotRows).toBe(2);
   });
 });
