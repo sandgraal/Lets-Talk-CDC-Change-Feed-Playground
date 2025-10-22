@@ -11,7 +11,7 @@
 ## Enablers & Platform Work
 - Add feature flags for P0 scope (`ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_crud_fix`, `ff_event_log`). ✅ incorporated in `index.html`.
 - Refresh unit/e2e test suites to cover EventBus ordering, CRUD flows, pause/resume backlog, and query-mode lossiness. ✅ Unit coverage now exists for `CDCController`, adapters, metrics widgets, and lane diff schema drift; Playwright exercises the schema walkthrough end-to-end.
-- Update developer docs (onboarding, harness guide) with the new architecture map and event bus workflow. 🔄 Pending doc refresh.
+- Update developer docs (onboarding, harness guide) with the new architecture map and event bus workflow. ✅ Added event-flow overview and harness mapping notes.
 - Prepare initial metrics telemetry hooks (in-memory only) and dashboard UI shell. ✅ Dashboard surfaces per-lane metrics with schema walkthrough controls in place.
 
 ## Definition of Ready
