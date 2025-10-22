@@ -13,7 +13,7 @@ const healthUrl = "http://localhost:8089/health";
 const reportUrl = "http://localhost:8089/report";
 const connectBaseUrl = process.env.HARNESS_CONNECT_URL || "http://localhost:8083";
 const connectorsDir = path.resolve(projectRoot, "harness/connectors");
-const scenarioId = process.env.HARNESS_SCENARIO || "orders-transactions";
+const scenarioId = process.env.HARNESS_SCENARIO || "orders-items-transactions";
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
