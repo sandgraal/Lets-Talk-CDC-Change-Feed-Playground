@@ -12,7 +12,7 @@ Each gate requires:
 - Harness verifier PASS against shared fixtures (`make status`).
 - Documentation updates reviewed via `docs/content-review-checklist.md`.
 
-### Rollout calendar
+### Feature flag matrix
 | Week | Audience | Flag state | Owner | Success signals |
 | --- | --- | --- | --- | --- |
 | Week 1 | Internal team accounts | `comparator_v2` forced **on** | Eng Enablement | Comparator smoke telemetry ≥ 5 sessions, no blocker bugs |
