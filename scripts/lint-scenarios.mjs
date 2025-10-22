@@ -11,6 +11,7 @@ const ALLOWED_PREFIXES = [
   "harness/verifier/",
   "harness/generator/",
   "docs/schema/",
+  "src/data/",
   "sim/tests/"
 ];
 const ALLOWED_FILES = new Set([
