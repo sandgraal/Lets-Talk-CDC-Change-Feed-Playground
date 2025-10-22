@@ -8,6 +8,16 @@ const indexUrl = pathToFileURL(path.resolve(__dirname, "../../index.html")).href
 
 const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test.describe;
 
+async function loadComparator(page) {
+  await page.goto(indexUrl, { waitUntil: "load" });
+
+  await page.waitForFunction(() => {
+    return Boolean(window.__LetstalkCdcUiShellLoaded);
+  }, null, { timeout: 15000 });
+
+  await page.waitForSelector(".sim-shell__title", { timeout: 15000 });
+}
+
 suite("Comparator basics", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -16,13 +26,13 @@ suite("Comparator basics", () => {
   });
 
   test("renders default scenario", async ({ page }) => {
-    await page.goto(indexUrl, { waitUntil: "load" });
+    await loadComparator(page);
     await expect(page.getByRole("heading", { name: /CDC Method Comparator/i })).toBeVisible();
     await expect(page.getByRole("combobox", { name: /Scenario/i })).toBeVisible();
   });
 
   test("filters events via search", async ({ page }) => {
-    await page.goto(indexUrl, { waitUntil: "load" });
+    await loadComparator(page);
     await page.evaluate(() => window.cdcComparatorClock?.play?.());
     await page.waitForTimeout(500);
     const filterInput = page.getByPlaceholder("Filter by pk, seq, or payload");
@@ -32,7 +42,7 @@ suite("Comparator basics", () => {
   });
 
   test("toggles event operations", async ({ page }) => {
-    await page.goto(indexUrl, { waitUntil: "load" });
+    await loadComparator(page);
     await page.evaluate(() => window.cdcComparatorClock?.play?.());
     await page.waitForTimeout(300);
     const deleteToggle = page.locator(".sim-shell__event-ops").getByRole("button", { name: "D" });
@@ -41,7 +51,7 @@ suite("Comparator basics", () => {
   });
 
   test("schema walkthrough emits events and updates destinations", async ({ page }) => {
-    await page.goto(indexUrl, { waitUntil: "load" });
+    await loadComparator(page);
 
     const scenarioSelect = page.locator('select[aria-label="Scenario"]');
     await scenarioSelect.waitFor({ timeout: 10000 });
@@ -70,9 +80,9 @@ suite("Comparator basics", () => {
     await expect(eventLog.getByText(/Dropped column priority_flag/i).first()).toBeVisible();
     await expect(destination.locator('th[data-highlight="true"]')).toHaveCount(0);
   });
-  
+
   test("transactions scenario exposes apply-on-commit toggle", async ({ page }) => {
-    await page.goto(indexUrl, { waitUntil: "load" });
+    await loadComparator(page);
 
     const scenarioSelect = page.locator('select[aria-label="Scenario"]');
     await scenarioSelect.waitFor({ timeout: 10000 });
