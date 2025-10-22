@@ -638,8 +638,7 @@ function computeMetrics(
     return evt.ts_ms >= prev.ts_ms;
   });
 
-  const consistent =
-    orderingOk && (method === "polling" ? capturedDeletes === totalDeletes : true);
+  const consistent = orderingOk && (method === "polling" ? deleteCount === totalDeletes : true);
 
   return {
     lagMs,
