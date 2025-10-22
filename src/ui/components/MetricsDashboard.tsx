@@ -12,6 +12,7 @@ export type MetricsDashboardLane = {
   lagP95: number;
   missedDeletes?: number;
   writeAmplification?: number;
+  snapshotRows?: number;
 };
 
 export type MetricsDashboardProps = {
@@ -81,6 +82,12 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
                 <dt>Lag p95</dt>
                 <dd data-tooltip={TOOLTIP_COPY.lagPercentile}>{formatLag(lane.lagP95)}</dd>
               </div>
+              {typeof lane.snapshotRows === "number" && (
+                <div>
+                  <dt>Snapshot rows</dt>
+                  <dd data-tooltip={TOOLTIP_COPY.snapshot}>{formatNumber(lane.snapshotRows)}</dd>
+                </div>
+              )}
               {typeof lane.missedDeletes === "number" && (
                 <div>
                   <dt>Missed deletes</dt>

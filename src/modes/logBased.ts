@@ -162,6 +162,7 @@ export function createLogBasedAdapter(): ModeAdapter {
           });
         });
       });
+      runtime?.metrics.recordSnapshotRows(rows.size);
       if (!rows.size) return;
       const events: Event[] = [];
       rows.forEach(stored => {

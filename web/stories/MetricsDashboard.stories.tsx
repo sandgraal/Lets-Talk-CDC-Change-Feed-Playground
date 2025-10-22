@@ -11,6 +11,7 @@ const lanes = [
     lagP50: 420,
     lagP95: 980,
     missedDeletes: 3,
+    snapshotRows: 120,
   },
   {
     id: "trigger",
@@ -21,6 +22,7 @@ const lanes = [
     lagP50: 85,
     lagP95: 140,
     writeAmplification: 2.4,
+    snapshotRows: 48,
   },
   {
     id: "log",
@@ -30,6 +32,7 @@ const lanes = [
     backlog: 0,
     lagP50: 35,
     lagP95: 60,
+    snapshotRows: 120,
   },
 ];
 

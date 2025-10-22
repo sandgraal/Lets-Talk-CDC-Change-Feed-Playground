@@ -187,6 +187,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
           });
         });
       });
+      runtime?.metrics.recordSnapshotRows(snapshotEvents.length);
       emitBatch(snapshotEvents);
     },
     startTailing(emit) {

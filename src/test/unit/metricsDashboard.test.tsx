@@ -16,6 +16,7 @@ describe("MetricsDashboard", () => {
             lagP50: 400,
             lagP95: 900,
             missedDeletes: 1,
+            snapshotRows: 4,
           },
           {
             id: "trigger",
@@ -26,6 +27,7 @@ describe("MetricsDashboard", () => {
             lagP50: 80,
             lagP95: 120,
             writeAmplification: 2.1,
+            snapshotRows: 0,
           },
         ]}
       />,
@@ -36,5 +38,6 @@ describe("MetricsDashboard", () => {
     expect(screen.getByText(/Trigger/)).toBeInTheDocument();
     expect(screen.getByText(/Missed deletes/i)).toBeInTheDocument();
     expect(screen.getByText(/Write amplification/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Snapshot rows/i)).toHaveLength(2);
   });
 });
