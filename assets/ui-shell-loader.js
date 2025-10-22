@@ -30,7 +30,17 @@
       }
     })();
 
-    if (assetHeaderEntries.length === 0) {
+    const shouldFetchWithHeaders = (() => {
+      if (assetHeaderEntries.length === 0) return false;
+      try {
+        const url = new URL(resolved, scriptBase);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    })();
+
+    if (!shouldFetchWithHeaders) {
       return import(/* @vite-ignore */ resolved);
     }
 
