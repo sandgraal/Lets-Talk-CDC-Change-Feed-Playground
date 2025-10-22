@@ -2,6 +2,19 @@
 
 Status: v1
 
+## Version History
+| Release | Highlights | Notes |
+| --- | --- | --- |
+| **v1.0.0** (current) | `comparator_v2` GA with the React comparator shell, multi-mode CDC engines, lane diff overlays, and the transactional “Orders + Items” scenario. | See [`docs/enablement/release-notes.md`](./enablement/release-notes.md) for the full narrative; statuses mirror [`docs/next-steps.md`](./next-steps.md).
+
+### Current Release Scope (v1.0.0)
+_Status icons align with the sprint tracker so both documents stay in sync._
+- ✅ **Comparator architecture** – The React comparator shell streams polling, trigger, and log adapters through the shared EventBus, scheduler, metrics store, and CDC state machine under `src/engine`/`src/modes`.
+- ✅ **Event visibility & insights** – Event Log filters/export, lane diff overlays, metrics strip + dashboard, backlog/lag instrumentation, and local telemetry buffer surface CDC parity gaps.
+- ✅ **Guided demos & presets** – Scenario gallery, vendor presets, guided walkthrough copy, and the apply-on-commit toggle cover multi-table, schema, and burst-update stories out of the box.
+- ✅ **Reliability controls** – Controlled CRUD flows, pause/resume apply, consumer throughput throttling, query-mode polling cadence + delete messaging, and feature flag governance keep demonstrations stable.
+- ✅ **Quality gates & ops tooling** – Property-based simulator tests, unit + Playwright suites, harness verifier, launch readiness plan, and enablement collateral ship alongside the experience.
+
 ## Goals (blunt + prioritized)
 - **P0**: Fix CRUD reliability, add **Event Log**, add **Pause/Resume**, add **Polling Interval** control, and **make Query-based limitations explicit**.
 - **P0**: Introduce **Event Bus** abstraction (to model Kafka/topic + offsets).
