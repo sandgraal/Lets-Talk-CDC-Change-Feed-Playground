@@ -1,5 +1,7 @@
 # Implementation Next Steps
 
+> ℹ️ **Release sync:** The shipped scope for v1 is tracked in [`docs/IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md#current-release-scope-v1-0-0). Update both documents together when statuses change.
+
 ## Sprint Kickoff Focus (P0)
 - Stand up the new `/src` module layout (engine, modes, domain, ui, features, test) and add minimal scaffolding exports. ✅
 - Implement the core `EventBus`, `CDCController` state machine skeleton, and shared `MetricsStore` interfaces. ✅
