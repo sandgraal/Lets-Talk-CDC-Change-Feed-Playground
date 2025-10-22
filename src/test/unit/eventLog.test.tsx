@@ -54,6 +54,29 @@ describe("EventLog", () => {
     expect(onReplay).not.toHaveBeenCalled();
   });
 
+  it("invokes filter callbacks when selecting an operation", () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <EventLog
+        events={[sampleEvent]}
+        onFiltersChange={onFiltersChange}
+        filterOptions={{
+          methods: [],
+          ops: ["c", "u"],
+          tables: [],
+          txns: [],
+        }}
+      />,
+    );
+
+    const opSelect = screen.getByLabelText("Operation");
+    fireEvent.change(opSelect, { target: { value: "u" } });
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ op: "u" }));
+
+    fireEvent.change(opSelect, { target: { value: "" } });
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ op: undefined }));
+  });
+
   it("lets users load additional historical events on demand", () => {
     const events = Array.from({ length: 5 }, (_, index) => ({
       id: `evt-${index}`,
