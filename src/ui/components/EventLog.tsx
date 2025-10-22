@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from "react";
+import { type FC, type ReactNode, useEffect, useMemo, useState } from "react";
 
 export type EventLogRow = {
   id: string;
@@ -104,10 +104,44 @@ export const EventLog: FC<EventLogProps> = ({
     txns: filterOptions?.txns ?? DEFAULT_FILTER_OPTIONS.txns,
   };
 
-  const limitedEvents =
-    typeof maxVisibleEvents === "number" && maxVisibleEvents > 0
-      ? events.slice(Math.max(events.length - maxVisibleEvents, 0))
-      : events;
+  const baseVisible = useMemo(() => {
+    if (typeof maxVisibleEvents !== "number" || maxVisibleEvents <= 0) {
+      return events.length;
+    }
+    return Math.min(maxVisibleEvents, events.length);
+  }, [events.length, maxVisibleEvents]);
+  const [visibleCount, setVisibleCount] = useState(baseVisible);
+
+  useEffect(() => {
+    setVisibleCount(previous => {
+      if (previous < baseVisible) {
+        return baseVisible;
+      }
+      if (previous > events.length) {
+        return events.length;
+      }
+      return previous;
+    });
+  }, [baseVisible, events.length]);
+
+  const visibleEvents = useMemo(() => {
+    const count = Math.max(visibleCount, 0);
+    const startIndex = Math.max(events.length - count, 0);
+    return events.slice(startIndex);
+  }, [events, visibleCount]);
+
+  const canLoadMore = visibleEvents.length < events.length;
+  const canShowLatest = visibleCount > baseVisible;
+
+  const handleLoadMore = () => {
+    if (!canLoadMore) return;
+    const batchSize = baseVisible > 0 ? baseVisible : events.length;
+    setVisibleCount(previous => Math.min(previous + batchSize, events.length));
+  };
+
+  const handleShowLatest = () => {
+    setVisibleCount(baseVisible);
+  };
 
   const total = typeof totalCount === "number" ? totalCount : events.length;
   const hasFilters =
@@ -245,12 +279,24 @@ export const EventLog: FC<EventLogProps> = ({
         </p>
       ) : (
         <ul className="cdc-event-log__list">
-          {events.length > limitedEvents.length && (
+          {events.length > visibleEvents.length && (
             <li className="cdc-event-log__notice">
-              Showing latest {limitedEvents.length} of {events.length} events.
+              <span>
+                Showing latest {visibleEvents.length} of {events.length} events.
+              </span>
+              <div className="cdc-event-log__notice-actions">
+                <button type="button" onClick={handleLoadMore} disabled={!canLoadMore}>
+                  Load more
+                </button>
+                {canShowLatest && (
+                  <button type="button" onClick={handleShowLatest}>
+                    Show latest
+                  </button>
+                )}
+              </div>
             </li>
           )}
-          {limitedEvents.map(event => {
+          {visibleEvents.map(event => {
             const op = coerceOp(event.op);
             const offset =
               typeof event.offset === "number" ? event.offset : event.offset == null ? "—" : event.offset;
