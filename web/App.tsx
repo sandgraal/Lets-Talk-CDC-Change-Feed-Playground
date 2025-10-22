@@ -1004,7 +1004,7 @@ export function App() {
         meta: schemaMeta,
       };
     });
-  }, [filteredCombinedBusEvents]);
+  }, [filteredCombinedBusEvents, methodCopy]);
   const eventLogFilters = useMemo<EventLogFilters>(
     () => ({
       methodId: eventLogMethod ?? undefined,
@@ -1019,7 +1019,7 @@ export function App() {
       tables: availableEventLogTables,
       txns: availableEventLogTxns,
     }),
-    [availableEventLogTables, availableEventLogTxns],
+    [availableEventLogTables, availableEventLogTxns, methodCopy],
   );
   const laneDestinations = useMemo(() => {
     const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
