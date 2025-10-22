@@ -2556,6 +2556,16 @@ if (typeof window !== "undefined") {
       applyScenarioTemplate(template, { focusStep: "events" });
     }
   });
+  window.addEventListener("cdc:workspace-replay-event", event => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail;
+    if (!detail) return;
+    try {
+      replayEventToTable(detail);
+    } catch (err) {
+      console.warn("Replay to workspace failed", err);
+    }
+  });
   window.addEventListener("cdc:scenario-filter-request", () => {
     window.dispatchEvent(new CustomEvent("cdc:scenario-filter", { detail: { query: uiState.scenarioFilter, tags: uiState.scenarioTags } }));
   });

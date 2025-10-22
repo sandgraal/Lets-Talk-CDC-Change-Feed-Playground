@@ -1802,6 +1802,30 @@ export function App() {
     [scenario.name],
   );
 
+  const handleReplayEvent = useCallback(
+    (row: EventLogRow) => {
+      if (typeof window === "undefined") return;
+      const op = typeof row.op === "string" ? row.op.trim().toLowerCase() : "";
+      if (op !== "c" && op !== "u" && op !== "d") return;
+      const detail = {
+        op,
+        before: row.before ?? null,
+        after: row.after ?? null,
+        ts_ms: typeof row.tsMs === "number" ? row.tsMs : undefined,
+        table: row.table ?? undefined,
+        key: row.pk ? { id: row.pk } : undefined,
+      } as const;
+      window.dispatchEvent(new CustomEvent("cdc:workspace-replay-event", { detail }));
+      track("comparator.event.replay", {
+        scenario: scenario.name,
+        method: row.methodId ?? null,
+        table: row.table ?? null,
+        op,
+      });
+    },
+    [scenario.name],
+  );
+
   const handlePresetSelect = useCallback((value: string) => {
     if (!isVendorPresetId(value)) return;
     setPresetId(value);
@@ -2628,6 +2652,7 @@ export function App() {
           onDownload={handleDownloadEventLog}
           onClear={handleClearEventLog}
           onCopyEvent={handleCopyEvent}
+          onReplayEvent={handleReplayEvent}
           maxVisibleEvents={MAX_EVENT_LOG_ROWS}
         />
       )}
