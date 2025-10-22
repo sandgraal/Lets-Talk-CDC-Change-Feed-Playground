@@ -218,6 +218,7 @@ export type Metrics = {
 ## Rollout Plan
 - Feature flags: `ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_trigger_mode`, `ff_schema_demo`, `ff_multitable`, `ff_metrics`, `ff_walkthrough`.
 - Release order: P0 bundle (event bus, pause/resume, query slider, CRUD fix, EventLog) -> P1 (trigger mode, schema demo, multitable, metrics, walkthrough, presets) -> P2 (generator, replay, second consumer).
+- Track owners, default states, and activation sequencing in [`docs/feature-flags.md`](./feature-flags.md).
 - Add `CHANGELOG.md`.
 
 ## Acceptance Criteria (summarized)
