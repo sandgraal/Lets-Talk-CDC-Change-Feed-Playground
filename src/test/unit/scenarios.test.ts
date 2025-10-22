@@ -292,4 +292,67 @@ describe("Shared scenario normaliser", () => {
     expect(op.after).toEqual({ id: "ORD-142", status: "complete" });
     expect(op.t).toBe(1425);
   });
+
+  it("normalises event payload variants and deep clones derived rows", () => {
+    const snapshotEvent = {
+      payload: {
+        op: "SNAPSHOT",
+        after: { id: "ORD-501", status: "snapshot" },
+      },
+    };
+    const updateEvent = {
+      payload: {
+        op: "U",
+        after: { id: "ORD-501", status: "released" },
+      },
+    };
+    const deleteEvent = {
+      payload: {
+        op: "DELETE",
+        before: { id: "ORD-501", status: "released" },
+      },
+    };
+
+    const scenario: SharedScenario = {
+      id: "event-variants",
+      name: "Event variants",
+      description: "Accepts a range of Debezium-like payload shapes.",
+      schema: [
+        { name: "id", type: "string", pk: true },
+        { name: "status", type: "string", pk: false },
+      ],
+      events: [snapshotEvent, updateEvent, deleteEvent],
+    };
+
+    const template = normaliseSharedScenario(scenario, {
+      scenarioIndex: 2,
+      allowEventsAsOps: true,
+      includeTxn: false,
+      fallbackTable: "orders_fallback",
+      fallbackTimestamp: ({ opIndex }) => 500 + opIndex * 10,
+    });
+
+    expect(template).toBeTruthy();
+    expect(template?.ops).toHaveLength(3);
+
+    expect(template?.ops[0].op).toBe("insert");
+    expect(template?.ops[0].table).toBe("orders_fallback");
+    expect(template?.ops[0].t).toBe(500);
+    expect(template?.ops[0].after).toEqual({ id: "ORD-501", status: "snapshot" });
+
+    expect(template?.ops[1].op).toBe("update");
+    expect(template?.ops[1].table).toBe("orders_fallback");
+    expect(template?.ops[1].t).toBe(510);
+    expect(template?.ops[1].after).toEqual({ id: "ORD-501", status: "released" });
+
+    expect(template?.ops[2].op).toBe("delete");
+    expect(template?.ops[2].table).toBe("orders_fallback");
+    expect(template?.ops[2].t).toBe(520);
+    expect(template?.ops[2].pk.id).toBe("ORD-501");
+
+    snapshotEvent.payload.after.status = "mutated";
+    updateEvent.payload.after.status = "mutated";
+    expect(template?.ops[0].after?.status).toBe("snapshot");
+    expect(template?.ops[1].after?.status).toBe("released");
+  });
 });
