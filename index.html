@@ -337,6 +337,9 @@
       scenarioCollectionId: "scenarios",
       shareBaseUrl: "https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/",
       channel: (db, col) => `databases.${db}.collections.${col}.documents`,
+      assetHeaders: {
+        "X-Appwrite-Project": "68e009780030a983a57d",
+      },
       featureFlags: [
         "comparator_v2",
         "ff_event_bus",

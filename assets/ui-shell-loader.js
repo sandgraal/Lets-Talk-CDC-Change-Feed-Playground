@@ -3,6 +3,58 @@
 
   const FLAG_NAME = "comparator_v2";
 
+  const bundleHref = "./generated/ui-shell.js";
+
+  const scriptBase = (() => {
+    if (typeof document !== "undefined" && document.currentScript?.src) {
+      return document.currentScript.src;
+    }
+    if (typeof location !== "undefined" && location.href) {
+      return location.href;
+    }
+    return bundleHref;
+  })();
+
+  const assetHeaderEntries = (() => {
+    const raw = global.APPWRITE_CFG?.assetHeaders;
+    if (!raw || typeof raw !== "object") return [];
+    return Object.entries(raw).filter(([, value]) => typeof value === "string" && value);
+  })();
+
+  async function importGeneratedModule(relativeHref) {
+    const resolved = (() => {
+      try {
+        return new URL(relativeHref, scriptBase).toString();
+      } catch {
+        return relativeHref;
+      }
+    })();
+
+    if (assetHeaderEntries.length === 0) {
+      return import(/* @vite-ignore */ resolved);
+    }
+
+    const headers = {};
+    for (const [key, value] of assetHeaderEntries) {
+      headers[key] = value;
+    }
+
+    const response = await fetch(resolved, { headers, credentials: "include" });
+    if (!response.ok) {
+      throw new Error(`Failed to load ${resolved}: ${response.status} ${response.statusText}`);
+    }
+
+    const source = await response.text();
+    const blob = new Blob([source], { type: "text/javascript" });
+    const blobUrl = URL.createObjectURL(blob);
+
+    try {
+      return await import(/* @vite-ignore */ blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
   function hasComparatorFlag() {
     return Boolean(global.cdcFeatureFlags?.has?.(FLAG_NAME));
   }
@@ -16,7 +68,7 @@
 
   async function loadShell() {
     try {
-      await import("./generated/ui-shell.js");
+      await importGeneratedModule(bundleHref);
       global.__LetstalkCdcUiShellLoaded = true;
     } catch (error) {
       console.warn(
