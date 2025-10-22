@@ -76,6 +76,7 @@ const baseProps = {
   onDownload: () => console.info("Download NDJSON"),
   onClear: () => console.info("Clear events"),
   onCopyEvent: (event: EventLogRow) => console.info("Copy", event.id),
+  onReplayEvent: (event: EventLogRow) => console.info("Replay", event.id),
 };
 
 export const Populated = () => <EventLog {...baseProps} />;

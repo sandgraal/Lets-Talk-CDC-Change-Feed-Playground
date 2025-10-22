@@ -1166,13 +1166,30 @@
 }
 
 .sim-shell__event-log-copy,
-.cdc-event-log__copy {
+.cdc-event-log__copy,
+.cdc-event-log__replay {
   font-size: 0.75rem;
   border: 1px solid rgba(100, 116, 139, 0.4);
   background: rgba(148, 163, 184, 0.12);
   color: #334155;
   padding: 0.25rem 0.5rem;
   border-radius: 8px;
+}
+
+.cdc-event-log__copy,
+.cdc-event-log__replay {
+  margin-left: 0.4rem;
+}
+
+.cdc-event-log__replay {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+}
+
+.cdc-event-log__replay[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .sim-shell__event-log-empty,

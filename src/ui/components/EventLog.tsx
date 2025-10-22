@@ -45,6 +45,7 @@ export type EventLogProps = {
   onDownload?: () => void;
   onClear?: () => void;
   onCopyEvent?: (event: EventLogRow) => void;
+  onReplayEvent?: (event: EventLogRow) => void;
   maxVisibleEvents?: number;
   emptyMessage?: string;
   noMatchMessage?: string;
@@ -91,6 +92,7 @@ export const EventLog: FC<EventLogProps> = ({
   onDownload,
   onClear,
   onCopyEvent,
+  onReplayEvent,
   maxVisibleEvents = DEFAULT_MAX_VISIBLE,
   emptyMessage,
   noMatchMessage,
@@ -257,6 +259,8 @@ export const EventLog: FC<EventLogProps> = ({
             const pk = event.pk ?? "—";
             const txn = event.txnId ?? "";
             const ts = typeof event.tsMs === "number" ? event.tsMs : "—";
+            const normalizedOp = typeof event.op === "string" ? event.op.trim().toLowerCase() : "";
+            const replayable = normalizedOp === "c" || normalizedOp === "u" || normalizedOp === "d";
             return (
               <li key={event.id} className="cdc-event-log__item">
                 <span className="cdc-event-log__method">
@@ -273,6 +277,16 @@ export const EventLog: FC<EventLogProps> = ({
                   {txn ? ` · txn=${txn}` : ""}
                 </span>
                 {event.meta ? <span className="cdc-event-log__extra">{event.meta}</span> : null}
+                {onReplayEvent ? (
+                  <button
+                    type="button"
+                    className="cdc-event-log__replay"
+                    onClick={() => onReplayEvent?.(event)}
+                    disabled={!replayable}
+                  >
+                    Replay
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="cdc-event-log__copy"
