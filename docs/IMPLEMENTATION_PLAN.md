@@ -55,6 +55,14 @@ _Status icons align with the sprint tracker so both documents stay in sync._
 pgsql
 ```
 
+### Storage integration (Deferred)
+- **Status**: Deferred until external dependencies are ready.
+- **Remaining work**: implement the domain `storage.ts` helper to persist source/destination tables between refreshes and add the optional Appwrite-backed persistence layer/configuration hooks.
+- **Prerequisites/blockers**:
+  - Confirm the data model and interface for the storage helper so it matches upcoming engine/state machine expectations.
+  - Provision an Appwrite project (API keys, self-hosted endpoint) and decide on authentication + data retention policies for demo data.
+  - Document environment configuration (env vars, SDK initialization) so the integration can be toggled without breaking the pure in-memory demo mode.
+
 ### Core data types (TypeScript)
 ```ts
 // /src/domain/types.ts
