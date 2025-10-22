@@ -322,3 +322,6 @@ export const PRESETS = {
 - Query mode demonstrably lossy with scenarios.
 - Basic glossary + tooltips shipped.
 - Tests green; CI runs unit + e2e headless.
+
+## Changelog
+- **v1 (current)** – Establishes the unified `/src` workspace layout, core EventBus + CDCController scaffolding, pause/resume, query polling controls, and the launch-ready Event Log.

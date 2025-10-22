@@ -47,6 +47,11 @@ All CDC modes publish into a shared `EventBus` (`src/engine/eventBus.ts`). The b
 2. Metrics updates (`onProduced`, `onConsumed`, `recordMissedDelete`, `recordWriteAmplification`) stay in sync with adapter semantics.
 3. UI consumers derive read models from the bus rather than bespoke stores—see `web/App.tsx` for integration examples.
 
+## Planning & status
+- Anchor every change against the implementation plan (currently **v1** per `docs/IMPLEMENTATION_PLAN.md`).
+- Before you start new work, skim the implementation plan’s [changelog](IMPLEMENTATION_PLAN.md#changelog) to see what shifted since your last sync.
+- Track active priorities and delivery gates via `docs/next-steps.md` and the feature-flag matrix in `docs/launch-readiness.md#feature-flag-matrix`.
+
 ## Common workflows
 - Review the day-to-day checklist in `../development.md` for the branching + PR process.
 - Run the React comparator + simulator side-by-side: `npm run dev:all` (spawns `npm run dev:sim` and `npm run dev:web` in parallel).
