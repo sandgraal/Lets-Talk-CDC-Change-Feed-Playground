@@ -155,6 +155,7 @@ type ComparatorPreferences = {
   eventLogTable?: string | null;
   eventLogTxn?: string | null;
   eventLogMethod?: MethodOption | null;
+  eventLogOp?: string | null;
   applyOnCommit?: boolean;
   consumerRateEnabled?: boolean;
   consumerRateLimit?: number;
@@ -610,6 +611,7 @@ function loadPreferences(): ComparatorPreferences | null {
       eventLogTable: typeof parsed.eventLogTable === "string" ? parsed.eventLogTable : undefined,
       eventLogTxn: typeof parsed.eventLogTxn === "string" ? parsed.eventLogTxn : undefined,
       eventLogMethod: typeof parsed.eventLogMethod === "string" ? parsed.eventLogMethod : undefined,
+      eventLogOp: typeof parsed.eventLogOp === "string" ? parsed.eventLogOp : undefined,
       applyOnCommit: typeof parsed.applyOnCommit === "boolean" ? parsed.applyOnCommit : undefined,
       consumerRateEnabled:
         typeof parsed.consumerRateEnabled === "boolean" ? parsed.consumerRateEnabled : undefined,
@@ -731,6 +733,10 @@ export function App() {
   const initialEventLogMethod = isMethodOption(storedPrefs?.eventLogMethod)
     ? (storedPrefs?.eventLogMethod as MethodOption)
     : null;
+  const initialEventLogOp =
+    typeof storedPrefs?.eventLogOp === "string" && storedPrefs.eventLogOp.trim()
+      ? storedPrefs.eventLogOp.trim().toLowerCase()
+      : null;
 
   const [liveScenario, setLiveScenario] = useState<ShellScenario | null>(null);
   const [scenarioId, setScenarioId] = useState<string>(
@@ -764,6 +770,7 @@ export function App() {
   const [eventLogTable, setEventLogTable] = useState<string | null>(storedPrefs?.eventLogTable ?? null);
   const [eventLogTxn, setEventLogTxn] = useState<string>(storedPrefs?.eventLogTxn ?? "");
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
+  const [eventLogOp, setEventLogOp] = useState<string | null>(initialEventLogOp);
   const [applyOnCommit, setApplyOnCommit] = useState(storedPrefs?.applyOnCommit ?? false);
   const [consumerRateEnabled, setConsumerRateEnabled] = useState(
     storedPrefs?.consumerRateEnabled ?? false,
@@ -931,6 +938,7 @@ export function App() {
     const list: CombinedBusEvent[] = [];
     const tables = new Set<string>();
     const txns = new Set<string>();
+    const ops = new Set<string>();
 
     activeMethods.forEach(method => {
       const events = busFilteredEventsByMethod.get(method) ?? [];
@@ -939,6 +947,8 @@ export function App() {
         if (table) tables.add(table);
         const txnId = event.tx?.id ?? null;
         if (txnId) txns.add(txnId);
+        const op = typeof event.op === "string" ? event.op.trim().toLowerCase() : "";
+        if (op) ops.add(op);
         list.push({ method, event: event as BusEvent });
       });
     });
@@ -954,19 +964,31 @@ export function App() {
       events: list,
       tables: Array.from(tables).sort(),
       txns: Array.from(txns).sort(),
+      ops: Array.from(ops),
     };
   }, [activeMethods, busFilteredEventsByMethod]);
   const combinedBusEvents = combinedBusData.events;
   const availableEventLogTables = combinedBusData.tables;
   const availableEventLogTxns = combinedBusData.txns;
+  const availableEventLogOps = useMemo(() => {
+    const set = new Set(combinedBusData.ops);
+    const prioritized = (DEFAULT_EVENT_OPS as readonly string[]).filter(op => set.has(op));
+    const extras = Array.from(set).filter(
+      op => !(DEFAULT_EVENT_OPS as readonly string[]).includes(op as EventOp),
+    );
+    extras.sort();
+    return [...prioritized, ...extras];
+  }, [combinedBusData.ops]);
   const filteredCombinedBusEvents = useMemo(() => {
     return combinedBusEvents.filter(({ method, event }) => {
       if (eventLogMethod && method !== eventLogMethod) return false;
       if (eventLogTable && (event.table ?? "") !== eventLogTable) return false;
       if (eventLogTxn && (event.tx?.id ?? "") !== eventLogTxn) return false;
+      const op = typeof event.op === "string" ? event.op.trim().toLowerCase() : "";
+      if (eventLogOp && op !== eventLogOp) return false;
       return true;
     });
-  }, [combinedBusEvents, eventLogMethod, eventLogTable, eventLogTxn]);
+  }, [combinedBusEvents, eventLogMethod, eventLogOp, eventLogTable, eventLogTxn]);
   const eventLogRows = useMemo<EventLogRow[]>(() => {
     return filteredCombinedBusEvents.map(({ method, event }, index) => {
       const offset = typeof event.offset === "number" ? event.offset : null;
@@ -1008,18 +1030,20 @@ export function App() {
   const eventLogFilters = useMemo<EventLogFilters>(
     () => ({
       methodId: eventLogMethod ?? undefined,
+      op: eventLogOp ?? undefined,
       table: eventLogTable ?? undefined,
       txnId: eventLogTxn ? eventLogTxn : undefined,
     }),
-    [eventLogMethod, eventLogTable, eventLogTxn],
+    [eventLogMethod, eventLogOp, eventLogTable, eventLogTxn],
   );
   const eventLogFilterOptions = useMemo(
     () => ({
       methods: METHOD_ORDER.map(method => ({ id: method, label: methodCopy[method].label })),
+      ops: availableEventLogOps,
       tables: availableEventLogTables,
       txns: availableEventLogTxns,
     }),
-    [availableEventLogTables, availableEventLogTxns],
+    [availableEventLogOps, availableEventLogTables, availableEventLogTxns],
   );
   const laneDestinations = useMemo(() => {
     const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
@@ -1100,6 +1124,12 @@ export function App() {
       setEventLogTable(null);
     }
   }, [availableEventLogTables, eventLogTable]);
+
+  useEffect(() => {
+    if (eventLogOp && !availableEventLogOps.includes(eventLogOp)) {
+      setEventLogOp(null);
+    }
+  }, [availableEventLogOps, eventLogOp]);
 
   useEffect(() => {
     if (eventLogTxn && !availableEventLogTxns.includes(eventLogTxn)) {
@@ -1348,6 +1378,7 @@ export function App() {
       eventLogTable,
       eventLogTxn,
       eventLogMethod,
+      eventLogOp,
       applyOnCommit,
       consumerRateEnabled,
       consumerRateLimit,
@@ -1363,6 +1394,7 @@ export function App() {
     eventLogTable,
     eventLogTxn,
     eventLogMethod,
+    eventLogOp,
     applyOnCommit,
     consumerRateEnabled,
     consumerRateLimit,
@@ -1689,8 +1721,9 @@ export function App() {
       }
       setEventLogTable(next.table ?? null);
       setEventLogTxn(next.txnId ?? "");
+      setEventLogOp(next.op ? next.op.toLowerCase() : null);
     },
-    [setEventLogMethod, setEventLogTable, setEventLogTxn],
+    [setEventLogMethod, setEventLogOp, setEventLogTable, setEventLogTxn],
   );
 
   const handleDownloadEventLog = useCallback(() => {
