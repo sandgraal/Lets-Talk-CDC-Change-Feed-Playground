@@ -37,25 +37,39 @@ export interface ScenarioNormaliseOptions {
   fallbackTable?: string;
 }
 
+function cloneValue<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(item => cloneValue(item)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const clone: Record<string, unknown> = {};
+    Object.entries(value as Record<string, unknown>).forEach(([key, val]) => {
+      clone[key] = cloneValue(val);
+    });
+    return clone as T;
+  }
+  return value;
+}
+
 function cloneRows(rows: SharedScenario["rows"]): SharedScenarioRow[] {
   if (!Array.isArray(rows)) return [];
   return rows
     .filter(row => row && typeof row === "object")
-    .map(row => ({ ...(row as SharedScenarioRow) }));
+    .map(row => cloneValue(row as SharedScenarioRow));
 }
 
 function cloneSchema(schema: SharedScenario["schema"]): SharedScenarioColumn[] {
   if (!Array.isArray(schema)) return [];
   return schema
     .filter(column => column && typeof column.name === "string")
-    .map(column => ({ ...(column as SharedScenarioColumn) }));
+    .map(column => cloneValue(column as SharedScenarioColumn));
 }
 
 function cloneEvents(events: SharedScenario["events"]): SharedScenarioEvent[] {
   if (!Array.isArray(events)) return [];
   return events
     .filter(event => event && typeof event === "object")
-    .map(event => ({ ...(event as SharedScenarioEvent) }));
+    .map(event => cloneValue(event as SharedScenarioEvent));
 }
 
 function deriveSeed(seed: SharedScenario["seed"], index: number): number {
@@ -64,7 +78,7 @@ function deriveSeed(seed: SharedScenario["seed"], index: number): number {
 
 function clonePk(pk: SourceOp["pk"]): SourceOp["pk"] | undefined {
   if (!pk || typeof pk !== "object") return undefined;
-  return { ...pk } as SourceOp["pk"];
+  return cloneValue(pk) as SourceOp["pk"];
 }
 
 function fallbackTimestampValue(
@@ -108,11 +122,11 @@ function cloneOps(
       clone.pk = clonePk(op?.pk) ?? derivePkFromAfter(op, schema);
 
       if (op?.after) {
-        clone.after = { ...op.after } as SourceOp["after"];
+        clone.after = cloneValue(op.after) as SourceOp["after"];
       }
 
       if (includeTxn && op?.txn) {
-        clone.txn = { ...op.txn };
+        clone.txn = cloneValue(op.txn) as SourceOp["txn"];
       }
 
       const fallbackT = fallbackTimestampValue(fallbackTimestamp, scenarioIndex, opIndex);
@@ -127,6 +141,29 @@ function cloneOps(
       return clone;
     })
     .filter((op): op is SourceOp => Boolean(op.pk?.id));
+}
+
+function normaliseOpCode(opCode: unknown): "insert" | "update" | "delete" | null {
+  if (typeof opCode !== "string") return null;
+  const trimmed = opCode.trim();
+  if (!trimmed) return null;
+  const lowered = trimmed.toLowerCase();
+  if (["c", "create", "r", "read", "s", "snapshot"].includes(lowered)) return "insert";
+  if (["u", "update"].includes(lowered)) return "update";
+  if (["d", "delete"].includes(lowered)) return "delete";
+  return null;
+}
+
+function formatPkValue(value: unknown, fallback: string): string {
+  if (value == null) return fallback;
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return String(value);
 }
 
 function deriveOpsFromEvents(
@@ -158,8 +195,17 @@ function deriveOpsFromEvents(
       const payload = (event as any)?.payload ?? event;
       if (!payload) return null;
 
-      const opCode = payload.op ?? (event as any)?.op;
-      const ts = Number(payload.ts_ms ?? (event as any)?.ts_ms);
+      const opCode = normaliseOpCode(payload.op ?? (event as any)?.op);
+      if (!opCode) return null;
+
+      const rawTs =
+        (payload as any)?.ts_ms ??
+        (payload as any)?.tsMs ??
+        (payload as any)?.ts ??
+        (event as any)?.ts_ms ??
+        (event as any)?.tsMs ??
+        (event as any)?.ts;
+      const ts = Number(rawTs);
       const after = payload.after ?? (event as any)?.after ?? null;
       const before = payload.before ?? (event as any)?.before ?? null;
       const keyData = (event as any)?.key ?? null;
@@ -169,31 +215,30 @@ function deriveOpsFromEvents(
         (after && after[pkField]) ??
         (before && before[pkField]);
 
-      const pk = { id: pkValue != null ? String(pkValue) : String(opIndex) };
+      const pk = { id: formatPkValue(pkValue, String(opIndex)) };
       const fallbackT = fallbackTimestampValue(options.fallbackTimestamp, options.scenarioIndex, opIndex);
+      const resolvedTs = Number.isFinite(ts) ? ts : fallbackT ?? opIndex * 200;
 
       const base: SourceOp = {
-        t: Number.isFinite(ts) ? ts : fallbackT ?? opIndex * 200,
+        t: resolvedTs,
         table: resolveEventTable(event),
         pk,
-        op: "insert",
+        op: opCode,
       } as SourceOp;
 
-      if (opCode === "c" || opCode === "r") {
-        if (!after) return null;
-        return { ...base, op: "insert", after };
+      if ((opCode === "insert" || opCode === "update") && !after) {
+        return null;
       }
 
-      if (opCode === "u") {
-        if (!after) return null;
-        return { ...base, op: "update", after };
+      if (opCode === "insert") {
+        return { ...base, op: "insert", after: cloneValue(after) as SourceOp["after"] };
       }
 
-      if (opCode === "d") {
-        return { ...base, op: "delete" };
+      if (opCode === "update") {
+        return { ...base, op: "update", after: cloneValue(after) as SourceOp["after"] };
       }
 
-      return null;
+      return { ...base, op: "delete" };
     })
     .filter((op): op is SourceOp => Boolean(op));
 }
