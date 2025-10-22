@@ -68,6 +68,40 @@
   height: 1rem;
 }
 
+.sim-shell__consumer-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.sim-shell__consumer-rate label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
+
+.sim-shell__consumer-rate label span {
+  font-weight: 500;
+}
+
+.sim-shell__consumer-rate input[type="range"] {
+  width: 140px;
+}
+
+.sim-shell__consumer-rate[data-enabled="false"] {
+  opacity: 0.75;
+}
+
+.sim-shell__consumer-rate button {
+  white-space: nowrap;
+}
+
 .sim-shell__actions button,
 .sim-shell__actions select {
   padding: 0.55rem 0.85rem;

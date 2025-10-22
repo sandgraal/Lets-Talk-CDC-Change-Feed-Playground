@@ -92,6 +92,10 @@ function computeTriggerWriteAmplification(
 const METHOD_ORDER = ["polling", "trigger", "log"] as const;
 const MIN_LANES = 2;
 const STEP_MS = 100;
+const MIN_CONSUMER_RATE = 10;
+const MAX_CONSUMER_RATE = 300;
+const DEFAULT_CONSUMER_RATE_LIMIT = 120;
+const CONSUMER_RATE_STEP = 10;
 
 type MethodOption = typeof METHOD_ORDER[number];
 
@@ -144,6 +148,8 @@ type ComparatorPreferences = {
   eventLogTxn?: string | null;
   eventLogMethod?: MethodOption | null;
   applyOnCommit?: boolean;
+  consumerRateEnabled?: boolean;
+  consumerRateLimit?: number;
 };
 
 type LaneMetrics = {
@@ -494,6 +500,13 @@ function sanitizeNumber(value: unknown, fallback: number, min?: number) {
   return parsed;
 }
 
+function sanitizeConsumerRate(value: unknown, fallback = DEFAULT_CONSUMER_RATE_LIMIT) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value);
+  if (!Number.isFinite(rounded)) return fallback;
+  return Math.min(MAX_CONSUMER_RATE, Math.max(MIN_CONSUMER_RATE, rounded));
+}
+
 function sanitizeActiveMethods(methods: unknown): MethodOption[] {
   if (!Array.isArray(methods)) return [...METHOD_ORDER];
   const unique: MethodOption[] = [];
@@ -590,6 +603,10 @@ function loadPreferences(): ComparatorPreferences | null {
       eventLogTxn: typeof parsed.eventLogTxn === "string" ? parsed.eventLogTxn : undefined,
       eventLogMethod: typeof parsed.eventLogMethod === "string" ? parsed.eventLogMethod : undefined,
       applyOnCommit: typeof parsed.applyOnCommit === "boolean" ? parsed.applyOnCommit : undefined,
+      consumerRateEnabled:
+        typeof parsed.consumerRateEnabled === "boolean" ? parsed.consumerRateEnabled : undefined,
+      consumerRateLimit:
+        typeof parsed.consumerRateLimit === "number" ? parsed.consumerRateLimit : undefined,
     };
   } catch (err) {
     console.warn("Comparator prefs load failed", err);
@@ -740,9 +757,21 @@ export function App() {
   const [eventLogTxn, setEventLogTxn] = useState<string>(storedPrefs?.eventLogTxn ?? "");
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
   const [applyOnCommit, setApplyOnCommit] = useState(storedPrefs?.applyOnCommit ?? false);
+  const [consumerRateEnabled, setConsumerRateEnabled] = useState(
+    storedPrefs?.consumerRateEnabled ?? false,
+  );
+  const [consumerRateLimit, setConsumerRateLimit] = useState(() =>
+    sanitizeConsumerRate(storedPrefs?.consumerRateLimit, DEFAULT_CONSUMER_RATE_LIMIT),
+  );
   const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
   const pendingTxnRef = useRef<Partial<Record<MethodOption, EngineEvent[]>>>({});
+  const consumerThrottleRef = useRef<number | null>(
+    (storedPrefs?.consumerRateEnabled ?? false)
+      ? sanitizeConsumerRate(storedPrefs?.consumerRateLimit, DEFAULT_CONSUMER_RATE_LIMIT)
+      : null,
+  );
+  const consumerAllowanceRef = useRef(0);
   const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET_ID];
   const presetOptions = useMemo(
     () =>
@@ -1322,6 +1351,14 @@ export function App() {
       if (typeof prefs.applyOnCommit === "boolean") {
         setApplyOnCommit(prefs.applyOnCommit);
       }
+
+      if (typeof prefs.consumerRateEnabled === "boolean") {
+        setConsumerRateEnabled(prefs.consumerRateEnabled);
+      }
+
+      if (typeof prefs.consumerRateLimit === "number") {
+        setConsumerRateLimit(sanitizeConsumerRate(prefs.consumerRateLimit));
+      }
     };
 
     window.addEventListener("cdc:comparator-preferences-set" as string, handler);
@@ -1344,6 +1381,8 @@ export function App() {
       eventLogTxn,
       eventLogMethod,
       applyOnCommit,
+      consumerRateEnabled,
+      consumerRateLimit,
     });
   }, [
     scenarioId,
@@ -1357,6 +1396,8 @@ export function App() {
     eventLogTxn,
     eventLogMethod,
     applyOnCommit,
+    consumerRateEnabled,
+    consumerRateLimit,
   ]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
@@ -1372,6 +1413,15 @@ export function App() {
   const drainQueues = useCallback(() => {
     if (isConsumerPaused) return;
     const additions: Partial<Record<MethodOption, CdcEvent[]>> = {};
+
+    const throttle = consumerThrottleRef.current;
+    if (throttle != null) {
+      const increment = (throttle * STEP_MS) / 1000;
+      const buffered = consumerAllowanceRef.current + increment;
+      consumerAllowanceRef.current = Math.min(buffered, throttle * 5);
+    }
+    let remainingAllowance =
+      throttle == null ? Number.POSITIVE_INFINITY : consumerAllowanceRef.current;
 
     const getTxnId = (event: EngineEvent) => event.txnId ?? `tx-${event.commitTs}`;
     const isTxnComplete = (events: EngineEvent[]): boolean => {
@@ -1421,22 +1471,50 @@ export function App() {
       if (!runtime) continue;
 
       let consumed: EngineEvent[] = [];
+      let consumedCount = 0;
 
       if (applyOnCommit) {
         const txnEvents = takeNextTransaction(method, runtime);
         if (!txnEvents.length) continue;
+        if (throttle != null && txnEvents.length > remainingAllowance) {
+          pendingTxnRef.current[method] = txnEvents;
+          continue;
+        }
         consumed = txnEvents;
+        consumedCount = txnEvents.length;
       } else {
         const pending = pendingTxnRef.current[method] ?? [];
         if (pending.length) {
+          if (throttle != null && pending.length > remainingAllowance) {
+            pendingTxnRef.current[method] = pending;
+            continue;
+          }
           consumed = [...pending];
+          consumedCount += pending.length;
           pendingTxnRef.current[method] = [];
         }
-        const batch = runtime.bus.consume(runtime.topic, 50);
-        if (batch.length) {
-          consumed = consumed.length ? consumed.concat(batch) : batch;
+        const availableAfterPending =
+          throttle == null ? Number.POSITIVE_INFINITY : remainingAllowance - consumedCount;
+        const canRequestBatch = throttle == null ? true : availableAfterPending >= 1;
+        if (canRequestBatch) {
+          const batchLimit =
+            throttle == null
+              ? 50
+              : Math.min(Math.floor(availableAfterPending), 50);
+          const requestSize = throttle == null ? 50 : Math.max(batchLimit, 0);
+          if (requestSize > 0) {
+            const batch = runtime.bus.consume(runtime.topic, requestSize);
+            if (batch.length) {
+              consumed = consumed.length ? consumed.concat(batch) : batch;
+              consumedCount += batch.length;
+            }
+          }
         }
         if (!consumed.length) continue;
+      }
+
+      if (throttle != null) {
+        remainingAllowance = Math.max(remainingAllowance - consumedCount, 0);
       }
 
       runtime.metrics.onConsumed(consumed);
@@ -1446,6 +1524,10 @@ export function App() {
       });
       updateLaneSnapshot(method);
       additions[method] = converted;
+    }
+
+    if (throttle != null) {
+      consumerAllowanceRef.current = remainingAllowance;
     }
 
     if (Object.keys(additions).length === 0) return;
@@ -1467,6 +1549,14 @@ export function App() {
       drainQueues();
     }, STEP_MS);
   }, [stopLoop, drainQueues]);
+
+  useEffect(() => {
+    const next = consumerRateEnabled ? consumerRateLimit : null;
+    consumerThrottleRef.current = next;
+    if (next == null) {
+      consumerAllowanceRef.current = 0;
+    }
+  }, [consumerRateEnabled, consumerRateLimit]);
 
   useEffect(() => {
     if (!isConsumerPaused) {
@@ -1591,6 +1681,30 @@ export function App() {
       return next;
     });
   }, [scenario.name]);
+
+  const handleToggleConsumerRate = useCallback(() => {
+    setConsumerRateEnabled(prev => {
+      const next = !prev;
+      track("comparator.consumer.rate_toggle", { scenario: scenario.name, enabled: next });
+      return next;
+    });
+    if (consumerRateEnabled) {
+      track("comparator.consumer.rate_reset", { scenario: scenario.name });
+    }
+  }, [consumerRateEnabled, scenario.name]);
+
+  const handleConsumerRateChange = useCallback(
+    (value: number) => {
+      const clamped = sanitizeConsumerRate(value, consumerRateLimit);
+      if (clamped === consumerRateLimit) return;
+      setConsumerRateLimit(clamped);
+      track("comparator.consumer.rate_adjust", {
+        scenario: scenario.name,
+        rate: clamped,
+      });
+    },
+    [consumerRateLimit, scenario.name],
+  );
 
   const handleEventLogFiltersChange = useCallback(
     (next: EventLogFilters) => {
@@ -2557,6 +2671,28 @@ export function App() {
           />
           <span>Apply on commit</span>
         </label>
+        <div
+          className="sim-shell__consumer-rate"
+          role="group"
+          aria-label="Apply rate limit"
+          data-enabled={consumerRateEnabled ? "true" : "false"}
+        >
+          <button type="button" onClick={handleToggleConsumerRate}>
+            {consumerRateEnabled ? "Disable throttle" : "Throttle apply"}
+          </button>
+          <label>
+            <span>{consumerRateEnabled ? `${consumerRateLimit} events/s` : "Unlimited"}</span>
+            <input
+              type="range"
+              min={MIN_CONSUMER_RATE}
+              max={MAX_CONSUMER_RATE}
+              step={CONSUMER_RATE_STEP}
+              value={consumerRateLimit}
+              onChange={event => handleConsumerRateChange(Number(event.target.value))}
+              disabled={!consumerRateEnabled}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="sim-shell__controls" aria-label="Method tuning controls">

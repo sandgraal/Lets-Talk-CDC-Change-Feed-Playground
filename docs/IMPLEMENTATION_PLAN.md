@@ -151,9 +151,10 @@ export type Metrics = {
     - Acceptance: tooltips can be toggled off; stored in localStorage.
 
 12. **High-volume generator + replay (optional P2)**
-    - Generator: N changes/sec, burst mode. Consumer throttle knob: max events/second.
-    - Replay: reset destination, replay last captured trace.
-    - Acceptance: users can create artificial lag and watch recovery.
+   - Generator: N changes/sec, burst mode. Consumer throttle knob: max events/second.
+   - Replay: reset destination, replay last captured trace.
+   - Acceptance: users can create artificial lag and watch recovery.
+   - 🔄 Consumer throttle control shipped in comparator shell; generator + replay still pending.
 
 ## UI Changes (surgical)
 - New top bar: Mode | Preset | Start/Stop | Pause/Resume Apply | Polling (QUERY).
