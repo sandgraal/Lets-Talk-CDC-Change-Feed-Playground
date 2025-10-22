@@ -10,7 +10,15 @@ import {
   type ModeIdentifier,
   type ModeRuntime,
 } from "../src";
-import { CDCController, EventBus, MetricsStore, PRESETS, Scheduler, type MetricsSnapshot } from "../src";
+import {
+  CDCController,
+  EventBus,
+  InMemoryTableStorage,
+  MetricsStore,
+  PRESETS,
+  Scheduler,
+  type MetricsSnapshot,
+} from "../src";
 import { EventLog, type EventLogFilters, type EventLogRow, type EmitFn } from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
 import harnessHistoryMd from "../docs/harness-history.md?raw";
@@ -766,6 +774,7 @@ export function App() {
   const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
   const pendingTxnRef = useRef<Partial<Record<MethodOption, EngineEvent[]>>>({});
+  const laneStorageRef = useRef<Partial<Record<MethodOption, InMemoryTableStorage>>>({});
   const consumerThrottleRef = useRef<number | null>(
     (storedPrefs?.consumerRateEnabled ?? false)
       ? sanitizeConsumerRate(storedPrefs?.consumerRateLimit, DEFAULT_CONSUMER_RATE_LIMIT)
@@ -797,6 +806,14 @@ export function App() {
     }, {} as Record<MethodOption, MethodCopy>);
   }, [preset]);
   const harnessHistoryContent = useMemo(() => harnessHistoryMd.trim(), []);
+  const ensureLaneStorage = useCallback((method: MethodOption) => {
+    let storage = laneStorageRef.current[method];
+    if (!storage) {
+      storage = new InMemoryTableStorage();
+      laneStorageRef.current[method] = storage;
+    }
+    return storage;
+  }, []);
   const updateLaneSnapshot = useCallback(
     (method: MethodOption, options?: { lastOffset?: number }) => {
       const runtime = laneRuntimeRef.current[method];
@@ -1007,107 +1024,58 @@ export function App() {
   const laneDestinations = useMemo(() => {
     const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
     activeMethods.forEach(method => {
-      const events = laneEvents[method] ?? [];
+      const storage = ensureLaneStorage(method);
+      const tables = storage.snapshot();
       const columnOrder: string[] = ["table", "id"];
-      const ensureColumn = (name: string | null | undefined) => {
-        if (!name || name === "id" || name === "table") return;
-        if (!columnOrder.includes(name)) {
-          columnOrder.push(name);
-        }
-      };
-      const removeColumn = (name: string | null | undefined) => {
-        if (!name || name === "id" || name === "table") return;
-        const idx = columnOrder.indexOf(name);
-        if (idx >= 0) {
-          columnOrder.splice(idx, 1);
-        }
-      };
-      const rowsMap = new Map<string, Record<string, unknown>>();
+      const seenColumns = new Set(columnOrder);
       let schemaVersion = 1;
 
-      events.forEach(event => {
-        if (typeof event.schemaVersion === "number" && event.schemaVersion > schemaVersion) {
-          schemaVersion = event.schemaVersion;
-        }
-
-        if (event.schemaChange) {
-          schemaVersion = Math.max(schemaVersion, event.schemaChange.nextVersion);
-          const columnName = event.schemaChange.column.name;
-          const targetTable = event.table ?? "";
-          if (event.schemaChange.action === "ADD_COLUMN") {
-            ensureColumn(columnName);
-            rowsMap.forEach(row => {
-              if ((row.table ?? "") !== targetTable) return;
-              if (!(columnName in row)) {
-                row[columnName] = null;
-              }
-            });
-          } else {
-            removeColumn(columnName);
-            rowsMap.forEach(row => {
-              if ((row.table ?? "") !== targetTable) return;
-              if (columnName in row) {
-                delete row[columnName];
-              }
-            });
-          }
-        }
-
-        if (event.op === "s") {
-          return;
-        }
-
-        if (event.after) {
-          Object.keys(event.after).forEach(key => ensureColumn(key));
-        }
-        if (event.before) {
-          Object.keys(event.before).forEach(key => ensureColumn(key));
-        }
-
-        const pkId = event.pk?.id != null ? String(event.pk.id) : null;
-        const tableName = event.table ?? "";
-        const rowKey = pkId ? `${tableName}::${pkId}` : null;
-
-        if (!pkId || !rowKey) return;
-
-        if (event.op === "c" || event.op === "u") {
-          const previous = rowsMap.get(rowKey) ?? { id: pkId, table: tableName };
-          const payload = event.after ?? {};
-          const next = {
-            ...previous,
-            ...payload,
-            id: pkId,
-            table: tableName,
-          };
-          rowsMap.set(rowKey, next);
-        } else if (event.op === "d") {
-          rowsMap.delete(rowKey);
-        }
-      });
-
-      rowsMap.forEach(row => {
-        columnOrder.forEach(column => {
-          if (column === "id" || column === "table") return;
-          if (!(column in row)) {
-            row[column] = null;
+      tables.forEach(table => {
+        schemaVersion = Math.max(schemaVersion, table.schema?.version ?? 1);
+        table.schema?.columns.forEach(column => {
+          if (!column) return;
+          const name = column.name;
+          if (!name || name === "id" || name.startsWith("__")) return;
+          if (!seenColumns.has(name)) {
+            seenColumns.add(name);
+            columnOrder.push(name);
           }
         });
       });
 
-      const rows = Array.from(rowsMap.entries())
-        .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: "base" }))
-        .map(([key, values]) => {
-          const tableName = typeof values.table === "string" ? values.table : "";
-          const displayId = typeof values.id === "string" ? values.id : String(values.id ?? key);
-          return {
-            id: key,
-            displayId,
-            table: tableName,
-            values,
-          };
+      tables.forEach(table => {
+        table.rows.forEach(row => {
+          Object.keys(row).forEach(key => {
+            if (key === "id" || key.startsWith("__")) return;
+            if (!seenColumns.has(key)) {
+              seenColumns.add(key);
+              columnOrder.push(key);
+            }
+          });
         });
+      });
 
-      const hasSchemaColumn = columnOrder.includes(SCHEMA_DEMO_COLUMN.name);
+      const rows = tables
+        .flatMap(table => {
+          return table.rows.map(row => {
+            const displayId = String(row.id);
+            const values: Record<string, unknown> = {};
+            columnOrder.forEach(column => {
+              if (column === "table" || column === "id" || column.startsWith("__")) return;
+              const value = (row as Record<string, unknown>)[column];
+              values[column] = value ?? null;
+            });
+            return {
+              id: `${table.name}::${displayId}`,
+              displayId,
+              table: table.name,
+              values,
+            };
+          });
+        })
+        .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: "base" }));
+
+      const hasSchemaColumn = seenColumns.has(SCHEMA_DEMO_COLUMN.name);
 
       snapshots.set(method, {
         columns: columnOrder,
@@ -1117,7 +1085,7 @@ export function App() {
       });
     });
     return snapshots;
-  }, [activeMethods, laneEvents]);
+  }, [activeMethods, ensureLaneStorage, laneEvents]);
   const isPlayingRef = useRef(isPlaying);
   const schemaCommitRef = useRef(0);
 
@@ -1517,6 +1485,8 @@ export function App() {
         remainingAllowance = Math.max(remainingAllowance - consumedCount, 0);
       }
 
+      const storage = ensureLaneStorage(method);
+      storage.applyEvents(consumed);
       runtime.metrics.onConsumed(consumed);
       const converted = consumed.map(event => {
         const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
@@ -1540,7 +1510,7 @@ export function App() {
       }
       return next;
     });
-  }, [activeMethods, applyOnCommit, isConsumerPaused, updateLaneSnapshot]);
+  }, [activeMethods, applyOnCommit, ensureLaneStorage, isConsumerPaused, updateLaneSnapshot]);
 
   const startLoop = useCallback(() => {
     stopLoop();
@@ -1569,6 +1539,10 @@ export function App() {
     setBusEvents(emptyEventMap<BusEvent>(activeMethods));
     laneRuntimeRef.current = {};
     pendingTxnRef.current = {};
+    laneStorageRef.current = {};
+    activeMethods.forEach(method => {
+      laneStorageRef.current[method] = new InMemoryTableStorage();
+    });
     setClock(0);
     setIsPlaying(false);
     stopLoop();
@@ -2134,6 +2108,7 @@ export function App() {
       setLaneEvents(emptyEventMap<CdcEvent>(activeMethods));
       setBusEvents(emptyEventMap<BusEvent>(activeMethods));
       for (const method of activeMethods) {
+        laneStorageRef.current[method] = new InMemoryTableStorage();
         const runtime = laneRuntimeRef.current[method];
         if (!runtime) continue;
         runtime.bus.reset(runtime.topic);
