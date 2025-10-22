@@ -64,6 +64,10 @@ type Metrics = {
   orderingOk: boolean;
   consistent: boolean;
   writeAmplification?: number;
+  insertCount: number;
+  updateCount: number;
+  deleteCount: number;
+  schemaChangeCount: number;
 };
 
 const SCHEMA_DEMO_COLUMN: SchemaColumn = {
@@ -218,6 +222,16 @@ type Summary = {
   highestDeletes: LaneMetrics;
   orderingIssues: MethodOption[];
   triggerWriteAmplification: LaneMetrics | null;
+};
+
+type LaneAnalytics = {
+  method: MethodOption;
+  label: string;
+  total: number;
+  inserts: number;
+  updates: number;
+  deletes: number;
+  schemaChanges: number;
 };
 
 type ClockControlCommand =
@@ -603,9 +617,20 @@ function computeMetrics(
   const lagMs = lastEvent ? Math.max(clock - lastEvent.ts_ms, 0) : clock;
   const throughput = clock > 0 ? events.length / (clock / 1000) : 0;
 
+  let insertCount = 0;
+  let updateCount = 0;
+  let deleteCount = 0;
+  let schemaChangeCount = 0;
+
+  events.forEach(evt => {
+    if (evt.op === "c") insertCount += 1;
+    else if (evt.op === "u") updateCount += 1;
+    else if (evt.op === "d") deleteCount += 1;
+    if (evt.schemaChange) schemaChangeCount += 1;
+  });
+
   const totalDeletes = scenario.ops.filter(op => op.op === "delete").length;
-  const capturedDeletes = events.filter(evt => evt.op === "d").length;
-  const deletesPct = totalDeletes === 0 ? 100 : (capturedDeletes / totalDeletes) * 100;
+  const deletesPct = totalDeletes === 0 ? 100 : (deleteCount / totalDeletes) * 100;
 
   const orderingOk = events.every((evt, idx) => {
     if (idx === 0) return true;
@@ -626,6 +651,10 @@ function computeMetrics(
       method === "trigger"
         ? computeTriggerWriteAmplification(stats, method, events, scenario) ?? 0
         : undefined,
+    insertCount,
+    updateCount,
+    deleteCount,
+    schemaChangeCount,
   };
 }
 
@@ -1768,26 +1797,21 @@ export function App() {
     () => laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0),
     [laneMetrics],
   );
-  const analytics = useMemo(() => {
-    return laneMetrics.map(({ method, events }) => {
-      let inserts = 0;
-      let updates = 0;
-      let deletes = 0;
-      events.forEach(evt => {
-        if (evt.op === 'c') inserts += 1;
-        else if (evt.op === 'u') updates += 1;
-        else if (evt.op === 'd') deletes += 1;
-      });
-      return {
-        method,
-        label: methodCopy[method].label,
-        total: events.length,
-        inserts,
-        updates,
-        deletes,
-      };
-    });
+  const analytics = useMemo<LaneAnalytics[]>(() => {
+    return laneMetrics.map(({ method, events, metrics }) => ({
+      method,
+      label: methodCopy[method].label,
+      total: events.length,
+      inserts: metrics.insertCount,
+      updates: metrics.updateCount,
+      deletes: metrics.deleteCount,
+      schemaChanges: metrics.schemaChangeCount,
+    }));
   }, [laneMetrics, methodCopy]);
+
+  const analyticsByMethod = useMemo(() => {
+    return analytics.reduce((map, entry) => map.set(entry.method, entry), new Map<MethodOption, LaneAnalytics>());
+  }, [analytics]);
 
   const laneDiffs = useMemo(() => {
     const map = new Map<MethodOption, LaneDiffResult>();
@@ -1801,6 +1825,7 @@ export function App() {
     () =>
     activeMethods.map(method => {
       const runtimeSummary = laneRuntimeSummaries.get(method);
+      const mix = analyticsByMethod.get(method);
       return {
         id: method,
         label: methodCopy[method].label,
@@ -1813,9 +1838,13 @@ export function App() {
         missedDeletes: runtimeSummary?.missedDeletes,
         writeAmplification: runtimeSummary?.writeAmplification,
         snapshotRows: runtimeSummary?.snapshotRows,
+        inserts: mix?.inserts ?? 0,
+        updates: mix?.updates ?? 0,
+        deletes: mix?.deletes ?? 0,
+        schemaChanges: mix?.schemaChanges ?? 0,
       };
     }),
-  [activeMethods, laneRuntimeSummaries, methodCopy]);
+  [activeMethods, analyticsByMethod, laneRuntimeSummaries, methodCopy]);
 
   const snapshotSummaryList = useMemo(
     () =>

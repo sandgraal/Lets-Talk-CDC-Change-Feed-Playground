@@ -8,6 +8,10 @@ const base = {
   orderingOk: true,
   consistent: true,
   writeAmplification: 1.4,
+  insertCount: 12,
+  updateCount: 18,
+  deleteCount: 4,
+  schemaChangeCount: 1,
 };
 
 export const Balanced = () => <MetricsStrip {...base} />;
@@ -19,6 +23,10 @@ export const DeleteGap = () => (
     orderingOk={false}
     consistent={false}
     writeAmplification={2.6}
+    insertCount={20}
+    updateCount={24}
+    deleteCount={3}
+    schemaChangeCount={0}
   />
 );
 
