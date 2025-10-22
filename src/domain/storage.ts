@@ -74,6 +74,19 @@ const normaliseRow = (row: Row): Row => {
 
 export type StorageSnapshot = Table[];
 
+export type ReplayEventsOptions = {
+  /**
+   * Optional tables to seed before replaying events. They will be cloned
+   * internally so callers retain their original references.
+   */
+  initialTables?: Table[];
+  /**
+   * When enabled, tables with zero rows after replay will be excluded from the
+   * returned snapshot.
+   */
+  pruneEmptyTables?: boolean;
+};
+
 export class InMemoryTableStorage {
   private readonly tables = new Map<string, TableState>();
 
@@ -228,3 +241,19 @@ export class InMemoryTableStorage {
     });
   }
 }
+
+export const replayEventsToTables = (
+  events: readonly Event[] | undefined,
+  options: ReplayEventsOptions = {},
+): Table[] => {
+  const { initialTables = [], pruneEmptyTables = false } = options;
+  const storage = new InMemoryTableStorage(initialTables);
+  if (Array.isArray(events) && events.length > 0) {
+    storage.applyEvents(events as Event[]);
+  }
+  const snapshot = storage.snapshot();
+  if (!pruneEmptyTables) {
+    return snapshot;
+  }
+  return snapshot.filter(table => table.rows.length > 0);
+};

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryTableStorage } from "../../domain/storage";
+import { InMemoryTableStorage, replayEventsToTables } from "../../domain/storage";
 import type { Event, Table } from "../../domain/types";
 
 const makeEvent = (overrides: Partial<Event>): Event => ({
@@ -147,5 +147,100 @@ describe("InMemoryTableStorage", () => {
     const fresh = storage.getTable("widgets");
     expect(fresh?.rows[0].status).toBe("seed");
     expect(fresh?.schema.columns.some(column => column.name === "extra")).toBe(false);
+  });
+
+  it("replays events into a final table snapshot", () => {
+    const events: Event[] = [
+      makeEvent({
+        id: "evt-insert", 
+        kind: "INSERT",
+        after: { id: "w2", status: "new" },
+        schemaVersion: 1,
+        commitTs: 5,
+      }),
+      makeEvent({
+        id: "evt-update",
+        kind: "UPDATE",
+        schemaVersion: 2,
+        commitTs: 10,
+        after: { id: "w2", status: "ready", note: "done" },
+      }),
+    ];
+
+    const tables = replayEventsToTables(events);
+    expect(tables).toHaveLength(1);
+    const table = tables[0];
+    expect(table.rows).toHaveLength(1);
+    expect(table.rows[0].status).toBe("ready");
+    expect(table.rows[0].note).toBe("done");
+    const schemaColumns = table.schema.columns.map(column => column.name);
+    expect(schemaColumns).toContain("note");
+    const noteColumn = table.schema.columns.find(column => column.name === "note");
+    expect(noteColumn?.type).toBe("string");
+    expect(table.schema.version).toBe(2);
+  });
+
+  it("replays on top of initial tables without mutating inputs", () => {
+    const initialTables: Table[] = [
+      {
+        name: "widgets",
+        schema: {
+          name: "widgets",
+          version: 1,
+          columns: [
+            { name: "id", type: "string" },
+            { name: "status", type: "string" },
+          ],
+        },
+        rows: [{ id: "w1", status: "seed" }],
+      },
+    ];
+
+    const events: Event[] = [
+      makeEvent({
+        id: "evt-delete",
+        kind: "DELETE",
+        before: { id: "w1" },
+      }),
+    ];
+
+    const snapshot = replayEventsToTables(events, {
+      initialTables,
+      pruneEmptyTables: true,
+    });
+
+    expect(snapshot).toHaveLength(0);
+    expect(initialTables[0].rows[0].status).toBe("seed");
+    expect(initialTables[0].schema.columns).toHaveLength(2);
+  });
+
+  it("handles schema change events during replay", () => {
+    const events: Event[] = [
+      makeEvent({
+        id: "evt-schema-add",
+        kind: "SCHEMA_ADD_COL",
+        schemaVersion: 2,
+        schemaChange: {
+          action: "ADD_COLUMN",
+          column: { name: "priority", type: "bool", nullable: true },
+          previousVersion: 1,
+          nextVersion: 2,
+        },
+      }),
+      makeEvent({
+        id: "evt-insert",
+        kind: "INSERT",
+        schemaVersion: 2,
+        after: { id: "w9", status: "queued", priority: true },
+        commitTs: 30,
+      }),
+    ];
+
+    const snapshot = replayEventsToTables(events);
+    expect(snapshot).toHaveLength(1);
+    const table = snapshot[0];
+    expect(table.schema.columns.some(column => column.name === "priority")).toBe(true);
+    expect(table.schema.version).toBe(2);
+    expect(table.rows[0].priority).toBe(true);
   });
 });
