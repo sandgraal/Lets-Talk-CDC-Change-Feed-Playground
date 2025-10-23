@@ -52,6 +52,10 @@ import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
 import methodCopyData from "../assets/method-copy.js";
 import tooltipCopyData from "../assets/tooltip-copy.js";
+import {
+  applyScenarioFilters,
+  collectScenarioTags,
+} from "../src/features/scenarioFilters";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
 const PREFERENCES_KEY = "cdc_comparator_prefs_v1" as const;
@@ -813,21 +817,14 @@ export function App() {
     }, {} as Record<MethodOption, MethodCopy>);
   }, [preset]);
   const scenarioTagSet = useMemo(() => new Set(scenarioTags), [scenarioTags]);
-  const availableScenarioTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    const append = (tags: string[] | undefined | null) => {
-      if (!Array.isArray(tags)) return;
-      tags.forEach(tag => {
-        if (typeof tag === "string" && tag.trim().length > 0) {
-          tagSet.add(tag);
-        }
-      });
-    };
-    SCENARIOS.forEach(option => append(option.tags));
-    append(liveScenario?.tags);
-    append(scenarioTags);
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
-  }, [liveScenario, scenarioTags]);
+  const availableScenarioTags = useMemo(
+    () =>
+      collectScenarioTags(SCENARIOS, {
+        liveScenario: liveScenario ?? undefined,
+        additionalTags: [scenarioTags],
+      }),
+    [liveScenario, scenarioTags],
+  );
   const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(
@@ -1163,31 +1160,16 @@ export function App() {
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
-  const scenarioOptions = useMemo(() => {
-    const list = [...SCENARIOS];
-    if (liveScenario) {
-      const existingIndex = list.findIndex(option => option.name === liveScenario.name);
-      if (existingIndex >= 0) {
-        list.splice(existingIndex, 1, liveScenario);
-      } else {
-        list.unshift(liveScenario);
-      }
-    }
-    const query = scenarioFilter.trim().toLowerCase();
-    return list.filter(option => {
-      if (option.name === LIVE_SCENARIO_NAME) return true;
-      if (scenarioTags.length) {
-        const optionTags = option.tags || [];
-        if (!scenarioTags.every(tag => optionTags.includes(tag))) return false;
-      }
-      if (!query) return true;
-      const haystack = [option.label, option.description, option.highlight, option.name, (option.tags || []).join(" ")]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [liveScenario, scenarioFilter, scenarioTags]);
+  const scenarioOptions = useMemo(
+    () =>
+      applyScenarioFilters(SCENARIOS, {
+        liveScenario: liveScenario ?? undefined,
+        liveScenarioName: LIVE_SCENARIO_NAME,
+        query: scenarioFilter,
+        tags: scenarioTags,
+      }),
+    [liveScenario, scenarioFilter, scenarioTags],
+  );
 
   const scenario = useMemo(() => {
     if (!scenarioOptions.length) return SCENARIOS[0];
