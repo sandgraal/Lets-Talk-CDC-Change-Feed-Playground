@@ -1,0 +1,46 @@
+{
+  "project_name": "Lets Talk CDC – Change Feed Playground",
+  "headline": "Change data capture simulator and comparator for Debezium-style pipelines.",
+  "links": {
+    "repository": "https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground",
+    "documentation": [
+      { "label": "README", "href": "README.md" },
+      { "label": "Development Playbook", "href": "docs/development.md" },
+      { "label": "Harness Overview", "href": "docs/harness-guide.md" }
+    ],
+    "entrypoints": [
+      { "label": "Playground", "href": "index.html" },
+      { "label": "Comparator Shell", "href": "web/" }
+    ]
+  },
+  "commands": {
+    "install": "npm install",
+    "dev_sim": "npm run dev:sim",
+    "dev_web": "npm run dev:web",
+    "build_all": "npm run build",
+    "build_sim": "npm run build:sim",
+    "build_web": "npm run build:web",
+    "property_tests": "npm run test:sim",
+    "unit_tests": "npm run test:unit",
+    "e2e_tests": "npm run test:e2e",
+    "harness_snapshot": "npm run test:harness-report",
+    "full_ci": "npm run ci:preflight"
+  },
+  "ci": {
+    "workflows": [
+      ".github/workflows/preflight.yml",
+      ".github/workflows/harness-nightly.yml",
+      ".github/workflows/ai-agents.yml"
+    ]
+  },
+  "environments": {
+    "local": {
+      "requirements": ["Node.js 20+", "npm 10+"],
+      "notes": [
+        "Open index.html directly for the static playground.",
+        "Use npm run dev:web to boot the Vite dev server for the comparator shell.",
+        "npm run dev:sim streams simulator updates for rapid iteration."
+      ]
+    }
+  }
+}
