@@ -1,0 +1,63 @@
+{
+  "databaseId": "main",
+  "collections": [
+    {
+      "collectionId": "profiles",
+      "name": "profiles",
+      "attributes": [
+        {"key":"userId","type":"string","required":true,"size":64},
+        {"key":"handle","type":"string","required":false,"size":64},
+        {"key":"createdAt","type":"string","required":true,"size":32}
+      ],
+      "indexes": [
+        {"key":"userId_unique","type":"unique","attributes":["userId"],"orders":["ASC"]}
+      ],
+      "permissions": { "read":["role:users"], "create":["role:users"], "update":["role:users"], "delete":[] }
+    },
+    {
+      "collectionId": "journeys",
+      "name": "journeys",
+      "attributes": [
+        {"key":"slug","type":"string","required":true,"size":64},
+        {"key":"title","type":"string","required":true,"size":128},
+        {"key":"steps","type":"integer","required":true,"min":1,"max":999}
+      ],
+      "indexes": [
+        {"key":"slug_unique","type":"unique","attributes":["slug"],"orders":["ASC"]}
+      ],
+      "permissions": { "read":["role:all"], "create":[], "update":[], "delete":[] }
+    },
+    {
+      "collectionId": "progress",
+      "name": "progress",
+      "attributes": [
+        {"key":"userId","type":"string","required":true,"size":64},
+        {"key":"journeySlug","type":"string","required":true,"size":64},
+        {"key":"step","type":"integer","required":true,"min":1,"max":999},
+        {"key":"percent","type":"float","required":false,"default":0},
+        {"key":"state","type":"json","required":false},
+        {"key":"updatedAt","type":"string","required":true,"size":32}
+      ],
+      "indexes": [
+        {"key":"by_user_journey","type":"key","attributes":["userId","journeySlug"],"orders":["ASC","ASC"]}
+      ],
+      "permissions": { "read":["role:users"], "create":["role:users"], "update":["role:users"], "delete":["role:users"] }
+    },
+    {
+      "collectionId": "events",
+      "name": "events",
+      "attributes": [
+        {"key":"userId","type":"string","required":true,"size":64},
+        {"key":"journeySlug","type":"string","required":true,"size":64},
+        {"key":"step","type":"integer","required":true,"min":0,"max":999},
+        {"key":"eventType","type":"string","required":true,"size":64},
+        {"key":"meta","type":"json","required":false},
+        {"key":"ts","type":"string","required":true,"size":32}
+      ],
+      "indexes": [
+        {"key":"by_journey_ts","type":"key","attributes":["journeySlug","ts"],"orders":["ASC","DESC"]}
+      ],
+      "permissions": { "read":["role:users"], "create":["role:users"], "update":["role:users"], "delete":["role:users"] }
+    }
+  ]
+}
