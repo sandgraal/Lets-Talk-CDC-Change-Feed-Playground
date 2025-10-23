@@ -552,6 +552,12 @@ const uiState = {
   editorDraft: {},
   editorTouched: {},
   pendingOperation: null,
+  eventLogFilters: {
+    methodId: null,
+    op: null,
+    table: null,
+    txnId: null,
+  },
 };
 
 let toastHost = null;
@@ -1999,12 +2005,58 @@ function getFilterFlags() {
   };
 }
 
-function filterEvents(evts) {
-  const allowed = getFilterFlags();
-  return evts.filter(e => {
-    const op = e.op || e.payload?.op;
-    return allowed[op] ?? true;
-  });
+const DEFAULT_EVENT_LOG_FILTERS = Object.freeze({
+  methodId: null,
+  op: null,
+  table: null,
+  txnId: null,
+});
+
+function normalizeFilterValue(value) {
+  if (value == null) return null;
+  const stringValue = String(value).trim();
+  return stringValue ? stringValue : null;
+}
+
+function normalizeFilterOp(value) {
+  const normalized = normalizeFilterValue(value);
+  return normalized ? normalized.toLowerCase() : null;
+}
+
+function getEventLogFiltersState() {
+  if (!uiState.eventLogFilters) {
+    uiState.eventLogFilters = { ...DEFAULT_EVENT_LOG_FILTERS };
+  }
+  return uiState.eventLogFilters;
+}
+
+function setEventLogFilters(next) {
+  const current = getEventLogFiltersState();
+  const nextState = {
+    methodId: next.methodId ?? null,
+    op: next.op ?? null,
+    table: next.table ?? null,
+    txnId: next.txnId ?? null,
+  };
+  if (
+    current.methodId === nextState.methodId &&
+    current.op === nextState.op &&
+    current.table === nextState.table &&
+    current.txnId === nextState.txnId
+  ) {
+    return false;
+  }
+  uiState.eventLogFilters = nextState;
+  return true;
+}
+
+function normalizeEventLogFiltersInput(input = {}) {
+  return {
+    methodId: normalizeFilterValue(input.methodId),
+    op: normalizeFilterOp(input.op),
+    table: normalizeFilterValue(input.table),
+    txnId: normalizeFilterValue(input.txnId),
+  };
 }
 
 function getOp(ev) {
@@ -2013,24 +2065,6 @@ function getOp(ev) {
   if (direct) return direct;
   if (typeof ev.kind === "string" && ev.kind.startsWith("SCHEMA_")) return "s";
   return "u";
-}
-
-function getRenderableEvents() {
-  const allowed = getFilterFlags();
-  const items = [];
-  state.events.forEach((event, index) => {
-    const op = getOp(event);
-    if (allowed[op] ?? true) items.push({ event, index });
-  });
-  return items;
-}
-
-function renderJSONLog(precomputed) {
-  const items = precomputed || getRenderableEvents();
-  renderReactEventLog(items);
-  renderEventInspector(items);
-  updateLearning();
-  broadcastComparatorState();
 }
 
 function getEventPayload(event) {
@@ -2085,6 +2119,122 @@ const EVENT_LOG_METHOD = {
   label: "Playground events",
 };
 
+function deriveEventLogMeta(event, index) {
+  const op = normalizeFilterOp(getOp(event));
+  const schemaChange = getSchemaChangeDetail(event);
+  const rawTable =
+    op === "s"
+      ? "schema"
+      : event.table ?? state.scenarioId ?? "workspace";
+  const table = rawTable != null ? String(rawTable) : null;
+  const txnId =
+    normalizeFilterValue(event.txnId) ??
+    normalizeFilterValue(event.payload?.txnId) ??
+    null;
+  const topic = event.topic ?? (op === "s" ? "cdc.schema" : "playground");
+  const offset = typeof event.offset === "number" ? event.offset : null;
+  const tsMs = getEventTimestamp(event);
+  return {
+    methodId: EVENT_LOG_METHOD.id,
+    op,
+    table,
+    txnId,
+    topic,
+    offset,
+    tsMs,
+    schemaChange,
+  };
+}
+
+function eventMatchesFilters(meta, filters) {
+  if (!filters) return true;
+  if (filters.methodId && filters.methodId !== meta.methodId) return false;
+  if (filters.op && filters.op !== meta.op) return false;
+  if (filters.table && filters.table !== meta.table) return false;
+  if (filters.txnId && filters.txnId !== meta.txnId) return false;
+  return true;
+}
+
+function buildEventLogItems(events = state.events, options = {}) {
+  const { applyEventLogFilters = true } = options;
+  const allowed = getFilterFlags();
+  const filters = applyEventLogFilters ? getEventLogFiltersState() : null;
+  const items = [];
+  events.forEach((event, index) => {
+    const meta = deriveEventLogMeta(event, index);
+    const opKey = meta.op ?? "";
+    if (!(allowed[opKey] ?? true)) return;
+    if (applyEventLogFilters && !eventMatchesFilters(meta, filters)) return;
+    items.push({ event, index, meta });
+  });
+  return items;
+}
+
+function deriveEventLogFilterOptions(items) {
+  const tables = new Set();
+  const txns = new Set();
+  const ops = new Set();
+  items.forEach(({ meta }) => {
+    if (meta.table) tables.add(meta.table);
+    if (meta.txnId) txns.add(meta.txnId);
+    if (meta.op) ops.add(meta.op);
+  });
+  const prioritized = ["c", "u", "d", "s"].filter(op => ops.has(op));
+  const extras = Array.from(ops).filter(op => !prioritized.includes(op));
+  extras.sort();
+  return {
+    methods: items.length ? [EVENT_LOG_METHOD] : [],
+    ops: [...prioritized, ...extras],
+    tables: Array.from(tables).sort(),
+    txns: Array.from(txns).sort(),
+  };
+}
+
+function sanitizeEventLogFilters(filterOptions) {
+  const current = getEventLogFiltersState();
+  const next = {
+    methodId: current.methodId,
+    op: current.op,
+    table: current.table,
+    txnId: current.txnId,
+  };
+  if (next.methodId && !filterOptions.methods.some(method => method.id === next.methodId)) {
+    next.methodId = null;
+  }
+  if (next.op && !filterOptions.ops.includes(next.op)) {
+    next.op = null;
+  }
+  if (next.table && !filterOptions.tables.includes(next.table)) {
+    next.table = null;
+  }
+  if (next.txnId && !filterOptions.txns.includes(next.txnId)) {
+    next.txnId = null;
+  }
+  setEventLogFilters(next);
+  return getEventLogFiltersState();
+}
+
+function filterEvents(evts) {
+  if (!Array.isArray(evts) || evts.length === 0) return [];
+  const items = buildEventLogItems(evts, { applyEventLogFilters: true });
+  return items.map(item => item.event);
+}
+
+function getRenderableEvents() {
+  return buildEventLogItems(state.events);
+}
+
+function renderJSONLog() {
+  const baseItems = buildEventLogItems(state.events, { applyEventLogFilters: false });
+  const filterOptions = deriveEventLogFilterOptions(baseItems);
+  sanitizeEventLogFilters(filterOptions);
+  const filteredItems = buildEventLogItems(state.events, { applyEventLogFilters: true });
+  renderReactEventLog(filteredItems, baseItems, filterOptions);
+  renderEventInspector(filteredItems);
+  updateLearning();
+  broadcastComparatorState();
+}
+
 function renderLegacyEventLog(items) {
   if (!els.eventLog) return;
   if (!items.length) {
@@ -2097,61 +2247,56 @@ function renderLegacyEventLog(items) {
 
 function buildEventLogRows(items) {
   const pkColumn = resolvePrimaryKeyColumn();
-  eventLogRowEventMap.clear();
-  return items.map(({ event, index }) => {
-    const op = getOp(event);
-    const ts = getEventTimestamp(event);
-    const schemaChange = getSchemaChangeDetail(event);
-    const pk = op === "s"
-      ? (schemaChange?.column?.name ?? `schema-${index}`)
-      : extractPrimaryKeyValue(event, pkColumn, `${index}`);
-    const offset = typeof event.offset === "number" ? event.offset : null;
-    const topic = event.topic ?? (op === "s" ? "cdc.schema" : "playground");
-    const table = op === "s" ? "schema" : (event.table ?? state.scenarioId ?? "workspace");
-    const txnId = event.txnId ?? event.payload?.txnId ?? null;
-    const id = String(event.id ?? `${op}-${index}-${ts ?? Date.now()}`);
-    let meta;
+  return items.map(({ event, index, meta }) => {
+    const opValue = typeof event.op === "string" ? event.op : meta.op ?? "";
+    const ts = meta.tsMs;
+    const schemaChange = meta.schemaChange;
+    const pk =
+      meta.op === "s"
+        ? schemaChange?.column?.name ?? `schema-${index}`
+        : extractPrimaryKeyValue(event, pkColumn, `${index}`);
+    const idParts = [
+      meta.methodId,
+      meta.offset != null ? `offset-${meta.offset}` : null,
+      typeof event.seq === "number" ? `seq-${event.seq}` : null,
+      ts != null ? `ts-${ts}` : null,
+      index,
+    ].filter(Boolean);
+    const id = idParts.length ? idParts.join("|") : `${meta.methodId}-${index}`;
+    let metaDescription;
     if (schemaChange) {
       const action = schemaChange.kind === "SCHEMA_DROP_COL" ? "Dropped" : "Added";
       const columnName = schemaChange.column?.name ?? "column";
       const columnType = schemaChange.column?.type ? ` (${schemaChange.column.type})` : "";
       const version = schemaChange.schemaVersion ?? state.schemaVersion;
-      meta = `${action} ${columnName}${columnType} · v${version}`;
+      metaDescription = `${action} ${columnName}${columnType} · v${version}`;
     }
-    const row = {
+    return {
       id,
-      methodId: EVENT_LOG_METHOD.id,
+      methodId: meta.methodId,
       methodLabel: EVENT_LOG_METHOD.label,
-      op,
-      offset,
-      topic,
-      table,
+      op: opValue,
+      offset: meta.offset,
+      topic: meta.topic,
+      table: meta.table ?? "—",
       tsMs: ts,
       pk: pk != null ? String(pk) : null,
-      txnId,
+      txnId: meta.txnId,
       before: getEventBefore(event) ?? null,
       after: getEventAfter(event) ?? null,
-      meta,
+      meta: metaDescription,
     };
-    eventLogRowEventMap.set(id, event);
-    return row;
   });
 }
 
-function buildEventLogProps(rows) {
-  const tables = Array.from(new Set(rows.map(row => row.table).filter(Boolean))).sort();
-  const txns = Array.from(new Set(rows.map(row => row.txnId).filter(Boolean))).sort();
-  const methods = rows.length ? [EVENT_LOG_METHOD] : [];
-  const opSet = new Set(
-    rows
-      .map(row => (typeof row.op === "string" ? row.op.trim().toLowerCase() : ""))
-      .filter(Boolean),
-  );
-  const prioritizedOps = ["c", "u", "d", "s"].filter(op => opSet.has(op));
-  const extraOps = Array.from(opSet).filter(op => !["c", "u", "d", "s"].includes(op));
-  extraOps.sort();
-  const ops = [...prioritizedOps, ...extraOps];
+function handleEventLogFiltersChange(nextFilters) {
+  const normalized = normalizeEventLogFiltersInput(nextFilters);
+  if (setEventLogFilters(normalized)) {
+    renderJSONLog();
+  }
+}
 
+function buildEventLogProps({ rows, totalCount, filterOptions, filters }) {
   return {
     className: "cdc-event-log",
     events: rows,
@@ -2160,15 +2305,17 @@ function buildEventLogProps(rows) {
       consumed: state.events.length,
       backlog: 0,
     },
-    totalCount: state.events.length,
-    filters: {},
-    filterOptions: {
-      methods,
-      ops,
-      tables,
-      txns,
+    totalCount,
+    filters: {
+      methodId: filters.methodId ?? undefined,
+      op: filters.op ?? undefined,
+      table: filters.table ?? undefined,
+      txnId: filters.txnId ?? undefined,
     },
+    filterOptions,
+    onFiltersChange: handleEventLogFiltersChange,
     onDownload: rows.length ? downloadNdjson : undefined,
+    onClear: state.events.length ? clearEventLog : undefined,
     onCopyEvent: handleEventLogCopy,
     emptyMessage: "// no events yet (check filters)",
     noMatchMessage: "No events match the current filters.",
@@ -2187,15 +2334,32 @@ function handleEventLogCopy(row) {
   }
 }
 
-function renderReactEventLog(items) {
+function clearEventLog() {
+  state.events = [];
+  resetEventSelection();
+  save();
+  renderJSONLog();
+}
+
+function renderReactEventLog(filteredItems, baseItems, filterOptions) {
   if (!els.eventLog) return;
   if (!window.__LetstalkCdcEventLogWidget?.load) {
-    renderLegacyEventLog(items);
+    renderLegacyEventLog(filteredItems);
     return;
   }
 
-  const rows = buildEventLogRows(items);
-  const props = buildEventLogProps(rows);
+  const rows = buildEventLogRows(filteredItems);
+  eventLogRowEventMap.clear();
+  rows.forEach((row, index) => {
+    const source = filteredItems[index]?.event;
+    if (row && source) eventLogRowEventMap.set(row.id, source);
+  });
+  const props = buildEventLogProps({
+    rows,
+    totalCount: baseItems.length,
+    filterOptions,
+    filters: getEventLogFiltersState(),
+  });
 
   if (!eventLogWidgetLoad) {
     eventLogWidgetLoad = window.__LetstalkCdcEventLogWidget
@@ -2214,7 +2378,7 @@ function renderReactEventLog(items) {
   eventLogWidgetLoad
     ?.then(module => {
       if (!module) {
-        renderLegacyEventLog(items);
+        renderLegacyEventLog(filteredItems);
         return;
       }
       if (!eventLogWidgetHandle) {
@@ -2224,7 +2388,7 @@ function renderReactEventLog(items) {
       }
     })
     .catch(() => {
-      renderLegacyEventLog(items);
+      renderLegacyEventLog(filteredItems);
     });
 }
 
@@ -4129,12 +4293,7 @@ function bindUiHandlers() {
   if (emitSnapshotBtn) emitSnapshotBtn.onclick = emitSnapshot;
 
   const clearEventsBtn = document.getElementById("clearEvents");
-  if (clearEventsBtn) clearEventsBtn.onclick = () => {
-    state.events = [];
-    resetEventSelection();
-    save();
-    renderJSONLog();
-  };
+  if (clearEventsBtn) clearEventsBtn.onclick = clearEventLog;
 
   const seedRowsBtn = document.getElementById("seedRows");
   if (seedRowsBtn) seedRowsBtn.onclick = seedRows;
