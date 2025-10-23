@@ -1,0 +1,18 @@
+project_name: "Lets Talk CDC – Change Feed Playground"
+repository_url: "https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground"
+project_summary: >
+  A zero-dependency CDC simulator and comparator that emits Debezium-style change events
+  so teams can demonstrate polling, trigger, and log-based capture patterns side by side.
+tech_stack: "TypeScript · React · Vite · Playwright · Vitest"
+primary_components: >
+  Static playground entry point at index.html backed by simulator engines in src/ and a
+  React comparator shell under web/ that consumes bundles from assets/generated/.
+local_setup: >
+  Install Node.js 20+, run npm install, then npm run dev:sim for the simulator engine or
+  npm run dev:web for the comparator shell. The static build also runs by opening index.html directly.
+build_commands: "npm run build (full), npm run build:sim, npm run build:web"
+test_commands: >
+  npm run test:sim (property tests), npm run test:unit, npm run test:e2e, npm run test:harness-report,
+  npm run ci:preflight for the full mirror.
+ci_workflows: ".github/workflows/preflight.yml, .github/workflows/harness-nightly.yml, .github/workflows/ai-agents.yml"
+documentation: "README.md, docs/development.md, docs/architecture and harness notes under docs/"

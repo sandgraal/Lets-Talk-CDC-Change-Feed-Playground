@@ -1,0 +1,47 @@
+name: AI Agents
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: Select the agent or bundle to execute.
+        required: true
+        default: all
+
+jobs:
+  run:
+    name: Run AI agent bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap AI template kit
+        run: node ai/scripts/bootstrap.mjs
+
+      - name: Log agent invocation
+        env:
+          AI_AGENT_NAME: ${{ github.event.inputs.agent }}
+        run: node ai/scripts/log-agent-run.mjs
+
+      - name: Upload AI kit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-agent-${{ github.event.inputs.agent }}
+          path: |
+            ai/logs
+            ai/_state
+          if-no-files-found: warn
