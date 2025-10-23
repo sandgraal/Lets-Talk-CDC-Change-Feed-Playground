@@ -1096,6 +1096,15 @@ export function App() {
       window.localStorage,
     );
   }, [scenarioFilter, scenarioTags]);
+  const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
+    if (typeof window === "undefined") return;
+    const detail = normaliseScenarioFilterDetail({ query, tags });
+    window.dispatchEvent(
+      new CustomEvent("cdc:scenario-filter", {
+        detail,
+      }),
+    );
+  }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = () => {
@@ -1106,15 +1115,6 @@ export function App() {
       window.removeEventListener("cdc:scenario-filter-request" as string, handler);
     };
   }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
-  const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
-    if (typeof window === "undefined") return;
-    const detail = normaliseScenarioFilterDetail({ query, tags });
-    window.dispatchEvent(
-      new CustomEvent("cdc:scenario-filter", {
-        detail,
-      }),
-    );
-  }, []);
   const harnessHistoryContent = useMemo(() => harnessHistoryMd.trim(), []);
   const ensureLaneStorage = useCallback((method: MethodOption) => {
     let storage = laneStorageRef.current[method];
@@ -1503,10 +1503,6 @@ export function App() {
     generatorRateRef.current = generatorRate;
   }, [generatorRate]);
 
-  useEffect(() => {
-    initializeGeneratorState(scenario);
-  }, [scenario, initializeGeneratorState]);
-
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
   const scenarioOptions = useMemo(
@@ -1524,6 +1520,10 @@ export function App() {
     if (!scenarioOptions.length) return SCENARIOS[0];
     return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
   }, [scenarioId, scenarioOptions]);
+
+  useEffect(() => {
+    initializeGeneratorState(scenario);
+  }, [scenario, initializeGeneratorState]);
 
   const schemaLaneState = useMemo(() => {
     const map = new Map<MethodOption, { present: boolean; version: number }>();
