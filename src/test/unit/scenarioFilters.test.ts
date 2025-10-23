@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_SCENARIO_FILTER,
+  SCENARIO_FILTER_STORAGE_KEY,
+  SCENARIO_FILTER_TAGS_STORAGE_KEY,
   applyScenarioFilters,
   collectScenarioTags,
+  loadScenarioFilterDetail,
+  normaliseScenarioFilterDetail,
+  saveScenarioFilterDetail,
+  scenarioFilterTagsEqual,
   type FilterableScenario,
+  type ScenarioFilterDetail,
+  type ScenarioFilterStorage,
 } from "../../features/scenarioFilters";
 
 const LIVE_NAME = "workspace-live";
@@ -46,6 +55,100 @@ const liveScenario: Scenario = {
   highlight: "Streams the latest workspace changes",
   tags: ["live", "workspace"],
 };
+
+class MemoryStorage implements ScenarioFilterStorage {
+  #store = new Map<string, string>();
+
+  getItem(key: string): string | null {
+    return this.#store.has(key) ? this.#store.get(key)! : null;
+  }
+
+  setItem(key: string, value: string) {
+    this.#store.set(key, value);
+  }
+
+  removeItem(key: string) {
+    this.#store.delete(key);
+  }
+}
+
+const readStorageDetail = (storage: ScenarioFilterStorage): ScenarioFilterDetail => ({
+  query: storage.getItem(SCENARIO_FILTER_STORAGE_KEY) ?? "",
+  tags: (() => {
+    const raw = storage.getItem(SCENARIO_FILTER_TAGS_STORAGE_KEY);
+    if (!raw) return [] as string[];
+    try {
+      return JSON.parse(raw) as string[];
+    } catch {
+      return [];
+    }
+  })(),
+});
+
+describe("normaliseScenarioFilterDetail", () => {
+  it("returns defaults when detail is missing", () => {
+    expect(normaliseScenarioFilterDetail(undefined)).toEqual(DEFAULT_SCENARIO_FILTER);
+    expect(normaliseScenarioFilterDetail(null)).toEqual(DEFAULT_SCENARIO_FILTER);
+  });
+
+  it("deduplicates and trims tags", () => {
+    const detail = normaliseScenarioFilterDetail({
+      query: " orders ",
+      tags: [" lag ", "orders", "lag", 42, ""],
+    });
+
+    expect(detail.query).toBe(" orders ");
+    expect(detail.tags).toEqual(["lag", "orders", "42"]);
+  });
+
+  it("coerces string tags into arrays", () => {
+    const detail = normaliseScenarioFilterDetail({ query: "lag", tags: "orders" });
+    expect(detail).toEqual({ query: "lag", tags: ["orders"] });
+  });
+});
+
+describe("scenarioFilterTagsEqual", () => {
+  it("checks equality by value and order", () => {
+    expect(scenarioFilterTagsEqual(["a", "b"], ["a", "b"])).toBe(true);
+    expect(scenarioFilterTagsEqual(["a", "b"], ["b", "a"])).toBe(false);
+    const tags = ["lag"];
+    expect(scenarioFilterTagsEqual(tags, tags)).toBe(true);
+  });
+});
+
+describe("scenario filter storage helpers", () => {
+  it("loads stored query and tags", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SCENARIO_FILTER_STORAGE_KEY, "orders");
+    storage.setItem(SCENARIO_FILTER_TAGS_STORAGE_KEY, JSON.stringify(["lag", " orders "]));
+
+    expect(loadScenarioFilterDetail(storage)).toEqual({
+      query: "orders",
+      tags: ["lag", "orders"],
+    });
+  });
+
+  it("handles legacy string values and invalid tags payloads", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SCENARIO_FILTER_STORAGE_KEY, "payments");
+    storage.setItem(SCENARIO_FILTER_TAGS_STORAGE_KEY, "invalid-json");
+
+    expect(loadScenarioFilterDetail(storage)).toEqual({ query: "payments", tags: [] });
+  });
+
+  it("saves detail back to storage and removes empty values", () => {
+    const storage = new MemoryStorage();
+    saveScenarioFilterDetail({ query: "lag", tags: ["orders", "lag"] }, storage);
+
+    expect(readStorageDetail(storage)).toEqual({
+      query: "lag",
+      tags: ["orders", "lag"],
+    });
+
+    saveScenarioFilterDetail({ query: "", tags: [] }, storage);
+    expect(readStorageDetail(storage)).toEqual({ query: "", tags: [] });
+  });
+});
 
 describe("collectScenarioTags", () => {
   it("gathers unique tags from scenarios, live scenario, and extras", () => {
