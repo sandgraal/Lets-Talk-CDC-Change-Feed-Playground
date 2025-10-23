@@ -1,4 +1,4 @@
-import type { MetricsSnapshot } from '../domain/types';
+import type { MetricsSnapshot } from "../domain/types";
 
 type TimestampCarrier = {
   commitTs?: number;
@@ -16,6 +16,7 @@ export class MetricsStore {
   private writeAmplification = 0;
   private snapshotRows = 0;
   private errors = 0;
+  private readonly lagAggregators = new Set<LagSampleAggregator>();
 
   onProduced(events: TimestampCarrier[]) {
     this.produced += events.length;
@@ -27,17 +28,27 @@ export class MetricsStore {
     this.backlog = Math.max(this.backlog - events.length, 0);
     const now = Date.now();
     events.forEach(evt => {
-      const commitTs = typeof evt.commitTs === 'number'
-        ? evt.commitTs
-        : typeof evt.ts_ms === 'number'
-          ? evt.ts_ms
-          : now;
+      const commitTs =
+        typeof evt.commitTs === "number"
+          ? evt.commitTs
+          : typeof evt.ts_ms === "number"
+            ? evt.ts_ms
+            : now;
       const lag = Math.max(now - commitTs, 0);
       this.lagSamples.push(lag);
     });
     if (this.lagSamples.length > 2000) {
       this.lagSamples.splice(0, this.lagSamples.length - 2000);
     }
+    this.notifyLagAggregators();
+  }
+
+  registerLagAggregator(aggregator: LagSampleAggregator): () => void {
+    this.lagAggregators.add(aggregator);
+    this.safeInvokeAggregator(aggregator);
+    return () => {
+      this.lagAggregators.delete(aggregator);
+    };
   }
 
   recordMissedDelete(count = 1) {
@@ -65,6 +76,7 @@ export class MetricsStore {
     this.writeAmplification = 0;
     this.snapshotRows = 0;
     this.errors = 0;
+    this.notifyLagAggregators();
   }
 
   snapshot(): MetricsSnapshot {
@@ -82,6 +94,23 @@ export class MetricsStore {
       snapshotRows: this.snapshotRows,
       errors: this.errors,
     };
+  }
+
+  private safeInvokeAggregator(aggregator: LagSampleAggregator, snapshot?: number[]) {
+    try {
+      const payload = snapshot ? [...snapshot] : [...this.lagSamples];
+      aggregator(payload);
+    } catch {
+      // Aggregators should never break metrics collection paths.
+    }
+  }
+
+  private notifyLagAggregators() {
+    if (this.lagAggregators.size === 0) return;
+    const snapshot = [...this.lagSamples];
+    this.lagAggregators.forEach(aggregator => {
+      this.safeInvokeAggregator(aggregator, snapshot);
+    });
   }
 
   private percentile(sorted: number[], percentile: number): number {
