@@ -6,5 +6,6 @@ export * from "./engine/stateMachine";
 export * from "./modes";
 export * from "./features/presets";
 export * from "./features/scenarios";
+export * from "./features/scenarioFilters";
 export * from "./domain/storage";
 export * from "./ui";
