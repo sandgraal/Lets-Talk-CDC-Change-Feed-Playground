@@ -812,6 +812,30 @@ export function App() {
       return acc;
     }, {} as Record<MethodOption, MethodCopy>);
   }, [preset]);
+  const scenarioTagSet = useMemo(() => new Set(scenarioTags), [scenarioTags]);
+  const availableScenarioTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    const append = (tags: string[] | undefined | null) => {
+      if (!Array.isArray(tags)) return;
+      tags.forEach(tag => {
+        if (typeof tag === "string" && tag.trim().length > 0) {
+          tagSet.add(tag);
+        }
+      });
+    };
+    SCENARIOS.forEach(option => append(option.tags));
+    append(liveScenario?.tags);
+    append(scenarioTags);
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  }, [liveScenario, scenarioTags]);
+  const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("cdc:scenario-filter", {
+        detail: { query, tags },
+      }),
+    );
+  }, []);
   const harnessHistoryContent = useMemo(() => harnessHistoryMd.trim(), []);
   const ensureLaneStorage = useCallback((method: MethodOption) => {
     let storage = laneStorageRef.current[method];
@@ -1865,6 +1889,33 @@ export function App() {
     track("comparator.preset.select", { presetId: value });
   }, []);
 
+  const handleScenarioFilterChange = useCallback(
+    (value: string) => {
+      setScenarioFilter(value);
+      broadcastScenarioFilter(value, scenarioTags);
+      track("comparator.scenario.filter", { query: value });
+    },
+    [broadcastScenarioFilter, scenarioTags],
+  );
+
+  const handleScenarioTagToggle = useCallback(
+    (tag: string) => {
+      const hasTag = scenarioTags.includes(tag);
+      const nextTags = hasTag ? scenarioTags.filter(entry => entry !== tag) : [...scenarioTags, tag];
+      setScenarioTags(nextTags);
+      broadcastScenarioFilter(scenarioFilter, nextTags);
+      track("comparator.scenario.tag_toggle", { tag, active: !hasTag });
+    },
+    [broadcastScenarioFilter, scenarioFilter, scenarioTags],
+  );
+
+  const handleScenarioTagClear = useCallback(() => {
+    if (!scenarioTags.length) return;
+    setScenarioTags([]);
+    broadcastScenarioFilter(scenarioFilter, []);
+    track("comparator.scenario.tag_clear");
+  }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
+
   const handleScenarioSelect = useCallback((value: string) => {
     userSelectedScenarioRef.current = true;
     setScenarioId(value);
@@ -2547,6 +2598,42 @@ export function App() {
               </>
             ) : null}
           </p>
+        </div>
+        <div className="sim-shell__scenario-filter-row" role="group" aria-label="Filter scenarios">
+          <label className="sim-shell__scenario-search">
+            <span>Search scenarios</span>
+            <input
+              type="search"
+              value={scenarioFilter}
+              onChange={event => handleScenarioFilterChange(event.target.value)}
+              placeholder="Find by label, description, or tag"
+            />
+          </label>
+          {availableScenarioTags.length > 0 ? (
+            <div className="sim-shell__scenario-tags" role="group" aria-label="Scenario tags">
+              {availableScenarioTags.map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  className="sim-shell__scenario-tag"
+                  data-active={scenarioTagSet.has(tag) ? "true" : "false"}
+                  aria-pressed={scenarioTagSet.has(tag)}
+                  onClick={() => handleScenarioTagToggle(tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+              {scenarioTags.length ? (
+                <button
+                  type="button"
+                  className="sim-shell__scenario-tag sim-shell__scenario-tag--clear"
+                  onClick={handleScenarioTagClear}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div className="sim-shell__actions sim-shell__actions--scenario" role="group" aria-label="Scenario controls">
           <select
