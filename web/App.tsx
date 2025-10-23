@@ -53,8 +53,13 @@ import "./styles/shell.css";
 import methodCopyData from "../assets/method-copy.js";
 import tooltipCopyData from "../assets/tooltip-copy.js";
 import {
+  DEFAULT_SCENARIO_FILTER,
   applyScenarioFilters,
   collectScenarioTags,
+  loadScenarioFilterDetail,
+  normaliseScenarioFilterDetail,
+  saveScenarioFilterDetail,
+  scenarioFilterTagsEqual,
 } from "../src/features/scenarioFilters";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
@@ -741,13 +746,23 @@ export function App() {
     typeof storedPrefs?.eventLogOp === "string" && storedPrefs.eventLogOp.trim()
       ? storedPrefs.eventLogOp.trim().toLowerCase()
       : null;
+  const initialScenarioFilterDetail = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { ...DEFAULT_SCENARIO_FILTER };
+    }
+    return loadScenarioFilterDetail(window.localStorage);
+  }, []);
 
   const [liveScenario, setLiveScenario] = useState<ShellScenario | null>(null);
   const [scenarioId, setScenarioId] = useState<string>(
     () => storedPrefs?.scenarioId ?? SCENARIOS[0].name,
   );
-  const [scenarioFilter, setScenarioFilter] = useState<string>("");
-  const [scenarioTags, setScenarioTags] = useState<string[]>([]);
+  const [scenarioFilter, setScenarioFilter] = useState<string>(
+    () => initialScenarioFilterDetail.query,
+  );
+  const [scenarioTags, setScenarioTags] = useState<string[]>(
+    () => initialScenarioFilterDetail.tags,
+  );
   const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
     () => initialActiveMethods,
   );
@@ -825,11 +840,29 @@ export function App() {
       }),
     [liveScenario, scenarioTags],
   );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    saveScenarioFilterDetail(
+      { query: scenarioFilter, tags: scenarioTags },
+      window.localStorage,
+    );
+  }, [scenarioFilter, scenarioTags]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => {
+      broadcastScenarioFilter(scenarioFilter, scenarioTags);
+    };
+    window.addEventListener("cdc:scenario-filter-request" as string, handler);
+    return () => {
+      window.removeEventListener("cdc:scenario-filter-request" as string, handler);
+    };
+  }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
   const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
     if (typeof window === "undefined") return;
+    const detail = normaliseScenarioFilterDetail({ query, tags });
     window.dispatchEvent(
       new CustomEvent("cdc:scenario-filter", {
-        detail: { query, tags },
+        detail,
       }),
     );
   }, []);
@@ -1266,11 +1299,11 @@ export function App() {
 
     const handler: EventListener = event => {
       if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as { query?: string; tags?: string[] } | undefined;
-      const query = detail?.query ?? "";
-      const tags = Array.isArray(detail?.tags) ? detail.tags.map(String) : [];
-      setScenarioFilter(String(query));
-      setScenarioTags(tags);
+      const detail = normaliseScenarioFilterDetail(
+        event.detail as Partial<{ query?: unknown; tags?: unknown }> | null | undefined,
+      );
+      setScenarioFilter(prev => (prev === detail.query ? prev : detail.query));
+      setScenarioTags(prev => (scenarioFilterTagsEqual(prev, detail.tags) ? prev : detail.tags));
     };
 
     window.addEventListener("cdc:scenario-filter" as string, handler);
