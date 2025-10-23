@@ -1,12 +1,6 @@
-import sharedScenarios from "../assets/shared-scenarios.js";
 import type { Scenario, SourceOp } from "../sim";
-import type { SharedScenarioModule } from "../src/types/shared-scenarios";
-import {
-  normaliseSharedScenario,
-  type ScenarioTemplate,
-} from "../src/features/shared-scenario-normaliser";
-
-type SharedScenario = SharedScenarioModule[number];
+import { SCENARIO_TEMPLATES } from "../src/features/scenarios";
+import { type ScenarioTemplate } from "../src/features/shared-scenario-normaliser";
 
 export interface ShellScenario extends Scenario {
   id: string;
@@ -60,25 +54,6 @@ function toShellScenario(template: ScenarioTemplate): ShellScenario {
     ops: template.ops.map(cloneOp),
   };
 }
-
-const typedSharedScenarios: SharedScenarioModule = Array.isArray(sharedScenarios)
-  ? (sharedScenarios as SharedScenarioModule)
-  : [];
-
-const mapped = typedSharedScenarios.length
-  ? typedSharedScenarios
-      .map((scenario, index) =>
-        normaliseSharedScenario(scenario, {
-          scenarioIndex: index,
-          includeTxn: true,
-          allowEventsAsOps: true,
-          fallbackTable: scenario.table ?? scenario.id,
-          fallbackTimestamp: ({ scenarioIndex, opIndex }) => scenarioIndex * 400 + opIndex * 50,
-        }),
-      )
-      .filter((template): template is ScenarioTemplate => Boolean(template))
-      .map(toShellScenario)
-  : [];
 
 const LEGACY_TEMPLATES: ScenarioTemplate[] = [
   {
@@ -391,6 +366,6 @@ const LEGACY_TEMPLATES: ScenarioTemplate[] = [
   },
 ];
 
-export const SCENARIOS: ShellScenario[] = mapped.length
-  ? mapped
-  : LEGACY_TEMPLATES.map(toShellScenario);
+const templates = SCENARIO_TEMPLATES.length ? SCENARIO_TEMPLATES : LEGACY_TEMPLATES;
+
+export const SCENARIOS: ShellScenario[] = templates.map(toShellScenario);
