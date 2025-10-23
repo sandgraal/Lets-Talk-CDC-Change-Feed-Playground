@@ -113,6 +113,12 @@ const MIN_CONSUMER_RATE = 10;
 const MAX_CONSUMER_RATE = 300;
 const DEFAULT_CONSUMER_RATE_LIMIT = 120;
 const CONSUMER_RATE_STEP = 10;
+const MIN_GENERATOR_RATE = 10;
+const MAX_GENERATOR_RATE = 600;
+const DEFAULT_GENERATOR_RATE = 120;
+const GENERATOR_RATE_STEP = 10;
+const GENERATOR_BURST_COUNT = 40;
+const GENERATOR_BURST_SPACING_MS = 5;
 
 type MethodOption = typeof METHOD_ORDER[number];
 
@@ -148,6 +154,221 @@ const DEFAULT_EVENT_OPS: readonly EventOp[] = ["c", "u", "d", "s"];
 
 const DEFAULT_PRESET_ID: VendorPresetId = "MYSQL_DEBEZIUM";
 
+type GeneratorTotals = {
+  inserts: number;
+  updates: number;
+  deletes: number;
+};
+
+type GeneratorState = {
+  table: string;
+  columns: SchemaColumn[];
+  pkField: string;
+  rows: Map<string, Record<string, unknown>>;
+  logicalTime: number;
+  seq: number;
+  opCounter: number;
+};
+
+type GeneratedOpResult = {
+  op: SourceOp;
+  kind: "insert" | "update" | "delete";
+};
+
+const GENERATOR_FALLBACK_TABLE = "workspace";
+
+const cloneGeneratorRow = (row: Record<string, unknown>): Record<string, unknown> => ({ ...row });
+
+const coerceColumnType = (column: SchemaColumn): string => {
+  if (!column.type) return "string";
+  return String(column.type).toLowerCase();
+};
+
+const derivePkField = (columns: SchemaColumn[]): string => {
+  const explicitPk = columns.find(column => column.pk);
+  if (explicitPk && explicitPk.name) {
+    return explicitPk.name;
+  }
+  return "id";
+};
+
+const buildAfterPayload = (
+  row: Record<string, unknown>,
+  pkField: string,
+  changedColumns?: readonly string[],
+): Record<string, unknown> => {
+  if (Array.isArray(changedColumns) && changedColumns.length > 0) {
+    return changedColumns.reduce<Record<string, unknown>>((acc, column) => {
+      if (column === pkField) return acc;
+      if (Object.prototype.hasOwnProperty.call(row, column)) {
+        acc[column] = row[column];
+      }
+      return acc;
+    }, {});
+  }
+
+  return Object.entries(row).reduce<Record<string, unknown>>((acc, [key, value]) => {
+    if (key === pkField) return acc;
+    acc[key] = value;
+    return acc;
+  }, {});
+};
+
+const nextGeneratorValue = (
+  column: SchemaColumn,
+  state: GeneratorState,
+  iteration: number,
+  previous?: unknown,
+): unknown => {
+  const type = coerceColumnType(column);
+  if (type === "number") {
+    const base = state.seq * 10 + iteration;
+    if (typeof previous === "number") return previous + 1;
+    return base;
+  }
+  if (type === "bool" || type === "boolean") {
+    if (typeof previous === "boolean") return !previous;
+    return iteration % 2 === 0;
+  }
+  if (type === "timestamp") {
+    return state.logicalTime + iteration + 1;
+  }
+  const suffix = `${state.seq}_${iteration}_${state.opCounter}`;
+  if (typeof previous === "string") {
+    return `${column.name}_${suffix}`;
+  }
+  return `${column.name}_${suffix}`;
+};
+
+const createGeneratorStateFromScenario = (scenario: ShellScenario): GeneratorState => {
+  const columns = Array.isArray(scenario.schema) && scenario.schema.length > 0
+    ? scenario.schema.map(column => ({ ...column }))
+    : ([{ name: "id", type: "string", pk: true }] as SchemaColumn[]);
+  const pkField = derivePkField(columns);
+  const rows = new Map<string, Record<string, unknown>>();
+  const seedRows = Array.isArray(scenario.rows) ? scenario.rows : [];
+
+  seedRows.forEach(row => {
+    if (!row || typeof row !== "object") return;
+    const record = row as Record<string, unknown>;
+    const rawId = record[pkField] ?? record.id;
+    if (rawId == null) return;
+    const id = String(rawId);
+    const values: Record<string, unknown> = {};
+    Object.entries(record).forEach(([key, value]) => {
+      if (key === pkField) {
+        values[key] = String(value);
+        return;
+      }
+      if (key === "id" && pkField !== "id") return;
+      values[key] = value;
+    });
+    if (!Object.prototype.hasOwnProperty.call(values, pkField)) {
+      values[pkField] = id;
+    }
+    rows.set(id, values);
+  });
+
+  const lastOpTime = Array.isArray(scenario.ops)
+    ? scenario.ops.reduce((max, op) => Math.max(max, op.t ?? 0), 0)
+    : 0;
+
+  return {
+    table: scenario.table ?? GENERATOR_FALLBACK_TABLE,
+    columns,
+    pkField,
+    rows,
+    logicalTime: lastOpTime,
+    seq: rows.size + 1,
+    opCounter: 0,
+  };
+};
+
+const createGeneratorOp = (
+  state: GeneratorState,
+  spacingMs: number,
+  currentClock: number,
+): GeneratedOpResult | null => {
+  const spacing = Math.max(1, Math.floor(spacingMs) || 1);
+  const availableIds = Array.from(state.rows.keys());
+  const nonPkColumns = state.columns.filter(column => column.name !== state.pkField);
+
+  let kind: "insert" | "update" | "delete" = "insert";
+  if (availableIds.length > 0 && nonPkColumns.length > 0) {
+    const cycle = state.opCounter % 6;
+    if ((cycle === 0 || cycle === 4) && availableIds.length > 1) {
+      kind = "delete";
+    } else if (cycle === 1 || cycle === 2 || cycle === 3) {
+      kind = "update";
+    } else {
+      kind = "insert";
+    }
+  } else if (availableIds.length > 1 && nonPkColumns.length === 0) {
+    kind = state.opCounter % 3 === 0 ? "delete" : "insert";
+  }
+
+  const counter = state.opCounter;
+  state.opCounter += 1;
+
+  const baseTime = Math.max(state.logicalTime, currentClock);
+  state.logicalTime = baseTime + spacing;
+  const commitTs = state.logicalTime;
+
+  if (kind === "insert") {
+    const id = `gen-${state.seq++}`;
+    const stored: Record<string, unknown> = { [state.pkField]: id };
+    nonPkColumns.forEach((column, index) => {
+      stored[column.name] = nextGeneratorValue(column, state, index);
+    });
+    state.rows.set(id, stored);
+    const after = buildAfterPayload(stored, state.pkField);
+    const op: SourceOp = {
+      t: commitTs,
+      op: "insert",
+      table: state.table,
+      pk: { id },
+      after,
+    };
+    return { op, kind };
+  }
+
+  if (kind === "update" && availableIds.length > 0 && nonPkColumns.length > 0) {
+    const targetIndex = counter % availableIds.length;
+    const id = availableIds[targetIndex];
+    const existing = state.rows.get(id);
+    if (!existing) return null;
+    const column = nonPkColumns[counter % nonPkColumns.length];
+    const nextValue = nextGeneratorValue(column, state, counter, existing[column.name]);
+    const updated = cloneGeneratorRow(existing);
+    updated[column.name] = nextValue;
+    state.rows.set(id, updated);
+    const after = buildAfterPayload(updated, state.pkField, [column.name]);
+    const op: SourceOp = {
+      t: commitTs,
+      op: "update",
+      table: state.table,
+      pk: { id },
+      after,
+    };
+    return { op, kind };
+  }
+
+  if (kind === "delete" && availableIds.length > 0) {
+    const targetIndex = counter % availableIds.length;
+    const id = availableIds[targetIndex];
+    state.rows.delete(id);
+    const op: SourceOp = {
+      t: commitTs,
+      op: "delete",
+      table: state.table,
+      pk: { id },
+    };
+    return { op, kind };
+  }
+
+  return null;
+};
+
 function isVendorPresetId(value: unknown): value is VendorPresetId {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(PRESETS, value);
 }
@@ -168,6 +389,8 @@ type ComparatorPreferences = {
   applyOnCommit?: boolean;
   consumerRateEnabled?: boolean;
   consumerRateLimit?: number;
+  generatorEnabled?: boolean;
+  generatorRate?: number;
 };
 
 type LaneMetrics = {
@@ -525,6 +748,14 @@ function sanitizeConsumerRate(value: unknown, fallback = DEFAULT_CONSUMER_RATE_L
   return Math.min(MAX_CONSUMER_RATE, Math.max(MIN_CONSUMER_RATE, rounded));
 }
 
+function sanitizeGeneratorRate(value: unknown, fallback = DEFAULT_GENERATOR_RATE) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value / GENERATOR_RATE_STEP) * GENERATOR_RATE_STEP;
+  if (!Number.isFinite(rounded)) return fallback;
+  const clamped = Math.min(MAX_GENERATOR_RATE, Math.max(MIN_GENERATOR_RATE, rounded));
+  return clamped;
+}
+
 function sanitizeActiveMethods(methods: unknown): MethodOption[] {
   if (!Array.isArray(methods)) return [...METHOD_ORDER];
   const unique: MethodOption[] = [];
@@ -626,6 +857,9 @@ function loadPreferences(): ComparatorPreferences | null {
         typeof parsed.consumerRateEnabled === "boolean" ? parsed.consumerRateEnabled : undefined,
       consumerRateLimit:
         typeof parsed.consumerRateLimit === "number" ? parsed.consumerRateLimit : undefined,
+      generatorEnabled:
+        typeof parsed.generatorEnabled === "boolean" ? parsed.generatorEnabled : undefined,
+      generatorRate: typeof parsed.generatorRate === "number" ? parsed.generatorRate : undefined,
     };
   } catch (err) {
     console.warn("Comparator prefs load failed", err);
@@ -648,6 +882,7 @@ function computeMetrics(
   scenario: ShellScenario,
   method: MethodOption,
   stats: Partial<Record<MethodOption, LaneStats>>,
+  generatorTotals?: GeneratorTotals,
 ): Metrics {
   const lastEvent = events.length ? events[events.length - 1] : null;
   const lagMs = lastEvent ? Math.max(clock - lastEvent.ts_ms, 0) : clock;
@@ -665,7 +900,9 @@ function computeMetrics(
     if (evt.schemaChange) schemaChangeCount += 1;
   });
 
-  const totalDeletes = scenario.ops.filter(op => op.op === "delete").length;
+  const scenarioDeletes = scenario.ops.filter(op => op.op === "delete").length;
+  const generatedDeletes = generatorTotals?.deletes ?? 0;
+  const totalDeletes = scenarioDeletes + generatedDeletes;
   const deletesPct = totalDeletes === 0 ? 100 : (deleteCount / totalDeletes) * 100;
 
   const orderingOk = events.every((evt, idx) => {
@@ -797,6 +1034,10 @@ export function App() {
   const [consumerRateLimit, setConsumerRateLimit] = useState(() =>
     sanitizeConsumerRate(storedPrefs?.consumerRateLimit, DEFAULT_CONSUMER_RATE_LIMIT),
   );
+  const [generatorEnabled, setGeneratorEnabled] = useState(storedPrefs?.generatorEnabled ?? false);
+  const [generatorRate, setGeneratorRate] = useState(() =>
+    sanitizeGeneratorRate(storedPrefs?.generatorRate, DEFAULT_GENERATOR_RATE),
+  );
   const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
   const pendingTxnRef = useRef<Partial<Record<MethodOption, EngineEvent[]>>>({});
@@ -807,6 +1048,14 @@ export function App() {
       : null,
   );
   const consumerAllowanceRef = useRef(0);
+  const generatorStateRef = useRef<GeneratorState | null>(null);
+  const generatorAllowanceRef = useRef(0);
+  const generatorRateRef = useRef(generatorRate);
+  const generatorEnabledRef = useRef(generatorEnabled);
+  const generatorTotalsRef = useRef<GeneratorTotals>({ inserts: 0, updates: 0, deletes: 0 });
+  const enginesRef = useRef<Partial<Record<MethodOption, ControllerBackedEngine>>>({});
+  const activeMethodsRef = useRef(activeMethods);
+  const clockRef = useRef(clock);
   const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET_ID];
   const presetOptions = useMemo(
     () =>
@@ -875,6 +1124,50 @@ export function App() {
     }
     return storage;
   }, []);
+  const initializeGeneratorState = useCallback((target: ShellScenario) => {
+    generatorStateRef.current = createGeneratorStateFromScenario(target);
+    generatorAllowanceRef.current = 0;
+    generatorTotalsRef.current = { inserts: 0, updates: 0, deletes: 0 };
+  }, []);
+  const generateOps = useCallback(
+    (count: number, spacingMsPerOp: number) => {
+      const state = generatorStateRef.current;
+      if (!state || count <= 0) return;
+      const methods = activeMethodsRef.current;
+      if (!methods.length) return;
+      const engines = enginesRef.current;
+      for (let index = 0; index < count; index += 1) {
+        const result = createGeneratorOp(state, spacingMsPerOp, clockRef.current);
+        if (!result) continue;
+        methods.forEach(method => {
+          engines[method]?.applySourceOp(result.op);
+        });
+        if (result.kind === "insert") {
+          generatorTotalsRef.current.inserts += 1;
+        } else if (result.kind === "update") {
+          generatorTotalsRef.current.updates += 1;
+        } else if (result.kind === "delete") {
+          generatorTotalsRef.current.deletes += 1;
+        }
+      }
+    },
+    [],
+  );
+  const runGenerator = useCallback(
+    (deltaMs: number) => {
+      if (!generatorEnabledRef.current) return;
+      if (!generatorStateRef.current) return;
+      const rate = generatorRateRef.current;
+      if (!Number.isFinite(rate) || rate <= 0) return;
+      generatorAllowanceRef.current += (rate * deltaMs) / 1000;
+      const count = Math.floor(generatorAllowanceRef.current);
+      if (count <= 0) return;
+      generatorAllowanceRef.current -= count;
+      const spacing = count > 0 ? deltaMs / count : deltaMs;
+      generateOps(count, spacing);
+    },
+    [generateOps],
+  );
   const updateLaneSnapshot = useCallback(
     (method: MethodOption, options?: { lastOffset?: number }) => {
       const runtime = laneRuntimeRef.current[method];
@@ -1191,6 +1484,29 @@ export function App() {
     }
   }, [availableEventLogTxns, eventLogTxn]);
 
+  useEffect(() => {
+    activeMethodsRef.current = activeMethods;
+  }, [activeMethods]);
+
+  useEffect(() => {
+    clockRef.current = clock;
+  }, [clock]);
+
+  useEffect(() => {
+    generatorEnabledRef.current = generatorEnabled;
+    if (!generatorEnabled) {
+      generatorAllowanceRef.current = 0;
+    }
+  }, [generatorEnabled]);
+
+  useEffect(() => {
+    generatorRateRef.current = generatorRate;
+  }, [generatorRate]);
+
+  useEffect(() => {
+    initializeGeneratorState(scenario);
+  }, [scenario, initializeGeneratorState]);
+
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
 
   const scenarioOptions = useMemo(
@@ -1396,6 +1712,14 @@ export function App() {
       if (typeof prefs.consumerRateLimit === "number") {
         setConsumerRateLimit(sanitizeConsumerRate(prefs.consumerRateLimit));
       }
+
+      if (typeof prefs.generatorEnabled === "boolean") {
+        setGeneratorEnabled(prefs.generatorEnabled);
+      }
+
+      if (typeof prefs.generatorRate === "number") {
+        setGeneratorRate(sanitizeGeneratorRate(prefs.generatorRate));
+      }
     };
 
     window.addEventListener("cdc:comparator-preferences-set" as string, handler);
@@ -1421,6 +1745,8 @@ export function App() {
       applyOnCommit,
       consumerRateEnabled,
       consumerRateLimit,
+      generatorEnabled,
+      generatorRate,
     });
   }, [
     scenarioId,
@@ -1437,6 +1763,8 @@ export function App() {
     applyOnCommit,
     consumerRateEnabled,
     consumerRateLimit,
+    generatorEnabled,
+    generatorRate,
   ]);
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
@@ -1587,9 +1915,10 @@ export function App() {
     stopLoop();
     timerRef.current = window.setInterval(() => {
       runnerRef.current?.tick(STEP_MS);
+      runGenerator(STEP_MS);
       drainQueues();
     }, STEP_MS);
-  }, [stopLoop, drainQueues]);
+  }, [stopLoop, drainQueues, runGenerator]);
 
   useEffect(() => {
     const next = consumerRateEnabled ? consumerRateLimit : null;
@@ -1617,13 +1946,16 @@ export function App() {
     setClock(0);
     setIsPlaying(false);
     stopLoop();
+    initializeGeneratorState(scenario);
 
     const runner = new ScenarioRunner();
     const unsubscribes: Array<() => void> = [];
     const runtimes: Partial<Record<MethodOption, LaneRuntime>> = {};
+    const enginesMap: Partial<Record<MethodOption, ControllerBackedEngine>> = {};
 
     const engines = activeMethods.map(method => {
       const engine = createEngine(method, events => handleProduced(method, events));
+      enginesMap[method] = engine;
       if (method === "polling") {
         const config = methodConfig.polling;
         engine.configure({
@@ -1664,6 +1996,7 @@ export function App() {
     });
 
     laneRuntimeRef.current = runtimes;
+    enginesRef.current = enginesMap;
     activeMethods.forEach(method => updateLaneSnapshot(method, { lastOffset: -1 }));
 
     runner.attach(engines);
@@ -1677,8 +2010,9 @@ export function App() {
       runner.pause();
       stopLoop();
       unsubscribes.forEach(unsub => unsub());
+      enginesRef.current = {};
     };
-  }, [activeMethods, scenario, stopLoop, methodConfig, updateLaneSnapshot, handleProduced]);
+  }, [activeMethods, scenario, stopLoop, methodConfig, updateLaneSnapshot, handleProduced, initializeGeneratorState]);
 
   const toggleMethod = useCallback((method: MethodOption) => {
     setActiveMethods(prev => {
@@ -1750,6 +2084,32 @@ export function App() {
     },
     [consumerRateLimit, scenario.name],
   );
+
+  const handleToggleGenerator = useCallback(() => {
+    setGeneratorEnabled(prev => {
+      const next = !prev;
+      track("comparator.generator.toggle", { scenario: scenario.name, enabled: next });
+      return next;
+    });
+  }, [scenario.name]);
+
+  const handleGeneratorRateChange = useCallback(
+    (value: number) => {
+      const clamped = sanitizeGeneratorRate(value, generatorRate);
+      if (clamped === generatorRate) return;
+      setGeneratorRate(clamped);
+      track("comparator.generator.rate_adjust", { scenario: scenario.name, rate: clamped });
+    },
+    [generatorRate, scenario.name],
+  );
+
+  const handleGeneratorBurst = useCallback(() => {
+    generateOps(GENERATOR_BURST_COUNT, GENERATOR_BURST_SPACING_MS);
+    track("comparator.generator.burst", {
+      scenario: scenario.name,
+      count: GENERATOR_BURST_COUNT,
+    });
+  }, [generateOps, scenario.name]);
 
   const handleEventLogFiltersChange = useCallback(
     (next: EventLogFilters) => {
@@ -1976,7 +2336,7 @@ export function App() {
       return {
         method,
         events,
-        metrics: computeMetrics(events, clock, scenario, method, laneStats),
+        metrics: computeMetrics(events, clock, scenario, method, laneStats, generatorTotalsRef.current),
       };
     });
   }, [activeMethods, clock, laneEvents, scenario, laneStats]);
@@ -2256,6 +2616,7 @@ export function App() {
       const runner = runnerRef.current;
       if (!runner) return;
 
+      initializeGeneratorState(scenario);
       runner.reset(scenario.seed);
       setLaneEvents(emptyEventMap<CdcEvent>(activeMethods));
       setBusEvents(emptyEventMap<BusEvent>(activeMethods));
@@ -2276,7 +2637,7 @@ export function App() {
         stopLoop();
       }
     },
-    [activeMethods, scenario.seed, stopLoop, updateLaneSnapshot],
+    [activeMethods, initializeGeneratorState, scenario, scenario.seed, stopLoop, updateLaneSnapshot],
   );
 
   const handleStart = useCallback(() => {
@@ -2320,13 +2681,14 @@ export function App() {
       }
 
       runner.tick(deltaMs);
+      runGenerator(deltaMs);
 
       if (!wasPlaying) {
         runner.pause();
       }
       trackClockControl("step", { deltaMs, scenario: scenario.name });
     },
-    [scenario.name],
+    [runGenerator, scenario.name],
   );
 
   const handleSeek = useCallback(
@@ -2856,6 +3218,33 @@ export function App() {
               disabled={!consumerRateEnabled}
             />
           </label>
+        </div>
+        <div
+          className="sim-shell__generator"
+          role="group"
+          aria-label="Event generator"
+          data-enabled={generatorEnabled ? "true" : "false"}
+        >
+          <button type="button" onClick={handleToggleGenerator}>
+            {generatorEnabled ? "Stop generator" : "Start generator"}
+          </button>
+          <label>
+            <span>
+              {generatorEnabled ? `${generatorRate} events/s` : `Set ${generatorRate} events/s`}
+            </span>
+            <input
+              type="range"
+              min={MIN_GENERATOR_RATE}
+              max={MAX_GENERATOR_RATE}
+              step={GENERATOR_RATE_STEP}
+              value={generatorRate}
+              onChange={event => handleGeneratorRateChange(Number(event.target.value))}
+              disabled={!generatorEnabled}
+            />
+          </label>
+          <button type="button" onClick={handleGeneratorBurst}>
+            Burst +{GENERATOR_BURST_COUNT}
+          </button>
         </div>
       </div>
 

@@ -68,7 +68,8 @@
   height: 1rem;
 }
 
-.sim-shell__consumer-rate {
+.sim-shell__consumer-rate,
+.sim-shell__generator {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
@@ -78,7 +79,8 @@
   background: rgba(248, 250, 252, 0.9);
 }
 
-.sim-shell__consumer-rate label {
+.sim-shell__consumer-rate label,
+.sim-shell__generator label {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -86,19 +88,23 @@
   color: #1f2937;
 }
 
-.sim-shell__consumer-rate label span {
+.sim-shell__consumer-rate label span,
+.sim-shell__generator label span {
   font-weight: 500;
 }
 
-.sim-shell__consumer-rate input[type="range"] {
+.sim-shell__consumer-rate input[type="range"],
+.sim-shell__generator input[type="range"] {
   width: 140px;
 }
 
-.sim-shell__consumer-rate[data-enabled="false"] {
+.sim-shell__consumer-rate[data-enabled="false"],
+.sim-shell__generator[data-enabled="false"] {
   opacity: 0.75;
 }
 
-.sim-shell__consumer-rate button {
+.sim-shell__consumer-rate button,
+.sim-shell__generator button {
   white-space: nowrap;
 }
 
