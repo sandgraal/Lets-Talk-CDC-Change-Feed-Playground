@@ -31,5 +31,8 @@
 - Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries. ✅ Lane checks panel now surfaces diff + lag chips; schema drift chips land in summary.
 - ✅ Replace placeholder `src/ui/components/EventLog` with the actual component now that the comparator pulls data from `/src` runtimes.
 - Add unit tests around `CDCController`, `EventBus`, and each mode adapter (see `src/test/README.md`). ✅ Vitest suite now covers adapters, controller, metrics, and lane overlays; continue expanding toward multi-table scenarios.
-- Todo: add Storybook visual regression notes for lane checks / diff overlay to keep UI states in sync with docs.
+- 📘 Add Storybook visual regression notes for lane checks / diff overlay so QA knows which Ladle stories to reference.
+  - Document the canonical states in `web/stories/LaneDiffOverlay.stories.tsx` (missing events, extra events, ordering, schema drift).
+  - During reviews, capture screenshots from Ladle (`npm run ladle`) using the "Diff Overlay / Summary" and "Diff Overlay / Details" stories.
+  - Attach the images to launch checklists so the enablement team can confirm copy and layout match the docs.
 - ✅ Multi-table + transactional demo landed with apply-on-commit toggle; follow-up e2e for transaction drift still on backlog.
