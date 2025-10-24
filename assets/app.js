@@ -4438,6 +4438,16 @@ async function main() {
   broadcastComparatorState();
   setShareControlsEnabled(false);
 
+  const shouldShowOnboarding = !localStorage.getItem(STORAGE_KEYS.onboarding)
+    && (state.scenarioId === "default" || !state.schema.length)
+    && state.rows.length === 0
+    && state.events.length === 0;
+  const sharePending = Boolean(uiState.pendingShareId);
+
+  if (shouldShowOnboarding && !sharePending) {
+    maybeShowOnboarding();
+  }
+
   try {
     await initAppwrite();
     if (appwrite?.cfg?.scenarioCollectionId) setShareControlsEnabled(true);
