@@ -1378,6 +1378,43 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.ops button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ops button .ops-button__splash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180%;
+  height: 180%;
+  transform: translate(-50%, -50%) scale(0.35);
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgba(58, 184, 255, 0.42), rgba(58, 184, 255, 0));
+  opacity: 0;
+  pointer-events: none;
+  animation: ops-button-splash 480ms ease-out forwards;
+}
+
+.ops button .ops-button__splash[data-office="true"] {
+  background: radial-gradient(circle at center, rgba(255, 205, 112, 0.5), rgba(255, 205, 112, 0));
+}
+
+@keyframes ops-button-splash {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  60% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
 .export-actions {
   margin-top: 8px;
 }
