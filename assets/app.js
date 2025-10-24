@@ -1666,6 +1666,35 @@ function emitSparkleTrail(op = "c") {
   }
 }
 
+function flashAutofillButton(button) {
+  if (!button) return;
+
+  const splash = document.createElement("span");
+  splash.className = "ops-button__splash";
+  if (isOfficeSchemaActive()) {
+    splash.dataset.office = "true";
+  }
+  button.appendChild(splash);
+
+  const cleanup = () => {
+    clearTimeout(fallback);
+    splash.remove();
+  };
+  const fallback = setTimeout(cleanup, 720);
+  splash.addEventListener("animationend", cleanup, { once: true });
+  splash.addEventListener("animationcancel", cleanup, { once: true });
+
+  if (typeof button.focus === "function") {
+    requestAnimationFrame(() => {
+      try {
+        button.focus({ preventScroll: true });
+      } catch {
+        button.focus();
+      }
+    });
+  }
+}
+
 function emitOfficeStaplerTrail() {
   const source = els.rowEditor;
   const target = els.eventLog;
@@ -4625,6 +4654,7 @@ function autofillRowAndInsert() {
     return;
   }
 
+  const triggerButton = els.autofillRow;
   const sample = generateSampleRow();
 
   // reflect values in the editor for transparency
@@ -4661,6 +4691,7 @@ function autofillRowAndInsert() {
   updateLearning("rows");
   emitSparkleTrail("c");
   if (isOfficeSchemaActive()) emitOfficeConfetti();
+  flashAutofillButton(triggerButton);
 }
 
 updateApplyPausedBanner(false, 0);
