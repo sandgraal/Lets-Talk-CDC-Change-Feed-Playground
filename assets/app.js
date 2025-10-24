@@ -1113,11 +1113,24 @@ function showOnboarding() {
   }
 }
 
-function maybeShowOnboarding() {
-  if (!els.onboardingOverlay) return;
+function shouldShowOnboarding() {
+  if (!els.onboardingOverlay) return false;
+  if (uiState.pendingShareId) return false;
+
   const seen = localStorage.getItem(STORAGE_KEYS.onboarding);
-  if (seen) return;
-  showOnboarding();
+  if (seen) return false;
+
+  const scenarioEligible = state.scenarioId === "default" || !state.schema.length;
+  const hasRows = state.rows.length > 0;
+  const hasEvents = state.events.length > 0;
+
+  return scenarioEligible && !hasRows && !hasEvents;
+}
+
+function maybeShowOnboarding() {
+  if (shouldShowOnboarding()) {
+    showOnboarding();
+  }
 }
 
 function applyScenarioTemplate(template, options = {}) {
@@ -4405,6 +4418,11 @@ async function main() {
   bindUiHandlers();
   renderComparatorFlagState(isComparatorFlagEnabled());
   renderMethodGuidance();
+
+  const showedOnboardingEarly = shouldShowOnboarding();
+  if (showedOnboardingEarly) {
+    showOnboarding();
+  }
   if (typeof window !== "undefined") {
     window.addEventListener("cdc:feature-flags", event => {
       const detail = Array.isArray(event.detail) ? event.detail : [];
@@ -4428,11 +4446,9 @@ async function main() {
     console.warn("Appwrite init skipped", err?.message || err);
   }
 
-  const shouldShowOnboarding = !localStorage.getItem(STORAGE_KEYS.onboarding)
-    && (state.scenarioId === "default" || !state.schema.length)
-    && state.rows.length === 0
-    && state.events.length === 0;
-  if (shouldShowOnboarding) maybeShowOnboarding();
+  if (!showedOnboardingEarly) {
+    maybeShowOnboarding();
+  }
 }
 main();
 
