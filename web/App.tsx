@@ -2718,9 +2718,22 @@ export function App() {
   );
 
   const handleReset = useCallback(() => {
+    setEventSearch("");
+    setEventLogMethod(null);
+    setEventLogTable(null);
+    setEventLogOp(null);
+    setEventLogTxn("");
     resetRunnerState();
     trackClockControl("reset", { scenario: scenario.name });
-  }, [resetRunnerState, scenario.name]);
+  }, [
+    resetRunnerState,
+    scenario.name,
+    setEventLogMethod,
+    setEventLogOp,
+    setEventLogTable,
+    setEventLogTxn,
+    setEventSearch,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -3177,6 +3190,9 @@ export function App() {
         </button>
         <button type="button" onClick={() => handleStep()}>
           Step +{STEP_MS}ms
+        </button>
+        <button type="button" onClick={handleReset}>
+          Reset
         </button>
         {pauseResumeEnabled && (
           <button
