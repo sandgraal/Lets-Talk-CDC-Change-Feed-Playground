@@ -1159,10 +1159,7 @@ function applyScenarioTemplate(template, options = {}) {
   if (options.closeOnboarding) hideOnboarding(true);
 }
 
-function startFromScratch() {
-  const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
-  setOfficeSchemaPreference(loadOffice);
-
+function resetWorkspaceState(loadOffice) {
   resetOfficeShenanigans({ resetMegadesk: true });
 
   if (loadOffice) {
@@ -1172,11 +1169,21 @@ function startFromScratch() {
     state.schema = [];
     state.scenarioId = null;
   }
+
   state.schemaVersion = 1;
   state.rows = [];
   state.events = [];
   state.remoteId = null;
   uiState.selectedEventIndex = null;
+  uiState.editorDraft = {};
+  uiState.editorTouched = {};
+}
+
+function startFromScratch() {
+  const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
+  setOfficeSchemaPreference(loadOffice);
+
+  resetWorkspaceState(loadOffice);
 
   localStorage.removeItem(STORAGE_KEYS.lastTemplate);
   if (els.onboardingEasterEgg) els.onboardingEasterEgg.checked = false;
