@@ -175,7 +175,8 @@ export type Metrics = {
    - Generator: N changes/sec, burst mode. Consumer throttle knob: max events/second.
    - Replay: reset destination, replay last captured trace.
    - Acceptance: users can create artificial lag and watch recovery.
-   - 🔄 Consumer throttle control shipped in comparator shell; generator + replay still pending.
+   - ✅ Consumer throttle control shipped in comparator shell; generator engine extracted into a shared module with automated
+     coverage and feeds the comparator burst controls, and replay hooks now route events back into the workspace table.
 
 ## UI Changes (surgical)
 - New top bar: Mode | Preset | Start/Stop | Pause/Resume Apply | Polling (QUERY).
