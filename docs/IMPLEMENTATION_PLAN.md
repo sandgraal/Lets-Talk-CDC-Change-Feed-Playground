@@ -216,7 +216,7 @@ export type Metrics = {
 ## Performance Guardrails
 - Batch log rendering (windowed list). Cap EventLog to last N=2,000 events with "Load more".
 - Avoid heavy animations; prefer CSS transforms.
-- Provide "Reset simulation" to clear memory.
+- ✅ Provide "Reset simulation" to clear memory (playback controls now include a reset button that clears runtime state).
 
 ## Security/Privacy
 - No PII; generated sample data only.
