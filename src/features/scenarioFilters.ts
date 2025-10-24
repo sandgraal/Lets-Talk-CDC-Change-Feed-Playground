@@ -192,6 +192,10 @@ export function applyScenarioFilters<T extends FilterableScenario>(
 
   const requiredTags = normaliseTags(tags);
   const normalizedQuery = normaliseQuery(query);
+  const queryTokens = normalizedQuery
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(token => token.length > 0);
 
   return list.filter(option => {
     if (liveScenarioName && option.name === liveScenarioName) {
@@ -204,11 +208,11 @@ export function applyScenarioFilters<T extends FilterableScenario>(
       if (!hasAllTags) return false;
     }
 
-    if (!normalizedQuery) return true;
+    if (queryTokens.length === 0) return true;
 
     const haystack = buildHaystack(option);
     if (!haystack) return false;
-    return haystack.includes(normalizedQuery);
+    return queryTokens.every(token => haystack.includes(token));
   });
 }
 

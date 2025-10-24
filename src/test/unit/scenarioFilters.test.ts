@@ -203,6 +203,20 @@ describe("applyScenarioFilters", () => {
     expect(result.map(option => option.id)).toEqual(["orders"]);
   });
 
+  it("requires all query terms to appear in the scenario metadata", () => {
+    const multiMatch = applyScenarioFilters(baseScenarios, {
+      query: "lag hotspots",
+    });
+
+    expect(multiMatch.map(option => option.id)).toEqual(["orders"]);
+
+    const noMatch = applyScenarioFilters(baseScenarios, {
+      query: "lag payments",
+    });
+
+    expect(noMatch).toHaveLength(0);
+  });
+
   it("filters scenarios by requiring all selected tags", () => {
     const result = applyScenarioFilters(baseScenarios, {
       tags: ["lag", "orders"],
