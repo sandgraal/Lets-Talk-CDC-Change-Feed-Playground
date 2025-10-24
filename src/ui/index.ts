@@ -1,11 +1,11 @@
 export * from "./components";
 export { GLOSSARY_ENTRIES } from "./glossary";
 export { TOOLTIP_COPY } from "./tooltips";
-export { createTelemetryClient } from "./telemetry";
-export type {
-  TelemetryClient,
-  TelemetryClientOptions,
-  TelemetryEntry,
-  TelemetryQuestion,
-  TelemetryQuestionKey,
-} from "./telemetry";
+export {
+  serializeEventLogNdjson,
+  mapEventsToExportRecords,
+  eventLogRowToExportItem,
+  type EventLogExportEvent,
+  type EventLogExportItem,
+  type EventLogExportRecord,
+} from "./eventLogExport";

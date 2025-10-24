@@ -19,7 +19,13 @@ import {
   Scheduler,
   type MetricsSnapshot,
 } from "../src";
-import { EventLog, type EventLogFilters, type EventLogRow, type EmitFn } from "../src";
+import {
+  EventLog,
+  type EventLogFilters,
+  type EventLogRow,
+  type EmitFn,
+  serializeEventLogNdjson,
+} from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
 import harnessHistoryMd from "../docs/harness-history.md?raw";
 import {
@@ -1924,21 +1930,9 @@ export function App() {
 
   const handleDownloadEventLog = useCallback(() => {
     if (filteredCombinedBusEvents.length === 0) return;
-    const payload = filteredCombinedBusEvents.map(({ method, event }) =>
-      JSON.stringify({
-        method,
-        offset: event.offset ?? null,
-        seq: event.seq,
-        ts_ms: event.ts_ms,
-        op: event.op,
-        pk: event.pk,
-        table: event.table,
-        before: event.before,
-        after: event.after,
-        topic: event.topic,
-      }),
-    );
-    const blob = new Blob([payload.join("\n")], { type: "application/json" });
+    const ndjson = serializeEventLogNdjson(filteredCombinedBusEvents);
+    if (!ndjson) return;
+    const blob = new Blob([ndjson], { type: "application/x-ndjson" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
