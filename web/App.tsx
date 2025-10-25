@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SourceOp, Event as EngineEvent, VendorPresetId, SchemaColumn } from "../src";
+import type {
+  SourceOp,
+  Event as EngineEvent,
+  VendorPresetId,
+  SchemaColumn,
+  VendorPreset,
+} from "../src";
 import type { CdcEvent, LaneDiffResult } from "../sim";
 import type { MethodEngine } from "../sim";
 import {
@@ -283,6 +289,114 @@ type LaneAnalytics = {
   deletes: number;
   schemaChanges: number;
 };
+
+type ComparatorOverlaySnapshot = Array<{
+  method: MethodOption;
+  label: string;
+  chips: Array<{ key: string; text: string; tone: string }>;
+  hasDetails: boolean;
+}>;
+
+type ComparatorSnapshotLane = {
+  method: MethodOption;
+  eventCount: number;
+  metrics: Metrics;
+};
+
+type ComparatorPresetSnapshot = {
+  id: VendorPresetId;
+  label: string;
+  description: string;
+  docsHint: string;
+  sourceLabel: string;
+  sourceTooltip: string;
+  logLabel: string;
+  logTooltip: string;
+  busLabel: string;
+  busTooltip: string;
+  destinationLabel: string;
+  destinationTooltip: string;
+  methodCopyOverrides?: VendorPreset["methodCopyOverrides"];
+};
+
+type ComparatorSnapshot = {
+  preferences: ComparatorPreferences | null;
+  summary: Summary | null;
+  analytics: LaneAnalytics[];
+  diffs: LaneDiffResult[];
+  tags: string[];
+  preset: ComparatorPresetSnapshot | null;
+  overlay: ComparatorOverlaySnapshot | null;
+  lanes: ComparatorSnapshotLane[];
+};
+
+const cloneJson = <T,>(value: T): T | null => {
+  if (value == null) return value as T | null;
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    return null;
+  }
+};
+
+const sanitizePresetSnapshot = (preset: VendorPreset | undefined): ComparatorPresetSnapshot | null => {
+  if (!preset) return null;
+  const overrides = preset.methodCopyOverrides
+    ? cloneJson(preset.methodCopyOverrides) ?? undefined
+    : undefined;
+  return {
+    id: preset.id,
+    label: preset.label,
+    description: preset.description,
+    docsHint: preset.docsHint,
+    sourceLabel: preset.sourceLabel,
+    sourceTooltip: preset.sourceTooltip,
+    logLabel: preset.logLabel,
+    logTooltip: preset.logTooltip,
+    busLabel: preset.busLabel,
+    busTooltip: preset.busTooltip,
+    destinationLabel: preset.destinationLabel,
+    destinationTooltip: preset.destinationTooltip,
+    methodCopyOverrides: overrides,
+  };
+};
+
+function buildComparatorSnapshot(
+  preferences: ComparatorPreferences,
+  summary: Summary | null,
+  analytics: LaneAnalytics[],
+  diffs: Map<MethodOption, LaneDiffResult>,
+  tags: string[],
+  preset: VendorPreset,
+  overlay: ComparatorOverlaySnapshot | null,
+  lanes: LaneMetrics[],
+): ComparatorSnapshot {
+  const prefsClone = cloneJson(preferences);
+  const summaryClone = summary ? cloneJson(summary) : null;
+  const analyticsClone = cloneJson(analytics) ?? [];
+  const overlayClone = overlay ? cloneJson(overlay) : null;
+  const diffSnapshot = Array.from(diffs.values())
+    .map(entry => cloneJson(entry))
+    .filter((entry): entry is LaneDiffResult => Boolean(entry));
+  const laneSnapshot = lanes
+    .map(lane => {
+      const metricsClone = cloneJson(lane.metrics);
+      if (!metricsClone) return null;
+      return { method: lane.method, eventCount: lane.events.length, metrics: metricsClone };
+    })
+    .filter((entry): entry is ComparatorSnapshotLane => Boolean(entry));
+
+  return {
+    preferences: prefsClone,
+    summary: summaryClone,
+    analytics: analyticsClone,
+    diffs: diffSnapshot,
+    tags: [...tags],
+    preset: sanitizePresetSnapshot(preset),
+    overlay: overlayClone,
+    lanes: laneSnapshot,
+  };
+}
 
 type ClockControlCommand =
   | { type: "play" }
@@ -2088,30 +2202,6 @@ export function App() {
     track("comparator.scenario.select", { scenario: value });
   }, []);
 
-  const handleScenarioDownload = useCallback((target: ShellScenario) => {
-    const payload = {
-      id: target.id,
-      name: target.name,
-      label: target.label,
-      description: target.description,
-      highlight: target.highlight,
-      tags: target.tags,
-      table: target.table,
-      schemaVersion: target.schemaVersion,
-      seed: target.seed,
-      schema: target.schema ?? [],
-      rows: target.rows ?? [],
-      events: target.events ?? [],
-      ops: target.ops,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${target.name}.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }, []);
-
   const handleScenarioPreview = useCallback((target: ShellScenario) => {
     track("comparator.scenario.preview", { scenario: target.name, tags: target.tags ?? [] });
     window.dispatchEvent(
@@ -2288,6 +2378,107 @@ export function App() {
         };
       }),
     [activeMethods, laneDestinations, laneDiffs, methodCopy, schemaMaxVersion, scenarioHasSchema],
+  );
+
+  const userPinnedScenario = userSelectedScenarioRef.current;
+
+  const comparatorSnapshot = useMemo(() => {
+    const preferences: ComparatorPreferences = {
+      scenarioId,
+      presetId,
+      activeMethods: [...activeMethods],
+      methodConfig,
+      userPinnedScenario,
+      showEventList,
+      eventOps: eventOpsArray,
+      eventSearch,
+      eventLogTable,
+      eventLogTxn,
+      eventLogMethod,
+      eventLogOp,
+      applyOnCommit,
+      consumerRateEnabled,
+      consumerRateLimit,
+      generatorEnabled,
+      generatorRate,
+    };
+
+    return buildComparatorSnapshot(
+      preferences,
+      summary ?? null,
+      analytics,
+      laneDiffs,
+      Array.isArray(scenario.tags) ? scenario.tags : [],
+      preset,
+      laneOverlaySummary,
+      laneMetrics,
+    );
+  }, [
+    activeMethods,
+    analytics,
+    applyOnCommit,
+    consumerRateEnabled,
+    consumerRateLimit,
+    eventLogMethod,
+    eventLogOp,
+    eventLogTable,
+    eventLogTxn,
+    eventOpsArray,
+    eventSearch,
+    generatorEnabled,
+    generatorRate,
+    laneDiffs,
+    laneMetrics,
+    laneOverlaySummary,
+    methodConfig,
+    preset,
+    presetId,
+    scenario,
+    scenarioId,
+    showEventList,
+    summary,
+    userPinnedScenario,
+  ]);
+
+  const handleScenarioDownload = useCallback(
+    (target: ShellScenario) => {
+      const exportedAt = new Date().toISOString();
+      const payload = {
+        id: target.id,
+        name: target.name,
+        label: target.label,
+        description: target.description,
+        highlight: target.highlight,
+        tags: target.tags,
+        table: target.table,
+        schemaVersion: target.schemaVersion,
+        seed: target.seed,
+        schema: target.schema ?? [],
+        rows: target.rows ?? [],
+        events: target.events ?? [],
+        ops: target.ops,
+        version: 2,
+        exportedAt,
+        comparator: comparatorSnapshot,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${target.name}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      const rowsCount = Array.isArray(target.rows) ? target.rows.length : 0;
+      const eventsCount = Array.isArray(target.events) ? target.events.length : 0;
+      track("workspace.scenario.exported", {
+        scenario: target.name,
+        rows: rowsCount,
+        events: eventsCount,
+        hasComparator: Boolean(comparatorSnapshot.summary),
+        methods: activeMethods,
+      });
+    },
+    [activeMethods, comparatorSnapshot, track],
   );
 
   useEffect(() => {
