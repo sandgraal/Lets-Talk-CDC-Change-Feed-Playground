@@ -231,7 +231,14 @@ export function createQueryBasedAdapter(): ModeAdapter {
     },
     applySchemaChange(tableName, action, column, commitTs) {
       ensureSchemaVersion(tableName);
-      if (action === "DROP_COLUMN") {
+      if (action === "ADD_COLUMN") {
+        rows.forEach((row, key) => {
+          if (row.table !== tableName) return;
+          if (Object.prototype.hasOwnProperty.call(row.data, column.name)) return;
+          const nextData = { ...row.data, [column.name]: null };
+          rows.set(key, { ...row, data: nextData });
+        });
+      } else if (action === "DROP_COLUMN") {
         rows.forEach((row, key) => {
           if (row.table !== tableName) return;
           if (column.name in row.data) {
