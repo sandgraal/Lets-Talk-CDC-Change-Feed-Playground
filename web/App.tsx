@@ -330,6 +330,37 @@ type ComparatorSnapshot = {
   lanes: ComparatorSnapshotLane[];
 };
 
+type ComparatorSummaryDetail = {
+  scenarioName: string;
+  scenarioLabel: string;
+  scenarioDescription: string;
+  isLive: boolean;
+  totalEvents: number;
+  summary: Record<string, unknown>;
+  lanes: Array<{
+    id: MethodOption;
+    label: string;
+    tooltip?: string;
+    produced: number;
+    consumed: number;
+    backlog: number;
+    lagP50: number;
+    lagP95: number;
+    missedDeletes?: number;
+    writeAmplification?: number;
+    snapshotRows?: number;
+    inserts: number;
+    updates: number;
+    deletes: number;
+    schemaChanges: number;
+  }>;
+  analytics: Array<Record<string, unknown>>;
+  tags: string[];
+  preset: Record<string, unknown> | null;
+  diffs: Array<Record<string, unknown>>;
+  overlay: Array<Record<string, unknown>>;
+};
+
 const cloneJson = <T,>(value: T): T | null => {
   if (value == null) return value as T | null;
   try {
@@ -1036,6 +1067,112 @@ export function App() {
       }),
     );
   }, []);
+  const applyComparatorPreferences = useCallback(
+    (prefs: ComparatorPreferences | null | undefined) => {
+      if (!prefs) {
+        userSelectedScenarioRef.current = false;
+        return;
+      }
+
+      if ("userPinnedScenario" in prefs) {
+        userSelectedScenarioRef.current = Boolean(prefs.userPinnedScenario);
+      }
+
+      if (prefs.activeMethods) {
+        setActiveMethods(sanitizeActiveMethods(prefs.activeMethods));
+      }
+
+      if (prefs.methodConfig) {
+        setMethodConfig(sanitizeMethodConfig(prefs.methodConfig));
+      }
+
+      if (prefs.scenarioId) {
+        setScenarioId(prefs.scenarioId);
+      }
+
+      if (prefs.presetId && isVendorPresetId(prefs.presetId)) {
+        setPresetId(prefs.presetId);
+      }
+
+      if ("showEventList" in prefs && typeof prefs.showEventList === "boolean") {
+        setShowEventList(prefs.showEventList);
+      }
+
+      if ("eventOps" in prefs) {
+        setActiveEventOps(sanitizeEventOps(prefs.eventOps));
+      }
+
+      if ("eventSearch" in prefs && typeof prefs.eventSearch === "string") {
+        setEventSearch(prefs.eventSearch);
+      }
+
+      if ("eventLogTable" in prefs) {
+        const tableValue =
+          typeof prefs.eventLogTable === "string" && prefs.eventLogTable.trim().length > 0
+            ? prefs.eventLogTable
+            : null;
+        setEventLogTable(tableValue);
+      }
+
+      if ("eventLogTxn" in prefs) {
+        setEventLogTxn(typeof prefs.eventLogTxn === "string" ? prefs.eventLogTxn : "");
+      }
+
+      if ("eventLogMethod" in prefs) {
+        const methodValue = isMethodOption(prefs.eventLogMethod)
+          ? (prefs.eventLogMethod as MethodOption)
+          : null;
+        setEventLogMethod(methodValue);
+      }
+
+      if ("eventLogOp" in prefs) {
+        if (typeof prefs.eventLogOp === "string") {
+          const trimmed = prefs.eventLogOp.trim().toLowerCase();
+          setEventLogOp(trimmed ? trimmed : null);
+        } else {
+          setEventLogOp(null);
+        }
+      }
+
+      if ("applyOnCommit" in prefs && typeof prefs.applyOnCommit === "boolean") {
+        setApplyOnCommit(prefs.applyOnCommit);
+      }
+
+      if ("consumerRateEnabled" in prefs && typeof prefs.consumerRateEnabled === "boolean") {
+        setConsumerRateEnabled(prefs.consumerRateEnabled);
+      }
+
+      if ("consumerRateLimit" in prefs && typeof prefs.consumerRateLimit === "number") {
+        setConsumerRateLimit(sanitizeConsumerRate(prefs.consumerRateLimit));
+      }
+
+      if ("generatorEnabled" in prefs && typeof prefs.generatorEnabled === "boolean") {
+        setGeneratorEnabled(prefs.generatorEnabled);
+      }
+
+      if ("generatorRate" in prefs && typeof prefs.generatorRate === "number") {
+        setGeneratorRate(sanitizeGeneratorRate(prefs.generatorRate));
+      }
+    },
+    [
+      setActiveMethods,
+      setMethodConfig,
+      setScenarioId,
+      setPresetId,
+      setShowEventList,
+      setActiveEventOps,
+      setEventSearch,
+      setEventLogTable,
+      setEventLogTxn,
+      setEventLogMethod,
+      setEventLogOp,
+      setApplyOnCommit,
+      setConsumerRateEnabled,
+      setConsumerRateLimit,
+      setGeneratorEnabled,
+      setGeneratorRate,
+    ],
+  );
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = () => {
@@ -1435,6 +1572,7 @@ export function App() {
   }, [generatorRate]);
 
   const userSelectedScenarioRef = useRef(storedPrefs?.userPinnedScenario ?? false);
+  const scenarioPreferencesAppliedRef = useRef<string | null>(null);
 
   const scenarioOptions = useMemo(
     () =>
@@ -1455,6 +1593,19 @@ export function App() {
   useEffect(() => {
     initializeGeneratorState(scenario);
   }, [scenario, initializeGeneratorState]);
+
+  useEffect(() => {
+    const prefsSource = scenario.comparator?.preferences;
+    if (!prefsSource || typeof prefsSource !== "object") {
+      scenarioPreferencesAppliedRef.current = null;
+      return;
+    }
+
+    if (scenarioPreferencesAppliedRef.current === scenario.name) return;
+
+    applyComparatorPreferences(prefsSource as ComparatorPreferences);
+    scenarioPreferencesAppliedRef.current = scenario.name;
+  }, [applyComparatorPreferences, scenario]);
 
   const schemaLaneState = useMemo(() => {
     const map = new Map<MethodOption, { present: boolean; version: number }>();
@@ -1607,57 +1758,14 @@ export function App() {
     const handler: EventListener = event => {
       if (!(event instanceof CustomEvent)) return;
       const prefs = event.detail as ComparatorPreferences | null;
-      if (!prefs) {
-        userSelectedScenarioRef.current = false;
-        return;
-      }
-
-      if (prefs.userPinnedScenario != null) {
-        userSelectedScenarioRef.current = Boolean(prefs.userPinnedScenario);
-      }
-
-      if (prefs.activeMethods) {
-        setActiveMethods(sanitizeActiveMethods(prefs.activeMethods));
-      }
-
-      if (prefs.methodConfig) {
-        setMethodConfig(sanitizeMethodConfig(prefs.methodConfig));
-      }
-
-      if (prefs.scenarioId) {
-        setScenarioId(prefs.scenarioId);
-      }
-
-      if (prefs.presetId && isVendorPresetId(prefs.presetId)) {
-        setPresetId(prefs.presetId);
-      }
-
-      if (typeof prefs.applyOnCommit === "boolean") {
-        setApplyOnCommit(prefs.applyOnCommit);
-      }
-
-      if (typeof prefs.consumerRateEnabled === "boolean") {
-        setConsumerRateEnabled(prefs.consumerRateEnabled);
-      }
-
-      if (typeof prefs.consumerRateLimit === "number") {
-        setConsumerRateLimit(sanitizeConsumerRate(prefs.consumerRateLimit));
-      }
-
-      if (typeof prefs.generatorEnabled === "boolean") {
-        setGeneratorEnabled(prefs.generatorEnabled);
-      }
-
-      if (typeof prefs.generatorRate === "number") {
-        setGeneratorRate(sanitizeGeneratorRate(prefs.generatorRate));
-      }
+      applyComparatorPreferences(prefs);
     };
 
     window.addEventListener("cdc:comparator-preferences-set" as string, handler);
     return () => {
       window.removeEventListener("cdc:comparator-preferences-set" as string, handler);
     };
-  }, []);
+  }, [applyComparatorPreferences]);
 
   useEffect(() => {
     savePreferences({
@@ -2236,6 +2344,108 @@ export function App() {
     });
   }, [activeMethods, clock, laneEvents, scenario, laneStats]);
 
+  const hasLiveEvents = useMemo(
+    () => laneMetrics.some(lane => lane.events.length > 0),
+    [laneMetrics],
+  );
+
+  const scenarioComparatorDetail = useMemo<ComparatorSummaryDetail | null>(() => {
+    const snapshot = scenario.comparator;
+    if (!snapshot || !snapshot.summary) return null;
+
+    const summaryClone = snapshot.summary
+      ? (cloneJson(snapshot.summary) ?? snapshot.summary)
+      : null;
+    if (!summaryClone) return null;
+
+    const analytics = (cloneJson(snapshot.analytics) ?? []) as Array<Record<string, unknown>>;
+    const diffs = (cloneJson(snapshot.diffs) ?? []) as Array<Record<string, unknown>>;
+    const overlay = (cloneJson(snapshot.overlay) ?? []) as Array<Record<string, unknown>>;
+    const presetSnapshot = snapshot.preset
+      ? ((cloneJson(snapshot.preset) ?? snapshot.preset) as Record<string, unknown>)
+      : null;
+    const tags = snapshot.tags.length
+      ? [...snapshot.tags]
+      : Array.isArray(scenario.tags)
+        ? [...scenario.tags]
+        : [];
+
+    const totalFromAnalytics = analytics.reduce((sum, entry) => {
+      const totalValue = Number((entry as Record<string, unknown>).total);
+      return Number.isFinite(totalValue) ? sum + totalValue : sum;
+    }, 0);
+
+    const laneEventTotal = Array.isArray(snapshot.lanes)
+      ? snapshot.lanes.reduce((sum, lane) => {
+          const count = Number(lane.eventCount);
+          return Number.isFinite(count) ? sum + count : sum;
+        }, 0)
+      : 0;
+
+    const fallbackTotal =
+      typeof scenario.stats?.ops === "number" && Number.isFinite(scenario.stats.ops)
+        ? scenario.stats.ops
+        : scenario.ops.length;
+
+    const totalEvents = totalFromAnalytics || laneEventTotal || fallbackTotal;
+    if (!(totalEvents > 0)) return null;
+
+    const lanes = Array.isArray(snapshot.lanes)
+      ? snapshot.lanes
+          .map(lane => {
+            const methodName = typeof lane.method === "string" ? lane.method : undefined;
+            if (!methodName || !isMethodOption(methodName)) return null;
+            const metricsRecord =
+              lane.metrics && typeof lane.metrics === "object" && !Array.isArray(lane.metrics)
+                ? (lane.metrics as Record<string, unknown>)
+                : {};
+            const getNumber = (...keys: string[]): number | undefined => {
+              for (const key of keys) {
+                const value = metricsRecord[key];
+                if (typeof value === "number" && Number.isFinite(value)) {
+                  return value;
+                }
+              }
+              return undefined;
+            };
+            const meta = methodCopy[methodName];
+            return {
+              id: methodName,
+              label: meta?.label ?? methodName,
+              tooltip: meta?.tooltip,
+              produced: getNumber("produced") ?? 0,
+              consumed: getNumber("consumed") ?? 0,
+              backlog: getNumber("backlog") ?? 0,
+              lagP50: getNumber("lagMsP50", "lagP50") ?? 0,
+              lagP95: getNumber("lagMsP95", "lagP95") ?? 0,
+              missedDeletes: getNumber("missedDeletes"),
+              writeAmplification: getNumber("writeAmplification"),
+              snapshotRows: getNumber("snapshotRows"),
+              inserts: getNumber("insertCount", "inserts") ?? 0,
+              updates: getNumber("updateCount", "updates") ?? 0,
+              deletes: getNumber("deleteCount", "deletes") ?? 0,
+              schemaChanges: getNumber("schemaChangeCount", "schemaChanges") ?? 0,
+            };
+          })
+          .filter((entry): entry is ComparatorSummaryDetail["lanes"][number] => Boolean(entry))
+      : [];
+
+    return {
+      scenarioName: scenario.name,
+      scenarioLabel: scenario.label,
+      scenarioDescription: scenario.description,
+      isLive: scenario.name === LIVE_SCENARIO_NAME,
+      totalEvents,
+      summary: summaryClone as Record<string, unknown>,
+      lanes,
+      analytics,
+      tags,
+      preset: presetSnapshot,
+      diffs,
+      overlay,
+    };
+  }, [methodCopy, scenario]);
+
   const laneRuntimeSummaries = useMemo(() => {
     return activeMethods.reduce((map, method) => {
       const stats = laneStats[method];
@@ -2256,6 +2466,18 @@ export function App() {
       return map;
     }, new Map<MethodOption, LaneRuntimeSummary>());
   }, [activeMethods, laneStats]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!scenarioComparatorDetail) return;
+    if (hasLiveEvents) return;
+
+    window.dispatchEvent(
+      new CustomEvent("cdc:comparator-summary", {
+        detail: scenarioComparatorDetail,
+      }),
+    );
+  }, [hasLiveEvents, scenarioComparatorDetail]);
 
   const totalBacklog = useMemo(
     () =>
@@ -2796,6 +3018,7 @@ export function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!hasLiveEvents && scenarioComparatorDetail) return;
 
     const summaryDetail = summary
       ? {
@@ -2949,7 +3172,20 @@ export function App() {
         },
       }),
     );
-  }, [laneMetrics, scenario, summary, totalEvents, analytics, scenarioTags, laneDiffs, methodCopy, preset, activeMethods]);
+  }, [
+    activeMethods,
+    analytics,
+    hasLiveEvents,
+    laneDiffs,
+    laneMetrics,
+    methodCopy,
+    preset,
+    scenario,
+    scenarioComparatorDetail,
+    scenarioTags,
+    summary,
+    totalEvents,
+  ]);
 
   return (
     <section className="sim-shell" aria-label="Simulator preview">
