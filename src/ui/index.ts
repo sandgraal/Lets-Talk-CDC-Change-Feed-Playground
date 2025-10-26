@@ -9,3 +9,13 @@ export {
   type EventLogExportItem,
   type EventLogExportRecord,
 } from "./eventLogExport";
+export {
+  createTelemetryClient,
+  type TelemetryClient,
+  type TelemetryClientOptions,
+  type TelemetryConsole,
+  type TelemetryEntry,
+  type TelemetryQuestion,
+  type TelemetryQuestionKey,
+  type TelemetryStorage,
+} from "./telemetry";
