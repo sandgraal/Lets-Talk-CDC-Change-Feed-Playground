@@ -1,6 +1,23 @@
 import type { SourceOp } from "../domain/types";
 import sharedScenarios from "../../assets/shared-scenarios.js";
 
+export type SharedScenarioComparatorLane = {
+  method?: unknown;
+  eventCount?: unknown;
+  metrics?: unknown;
+};
+
+export type SharedScenarioComparator = {
+  preferences?: unknown;
+  summary?: unknown;
+  analytics?: unknown;
+  diffs?: unknown;
+  tags?: unknown;
+  preset?: unknown;
+  overlay?: unknown;
+  lanes?: unknown;
+} | null;
+
 export type SharedScenarioColumnType = "string" | "number" | "bool" | "json";
 
 export type SharedScenarioColumn = {
@@ -27,6 +44,7 @@ export type SharedScenario = {
   rows?: SharedScenarioRow[];
   events?: SharedScenarioEvent[];
   ops?: SourceOp[];
+  comparator?: SharedScenarioComparator;
 };
 
 export default sharedScenarios as SharedScenario[];
