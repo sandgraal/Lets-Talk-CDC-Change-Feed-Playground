@@ -316,6 +316,48 @@ describe("Mode adapters", () => {
     expect(emitted[0].schemaVersion).toBe(2);
   });
 
+  it("query adapter seeds new columns on soft delete payloads", () => {
+    const adapter = createQueryBasedAdapter();
+    const { runtime } = createRuntime("cdc.query");
+    adapter.initialise?.(runtime);
+    adapter.configure?.({ poll_interval_ms: 5 });
+    adapter.configure?.({ include_soft_deletes: true });
+
+    const emitted: Event[] = [];
+    adapter.startTailing?.(events => {
+      emitted.push(...events);
+      return events;
+    });
+
+    const insert: SourceOp = {
+      t: 1,
+      op: "insert",
+      table: "widgets",
+      pk: { id: "w1" },
+      after: { status: "new" },
+    };
+    const deleteOp: SourceOp = {
+      t: 30,
+      op: "delete",
+      table: "widgets",
+      pk: { id: "w1" },
+    };
+    const column = { name: "priority_flag", type: "bool" } as const;
+
+    adapter.applySource?.(insert);
+    adapter.tick?.(10);
+
+    adapter.applySchemaChange?.("widgets", "ADD_COLUMN", column, 20);
+    adapter.tick?.(20);
+
+    adapter.applySource?.(deleteOp);
+    adapter.tick?.(35);
+
+    const deleteEvent = emitted.find(evt => evt.kind === "DELETE");
+    expect(deleteEvent).toBeDefined();
+    expect(deleteEvent?.before?.priority_flag).toBeNull();
+  });
+
   it("query adapter records snapshot row counts", () => {
     const adapter = createQueryBasedAdapter();
     const { runtime } = createRuntime("cdc.query");
