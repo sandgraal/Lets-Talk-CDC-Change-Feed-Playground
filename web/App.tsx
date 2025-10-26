@@ -398,6 +398,20 @@ function buildComparatorSnapshot(
   };
 }
 
+function hasComparatorSnapshotData(snapshot: ComparatorSnapshot | null | undefined): boolean {
+  if (!snapshot) return false;
+  return Boolean(
+    snapshot.preferences && Object.keys(snapshot.preferences).length > 0,
+  ) ||
+    Boolean(snapshot.summary) ||
+    (snapshot.analytics?.length ?? 0) > 0 ||
+    (snapshot.diffs?.length ?? 0) > 0 ||
+    (snapshot.tags?.length ?? 0) > 0 ||
+    Boolean(snapshot.preset) ||
+    (snapshot.overlay?.length ?? 0) > 0 ||
+    (snapshot.lanes?.length ?? 0) > 0;
+}
+
 type ClockControlCommand =
   | { type: "play" }
   | { type: "pause" }
@@ -2443,6 +2457,9 @@ export function App() {
   const handleScenarioDownload = useCallback(
     (target: ShellScenario) => {
       const exportedAt = new Date().toISOString();
+      const comparatorPayload = hasComparatorSnapshotData(comparatorSnapshot)
+        ? comparatorSnapshot
+        : target.comparator ?? comparatorSnapshot;
       const payload = {
         id: target.id,
         name: target.name,
@@ -2459,7 +2476,7 @@ export function App() {
         ops: target.ops,
         version: 2,
         exportedAt,
-        comparator: comparatorSnapshot,
+        comparator: comparatorPayload,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
@@ -2474,7 +2491,7 @@ export function App() {
         scenario: target.name,
         rows: rowsCount,
         events: eventsCount,
-        hasComparator: Boolean(comparatorSnapshot.summary),
+        hasComparator: hasComparatorSnapshotData(comparatorPayload),
         methods: activeMethods,
       });
     },

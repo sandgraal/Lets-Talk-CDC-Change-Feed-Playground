@@ -17,6 +17,7 @@ export interface ShellScenario extends Scenario {
   rows?: ScenarioTemplate["rows"];
   events?: ScenarioTemplate["events"];
   schemaVersion?: number;
+  comparator?: ScenarioTemplate["comparator"] | null;
 }
 
 function cloneOp(op: SourceOp): SourceOp {
@@ -31,6 +32,15 @@ function cloneOp(op: SourceOp): SourceOp {
     clone.txn = { ...op.txn };
   }
   return clone;
+}
+
+function cloneJson<T>(value: T): T {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    return value;
+  }
 }
 
 function toShellScenario(template: ScenarioTemplate): ShellScenario {
@@ -52,6 +62,7 @@ function toShellScenario(template: ScenarioTemplate): ShellScenario {
     schemaVersion: template.schemaVersion,
     seed: template.seed,
     ops: template.ops.map(cloneOp),
+    comparator: template.comparator ? cloneJson(template.comparator) : null,
   };
 }
 

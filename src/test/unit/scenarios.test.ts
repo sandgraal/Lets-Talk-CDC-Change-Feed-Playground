@@ -3,6 +3,7 @@ import { SCENARIO_TEMPLATES } from "../../features/scenarios";
 import { SCENARIOS as COMPARATOR_SCENARIOS } from "../../../web/scenarios";
 import sharedScenarios, { type SharedScenario } from "../../features/shared-scenarios";
 import { normaliseSharedScenario } from "../../features/shared-scenario-normaliser";
+import type { SourceOp } from "../../domain/types";
 
 const EXPECTED_SCENARIOS = [
   {
@@ -354,5 +355,87 @@ describe("Shared scenario normaliser", () => {
     updateEvent.payload.after.status = "mutated";
     expect(template?.ops[0].after?.status).toBe("snapshot");
     expect(template?.ops[1].after?.status).toBe("released");
+  });
+
+  it("clones comparator snapshots when scenarios provide them", () => {
+    const comparator = {
+      preferences: { scenarioId: "with-comparator", activeMethods: ["polling"] },
+      summary: { note: "stored" },
+      analytics: [{ method: "polling", total: 5 }, null],
+      diffs: [
+        {
+          method: "polling",
+          totals: { missing: 1, extra: 0, ordering: 0 },
+          issues: [{ id: "missing" }],
+          lag: { max: 12, samples: [{ at: 42 }] },
+        },
+        undefined,
+      ],
+      tags: ["lag", 42],
+      preset: { id: "MYSQL_DEBEZIUM", label: "MySQL" },
+      overlay: [
+        { method: "polling", label: "Polling", chips: [], hasDetails: false },
+        { note: "invalid" },
+      ],
+      lanes: [
+        { method: "polling", eventCount: "7", metrics: { produced: 7, consumed: 7 } },
+        { method: 42 },
+      ],
+    } as unknown as SharedScenario["comparator"];
+
+    const scenario: SharedScenario = {
+      id: "with-comparator",
+      name: "With comparator",
+      description: "Includes stored comparator metadata.",
+      schema: [],
+      ops: [
+        {
+          t: 0,
+          table: "orders",
+          op: "insert",
+          pk: { id: "1" },
+          after: { id: "1" },
+        } as SourceOp,
+      ],
+      comparator,
+    };
+
+    const template = normaliseSharedScenario(scenario, {
+      scenarioIndex: 3,
+      allowEventsAsOps: false,
+    });
+
+    expect(template?.comparator).toEqual({
+      preferences: { scenarioId: "with-comparator", activeMethods: ["polling"] },
+      summary: { note: "stored" },
+      analytics: [{ method: "polling", total: 5 }],
+      diffs: [
+        {
+          method: "polling",
+          totals: { missing: 1, extra: 0, ordering: 0 },
+          issues: [{ id: "missing" }],
+          lag: { max: 12, samples: [{ at: 42 }] },
+        },
+      ],
+      tags: ["lag"],
+      preset: { id: "MYSQL_DEBEZIUM", label: "MySQL" },
+      overlay: [{ method: "polling", label: "Polling", chips: [], hasDetails: false }],
+      lanes: [
+        {
+          method: "polling",
+          eventCount: 7,
+          metrics: { produced: 7, consumed: 7 },
+        },
+      ],
+    });
+
+    if (scenario.comparator && typeof scenario.comparator === "object") {
+      const analytics = (scenario.comparator as Record<string, unknown>).analytics as unknown[] | undefined;
+      if (Array.isArray(analytics) && analytics[0] && typeof analytics[0] === "object") {
+        (analytics[0] as Record<string, unknown>).method = "mutated";
+      }
+    }
+
+    expect(template?.comparator?.analytics[0]?.method).toBe("polling");
   });
 });

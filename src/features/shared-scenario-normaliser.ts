@@ -22,6 +22,24 @@ export type ScenarioTemplate = {
   rows: SharedScenarioRow[];
   events: SharedScenarioEvent[];
   ops: SourceOp[];
+  comparator: ScenarioComparatorSnapshot | null;
+};
+
+export type ScenarioComparatorLaneSnapshot = {
+  method?: string;
+  eventCount?: number;
+  metrics?: Record<string, unknown>;
+};
+
+export type ScenarioComparatorSnapshot = {
+  preferences: Record<string, unknown> | null;
+  summary: Record<string, unknown> | null;
+  analytics: Array<Record<string, unknown>>;
+  diffs: Array<Record<string, unknown>>;
+  tags: string[];
+  preset: Record<string, unknown> | null;
+  overlay: Array<Record<string, unknown>>;
+  lanes: ScenarioComparatorLaneSnapshot[];
 };
 
 export type FallbackTimestampFn = (input: {
@@ -49,6 +67,104 @@ function cloneValue<T>(value: T): T {
     return clone as T;
   }
   return value;
+}
+
+function clonePlainRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return cloneValue(value as Record<string, unknown>);
+}
+
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function cloneComparatorSnapshot(
+  comparator: SharedScenario["comparator"],
+): ScenarioComparatorSnapshot | null {
+  if (!comparator || typeof comparator !== "object") return null;
+
+  const record = comparator as Record<string, unknown>;
+
+  const preferences = clonePlainRecord(record.preferences);
+  const summary = clonePlainRecord(record.summary);
+
+  const analytics = Array.isArray(record.analytics)
+    ? (record.analytics as unknown[])
+        .filter(entry => entry && typeof entry === "object" && !Array.isArray(entry))
+        .map(entry => cloneValue(entry as Record<string, unknown>))
+    : [];
+
+  const diffs = Array.isArray(record.diffs)
+    ? (record.diffs as unknown[])
+        .filter(entry => entry && typeof entry === "object" && !Array.isArray(entry))
+        .map(entry => cloneValue(entry as Record<string, unknown>))
+    : [];
+
+  const tags = Array.isArray(record.tags)
+    ? (record.tags as unknown[]).filter((tag): tag is string =>
+        typeof tag === "string",
+      )
+    : [];
+
+  const preset = clonePlainRecord(record.preset);
+
+  const overlay = Array.isArray(record.overlay)
+    ? (record.overlay as unknown[])
+        .filter(entry => entry && typeof entry === "object" && !Array.isArray(entry))
+        .map(entry => cloneValue(entry as Record<string, unknown>))
+        .filter(entry => {
+          const method = (entry as Record<string, unknown>).method;
+          const label = (entry as Record<string, unknown>).label;
+          return typeof method === "string" || typeof label === "string";
+        })
+    : [];
+
+  const lanes = Array.isArray(record.lanes)
+    ? (record.lanes as unknown[])
+        .filter(entry => entry && typeof entry === "object" && !Array.isArray(entry))
+        .map(entry => {
+          const laneRecord = entry as Record<string, unknown>;
+          const method = typeof laneRecord.method === "string" ? laneRecord.method : undefined;
+          const eventCount = toFiniteNumber(laneRecord.eventCount);
+          const metrics = clonePlainRecord(laneRecord.metrics);
+          const result: ScenarioComparatorLaneSnapshot = {};
+          if (method) result.method = method;
+          if (typeof eventCount === "number") result.eventCount = eventCount;
+          if (metrics) result.metrics = metrics;
+          return Object.keys(result).length > 0 ? result : null;
+        })
+        .filter((lane): lane is ScenarioComparatorLaneSnapshot => Boolean(lane))
+    : [];
+
+  const hasContent =
+    preferences !== null ||
+    summary !== null ||
+    analytics.length > 0 ||
+    diffs.length > 0 ||
+    tags.length > 0 ||
+    preset !== null ||
+    overlay.length > 0 ||
+    lanes.length > 0;
+
+  if (!hasContent) {
+    return null;
+  }
+
+  return {
+    preferences,
+    summary,
+    analytics,
+    diffs,
+    tags,
+    preset,
+    overlay,
+    lanes,
+  };
 }
 
 function cloneRows(rows: SharedScenario["rows"]): SharedScenarioRow[] {
@@ -279,5 +395,6 @@ export function normaliseSharedScenario(
     rows,
     events,
     ops,
+    comparator: cloneComparatorSnapshot(raw.comparator),
   };
 }
