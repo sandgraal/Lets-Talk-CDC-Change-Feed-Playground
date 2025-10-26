@@ -78,11 +78,26 @@ const formatRowPreview = (row: Record<string, unknown> | null | undefined) => {
   }
 };
 
-const coerceOp = (op: string) => {
-  if (!op) return "—";
+const normaliseOpCode = (op: unknown): string => {
+  if (typeof op !== "string") return "";
+  const trimmed = op.trim();
+  if (!trimmed) return "";
+  const lowered = trimmed.toLowerCase();
+  if (["c", "create", "insert", "i"].includes(lowered)) return "insert";
+  if (["u", "update"].includes(lowered)) return "update";
+  if (["d", "delete"].includes(lowered)) return "delete";
+  return lowered;
+};
+
+const formatOpLabel = (op: unknown): string => {
+  const normalised = normaliseOpCode(op);
+  if (normalised === "insert" || normalised === "update" || normalised === "delete") {
+    return normalised.toUpperCase();
+  }
+  if (typeof op !== "string") return "—";
   const trimmed = op.trim();
   if (!trimmed) return "—";
-  return trimmed.length === 1 ? trimmed.toUpperCase() : trimmed.toUpperCase();
+  return trimmed.toUpperCase();
 };
 
 export const EventLog: FC<EventLogProps> = ({
@@ -318,7 +333,8 @@ export const EventLog: FC<EventLogProps> = ({
             </li>
           )}
           {visibleEvents.map(event => {
-            const op = coerceOp(event.op);
+            const opLabel = formatOpLabel(event.op);
+            const normalizedOp = normaliseOpCode(event.op);
             const offset =
               typeof event.offset === "number" ? event.offset : event.offset == null ? "—" : event.offset;
             const topic = event.topic ?? "—";
@@ -326,15 +342,15 @@ export const EventLog: FC<EventLogProps> = ({
             const pk = event.pk ?? "—";
             const txn = event.txnId ?? "";
             const ts = typeof event.tsMs === "number" ? event.tsMs : "—";
-            const normalizedOp = typeof event.op === "string" ? event.op.trim().toLowerCase() : "";
-            const replayable = normalizedOp === "c" || normalizedOp === "u" || normalizedOp === "d";
+            const replayable =
+              normalizedOp === "insert" || normalizedOp === "update" || normalizedOp === "delete";
             return (
               <li key={event.id} className="cdc-event-log__item">
                 <span className="cdc-event-log__method">
                   {event.methodLabel ?? event.methodId ?? "—"}
                 </span>
-                <span className="cdc-event-log__op" data-op={op}>
-                  {op}
+                <span className="cdc-event-log__op" data-op={opLabel}>
+                  {opLabel}
                 </span>
                 <span className="cdc-event-log__offset">offset {offset}</span>
                 <span className="cdc-event-log__topic">{topic}</span>

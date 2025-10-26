@@ -44,6 +44,23 @@ describe("EventLog", () => {
     expect(onReplay).toHaveBeenCalledWith(expect.objectContaining({ id: sampleEvent.id }));
   });
 
+  it("enables replay for verbose change verbs", () => {
+    const onReplay = vi.fn();
+    render(
+      <EventLog
+        events={[
+          { id: "evt-insert", op: "INSERT" },
+          { id: "evt-update", op: "update" },
+          { id: "evt-delete", op: "Delete" },
+        ]}
+        onReplayEvent={onReplay}
+      />,
+    );
+
+    const replayButtons = screen.getAllByRole("button", { name: "Replay" });
+    replayButtons.forEach(button => expect(button).toBeEnabled());
+  });
+
   it("disables the replay action for schema events", () => {
     const onReplay = vi.fn();
     render(<EventLog events={[{ id: "evt-schema", op: "s" }]} onReplayEvent={onReplay} />);
