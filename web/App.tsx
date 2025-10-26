@@ -33,6 +33,7 @@ import {
   serializeEventLogNdjson,
 } from "../src";
 import { parseHarnessHistoryMarkdown } from "../src";
+import { normalizeComparatorSummary } from "../src/utils/normalizeComparatorSummary";
 import { ScenarioRunner, diffLane } from "../sim";
 import harnessHistoryMd from "../docs/harness-history.md?raw";
 import {
@@ -1043,6 +1044,18 @@ export function App() {
       return acc;
     }, {} as Record<MethodOption, MethodCopy>);
   }, [preset]);
+  const methodLabelMap = useMemo(
+    () =>
+      METHOD_ORDER.reduce(
+        (acc, method) => {
+          const copy = methodCopy[method];
+          acc[method] = { label: copy.label, tooltip: copy.tooltip };
+          return acc;
+        },
+        {} as Record<MethodOption, { label: string; tooltip?: string }>,
+      ),
+    [methodCopy],
+  );
   const scenarioTagSet = useMemo(() => new Set(scenarioTags), [scenarioTags]);
   const availableScenarioTags = useMemo(
     () =>
@@ -2362,6 +2375,8 @@ export function App() {
       : null;
     if (!summaryClone) return null;
 
+    const summaryNormalized = normalizeComparatorSummary(summaryClone, methodLabelMap);
+
     const analytics = (cloneJson(snapshot.analytics) ?? []) as Array<Record<string, unknown>>;
     const diffs = (cloneJson(snapshot.diffs) ?? []) as Array<Record<string, unknown>>;
     const overlay = (cloneJson(snapshot.overlay) ?? []) as Array<Record<string, unknown>>;
@@ -2440,7 +2455,7 @@ export function App() {
       scenarioDescription: scenario.description,
       isLive: scenario.name === LIVE_SCENARIO_NAME,
       totalEvents,
-      summary: summaryClone as Record<string, unknown>,
+      summary: summaryNormalized as Record<string, unknown>,
       lanes,
       analytics,
       tags,
@@ -2448,7 +2463,7 @@ export function App() {
       diffs,
       overlay,
     };
-  }, [methodCopy, scenario]);
+  }, [methodCopy, methodLabelMap, scenario]);
 
   const laneRuntimeSummaries = useMemo(() => {
     return activeMethods.reduce((map, method) => {
