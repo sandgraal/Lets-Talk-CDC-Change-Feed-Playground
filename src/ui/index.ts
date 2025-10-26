@@ -19,3 +19,8 @@ export {
   type TelemetryQuestionKey,
   type TelemetryStorage,
 } from "./telemetry";
+  parseHarnessHistoryMarkdown,
+  type HarnessHistoryTable,
+  type HarnessHistoryRow,
+  type HarnessHistoryCell,
+} from "./harnessHistory";

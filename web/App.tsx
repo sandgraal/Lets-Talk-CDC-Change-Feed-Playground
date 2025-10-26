@@ -32,6 +32,7 @@ import {
   type EmitFn,
   serializeEventLogNdjson,
 } from "../src";
+import { parseHarnessHistoryMarkdown } from "../src";
 import { ScenarioRunner, diffLane } from "../sim";
 import harnessHistoryMd from "../docs/harness-history.md?raw";
 import {
@@ -1183,7 +1184,10 @@ export function App() {
       window.removeEventListener("cdc:scenario-filter-request" as string, handler);
     };
   }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
-  const harnessHistoryContent = useMemo(() => harnessHistoryMd.trim(), []);
+  const harnessHistory = useMemo(
+    () => parseHarnessHistoryMarkdown(harnessHistoryMd),
+    [],
+  );
   const ensureLaneStorage = useCallback((method: MethodOption) => {
     let storage = laneStorageRef.current[method];
     if (!storage) {
@@ -3402,11 +3406,45 @@ export function App() {
         />
       )}
 
-      {harnessHistoryContent && (
+      {harnessHistory && (harnessHistory.rows.length > 0 || harnessHistory.placeholder) && (
         <section className="sim-shell__harness-history" aria-label="Harness nightly history">
           <details>
             <summary>Harness nightly history</summary>
-            <pre>{harnessHistoryContent}</pre>
+            {harnessHistory.rows.length > 0 ? (
+              <div className="sim-shell__harness-history-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      {harnessHistory.headers.map(header => (
+                        <th key={header}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {harnessHistory.rows.map((row, rowIndex) => (
+                      <tr key={`harness-row-${rowIndex}`}>
+                        {row.map((cell, cellIndex) => {
+                          const text = cell.text || "—";
+                          const link = cell.href ? (
+                            <a href={cell.href} target="_blank" rel="noreferrer noopener">
+                              {text}
+                            </a>
+                          ) : (
+                            text
+                          );
+                          const content = cell.emphasis ? <em>{link}</em> : link;
+                          return <td key={`harness-cell-${rowIndex}-${cellIndex}`}>{content}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="sim-shell__harness-history-empty">
+                {harnessHistory.placeholder ?? "No harness runs captured yet."}
+              </p>
+            )}
           </details>
         </section>
       )}
