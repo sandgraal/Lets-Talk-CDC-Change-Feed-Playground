@@ -9,3 +9,9 @@ export {
   type EventLogExportItem,
   type EventLogExportRecord,
 } from "./eventLogExport";
+export {
+  parseHarnessHistoryMarkdown,
+  type HarnessHistoryTable,
+  type HarnessHistoryRow,
+  type HarnessHistoryCell,
+} from "./harnessHistory";

@@ -1481,3 +1481,74 @@
    opacity: 0.55;
    cursor: not-allowed;
  }
+
+.sim-shell__harness-history {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.85);
+  padding: 1rem 1.25rem;
+}
+
+.sim-shell__harness-history details {
+  display: block;
+}
+
+.sim-shell__harness-history summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.sim-shell__harness-history summary:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+}
+
+.sim-shell__harness-history-table-wrapper {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.sim-shell__harness-history table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 540px;
+}
+
+.sim-shell__harness-history th,
+.sim-shell__harness-history td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 0.85rem;
+  color: #1f2937;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sim-shell__harness-history tbody tr:last-of-type th,
+.sim-shell__harness-history tbody tr:last-of-type td {
+  border-bottom: none;
+}
+
+.sim-shell__harness-history th {
+  font-weight: 600;
+  color: #0f172a;
+  background: rgba(226, 232, 240, 0.6);
+}
+
+.sim-shell__harness-history td a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.sim-shell__harness-history td a:hover,
+.sim-shell__harness-history td a:focus-visible {
+  text-decoration: underline;
+}
+
+.sim-shell__harness-history-empty {
+  margin: 0.85rem 0 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
