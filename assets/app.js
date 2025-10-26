@@ -523,6 +523,28 @@ const els = {
   inspectorReplay: document.getElementById("eventReplay"),
 };
 
+function ensureOnboardingElements() {
+  if (typeof document === "undefined") return;
+  if (!els.onboardingOverlay) {
+    els.onboardingOverlay = document.getElementById("onboardingOverlay");
+  }
+  if (!els.onboardingButton) {
+    els.onboardingButton = document.getElementById("btnOnboarding");
+  }
+  if (!els.onboardingClose) {
+    els.onboardingClose = document.getElementById("onboardingClose");
+  }
+  if (!els.onboardingDismiss) {
+    els.onboardingDismiss = document.getElementById("onboardingDismiss");
+  }
+  if (!els.onboardingStart) {
+    els.onboardingStart = document.getElementById("onboardingStart");
+  }
+  if (!els.onboardingEasterEgg) {
+    els.onboardingEasterEgg = document.getElementById("onboardingEasterEgg");
+  }
+}
+
 if (typeof document !== "undefined") {
   document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
   document.getElementById("btnReset")?.addEventListener("click", () => {
@@ -1086,6 +1108,7 @@ function deriveOpsFromEvents(events) {
 }
 
 function hideOnboarding(markSeen = false) {
+  ensureOnboardingElements();
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = true;
   document.body.classList.remove("is-onboarding");
@@ -1093,6 +1116,7 @@ function hideOnboarding(markSeen = false) {
 }
 
 function showOnboarding() {
+  ensureOnboardingElements();
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = false;
   document.body.classList.add("is-onboarding");
@@ -1114,6 +1138,7 @@ function showOnboarding() {
 }
 
 function shouldShowOnboarding() {
+  ensureOnboardingElements();
   if (!els.onboardingOverlay) return false;
   if (uiState.pendingShareId) return false;
 
@@ -1193,6 +1218,7 @@ function resetWorkspaceState(loadOffice) {
 }
 
 function startFromScratch() {
+  ensureOnboardingElements();
   const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
   setOfficeSchemaPreference(loadOffice);
 
@@ -4205,6 +4231,7 @@ function quickstartEmitEvent() {
 }
 
 function bindUiHandlers() {
+  ensureOnboardingElements();
   if (typeof document !== "undefined") {
     document.addEventListener("keydown", handleMegadeskShortcut);
   }
