@@ -1506,6 +1506,9 @@ const load   = () => {
     state.schemaVersion = Number(s.schemaVersion) || 1;
     state.scenarioId = s.scenarioId || null;
     state.remoteId = s.remoteId || null;
+    if (!state.scenarioId && state.schema.length && isOfficeSchemaActive()) {
+      state.scenarioId = "default";
+    }
   } catch { /* ignore */ }
 };
 const loadTemplateFilter = () => {
