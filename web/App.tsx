@@ -33,6 +33,7 @@ import {
   serializeEventLogNdjson,
 } from "../src";
 import { parseHarnessHistoryMarkdown } from "../src";
+import { createSafeStorage, type SafeStorage, type StorageLike } from "../src";
 import { normalizeComparatorSummary } from "../src/utils/normalizeComparatorSummary";
 import { ScenarioRunner, diffLane } from "../sim";
 import harnessHistoryMd from "../docs/harness-history.md?raw";
@@ -110,6 +111,29 @@ const SCHEMA_DEMO_COLUMN: SchemaColumn = {
   name: "priority_flag",
   type: "bool",
 };
+
+const resolveBrowserStorage = (): StorageLike | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+const ensureSafeLocalStorage = (() => {
+  let safeStorage: SafeStorage | null = null;
+  let baseStorage: StorageLike | null = null;
+
+  return (): SafeStorage => {
+    const nextBase = resolveBrowserStorage();
+    if (!safeStorage || nextBase !== baseStorage) {
+      safeStorage = createSafeStorage(nextBase);
+      baseStorage = nextBase;
+    }
+    return safeStorage;
+  };
+})();
 
 function computeTriggerWriteAmplification(
   stats: Partial<Record<MethodOption, LaneStats>>,
@@ -800,7 +824,8 @@ function sanitizeMethodConfig(partial?: PartialMethodConfigMap): MethodConfigMap
 function loadPreferences(): ComparatorPreferences | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(PREFERENCES_KEY);
+    const storage = ensureSafeLocalStorage();
+    const raw = storage.getItem(PREFERENCES_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return {
@@ -834,7 +859,8 @@ function loadPreferences(): ComparatorPreferences | null {
 function savePreferences(prefs: ComparatorPreferences) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+    const storage = ensureSafeLocalStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
   } catch (err) {
     console.warn("Comparator prefs save failed", err);
   }
@@ -935,6 +961,7 @@ export function App() {
     storedPrefsRef.current = loadPreferences();
   }
   const storedPrefs = storedPrefsRef.current || undefined;
+  const safeLocalStorage = useMemo(() => ensureSafeLocalStorage(), []);
   const initialActiveMethods = sanitizeActiveMethods(storedPrefs?.activeMethods);
   const initialMethodConfig = sanitizeMethodConfig(storedPrefs?.methodConfig);
   const initialPresetId: VendorPresetId = storedPrefs?.presetId && isVendorPresetId(storedPrefs.presetId)
@@ -951,8 +978,8 @@ export function App() {
     if (typeof window === "undefined") {
       return { ...DEFAULT_SCENARIO_FILTER };
     }
-    return loadScenarioFilterDetail(window.localStorage);
-  }, []);
+    return loadScenarioFilterDetail(safeLocalStorage);
+  }, [safeLocalStorage]);
 
   const [liveScenario, setLiveScenario] = useState<ShellScenario | null>(null);
   const [scenarioId, setScenarioId] = useState<string>(
@@ -1069,9 +1096,9 @@ export function App() {
     if (typeof window === "undefined") return;
     saveScenarioFilterDetail(
       { query: scenarioFilter, tags: scenarioTags },
-      window.localStorage,
+      safeLocalStorage,
     );
-  }, [scenarioFilter, scenarioTags]);
+  }, [scenarioFilter, scenarioTags, safeLocalStorage]);
   const broadcastScenarioFilter = useCallback((query: string, tags: string[]) => {
     if (typeof window === "undefined") return;
     const detail = normaliseScenarioFilterDetail({ query, tags });
