@@ -53,6 +53,100 @@ const STORAGE_KEYS = Object.freeze({
   officeOptIn: "cdc_playground_office_opt_in_v1",
 });
 
+function createSafeStorage() {
+  const memory = new Map();
+  const fallback = {
+    available: false,
+    get(key) {
+      return memory.has(key) ? memory.get(key) ?? null : null;
+    },
+    set(key, value) {
+      const stringValue = typeof value === "string" ? value : String(value);
+      memory.set(key, stringValue);
+    },
+    remove(key) {
+      memory.delete(key);
+    },
+    clear() {
+      memory.clear();
+    },
+  };
+
+  const globalStorage = (() => {
+    try {
+      if (typeof window !== "undefined") {
+        try {
+          return window.localStorage;
+        } catch {
+          return null;
+        }
+      }
+      if (typeof globalThis !== "undefined") {
+        try {
+          return globalThis.localStorage;
+        } catch {
+          return null;
+        }
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  })();
+
+  if (!globalStorage) return fallback;
+
+  try {
+    const probe = "__cdc_storage_probe__";
+    globalStorage.setItem(probe, "1");
+    globalStorage.removeItem(probe);
+  } catch {
+    return fallback;
+  }
+
+  return {
+    available: true,
+    get(key) {
+      try {
+        const value = globalStorage.getItem(key);
+        if (value === null && memory.has(key)) {
+          return memory.get(key) ?? null;
+        }
+        return value;
+      } catch {
+        return fallback.get(key);
+      }
+    },
+    set(key, value) {
+      const stringValue = typeof value === "string" ? value : String(value);
+      try {
+        globalStorage.setItem(key, stringValue);
+        memory.delete(key);
+      } catch {
+        fallback.set(key, stringValue);
+      }
+    },
+    remove(key) {
+      try {
+        globalStorage.removeItem(key);
+        memory.delete(key);
+      } catch {
+        fallback.remove(key);
+      }
+    },
+    clear() {
+      try {
+        globalStorage.clear();
+        memory.clear();
+      } catch {
+        fallback.clear();
+      }
+    },
+  };
+}
+
+const storage = createSafeStorage();
+
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
 const SCHEMA_DEMO_COLUMN = { name: "priority_flag", type: "boolean" };
 
@@ -548,10 +642,10 @@ function ensureOnboardingElements() {
 if (typeof document !== "undefined") {
   document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
   document.getElementById("btnReset")?.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEYS.state);
-    localStorage.removeItem(STORAGE_KEYS.lastTemplate);
-    localStorage.removeItem(STORAGE_KEYS.onboarding);
-    localStorage.removeItem(STORAGE_KEYS.officeOptIn);
+    storage.remove(STORAGE_KEYS.state);
+    storage.remove(STORAGE_KEYS.lastTemplate);
+    storage.remove(STORAGE_KEYS.onboarding);
+    storage.remove(STORAGE_KEYS.officeOptIn);
     location.reload();
   });
 }
@@ -1112,7 +1206,7 @@ function hideOnboarding(markSeen = false) {
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = true;
   document.body.classList.remove("is-onboarding");
-  if (markSeen) localStorage.setItem(STORAGE_KEYS.onboarding, "seen");
+  if (markSeen) storage.set(STORAGE_KEYS.onboarding, "seen");
 }
 
 function showOnboarding() {
@@ -1142,7 +1236,7 @@ function shouldShowOnboarding() {
   if (!els.onboardingOverlay) return false;
   if (uiState.pendingShareId) return false;
 
-  const seen = localStorage.getItem(STORAGE_KEYS.onboarding);
+  const seen = storage.get(STORAGE_KEYS.onboarding);
   if (seen) return false;
 
   const scenarioEligible = state.scenarioId === "default" || !state.schema.length;
@@ -1168,8 +1262,8 @@ function applyScenarioTemplate(template, options = {}) {
   state.scenarioId = template.id;
   state.remoteId = null;
 
-  localStorage.setItem(STORAGE_KEYS.lastTemplate, template.id);
-  if (options.markSeen !== false) localStorage.setItem(STORAGE_KEYS.onboarding, "seen");
+  storage.set(STORAGE_KEYS.lastTemplate, template.id);
+  if (options.markSeen !== false) storage.set(STORAGE_KEYS.onboarding, "seen");
 
   if (state.events.length) {
     uiState.selectedEventIndex = state.events.length - 1;
@@ -1224,7 +1318,7 @@ function startFromScratch() {
 
   resetWorkspaceState(loadOffice);
 
-  localStorage.removeItem(STORAGE_KEYS.lastTemplate);
+  storage.remove(STORAGE_KEYS.lastTemplate);
   if (els.onboardingEasterEgg) els.onboardingEasterEgg.checked = false;
 
   save();
@@ -1416,7 +1510,7 @@ async function maybeHydrateSharedScenario() {
     state.remoteId = doc.$id;
 
     if (state.events.length) selectLastEvent(); else resetEventSelection();
-    if (state.scenarioId) localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
+    if (state.scenarioId) storage.set(STORAGE_KEYS.lastTemplate, state.scenarioId);
     if (doc.comparator?.preferences) {
       applyComparatorPreferences(doc.comparator.preferences);
     }
@@ -1474,9 +1568,9 @@ const comparatorState = {
 };
 const save   = () => {
   try {
-    localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
+    storage.set(STORAGE_KEYS.state, JSON.stringify(state));
   } catch (err) {
-    console.warn("Save to localStorage failed", err?.message || err);
+    console.warn("Save to storage failed", err?.message || err);
   }
 };
 
@@ -1497,7 +1591,7 @@ function trackEvent(event, payload = {}, context = {}) {
 }
 const load   = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.state);
+    const raw = storage.get(STORAGE_KEYS.state);
     if (!raw) return;
     const s = JSON.parse(raw);
     state.schema = s.schema || [];
@@ -1512,31 +1606,20 @@ const load   = () => {
   } catch { /* ignore */ }
 };
 const loadTemplateFilter = () => {
-  try {
-    uiState.scenarioFilter = localStorage.getItem(STORAGE_KEYS.scenarioFilter) || "";
-  } catch {
-    uiState.scenarioFilter = "";
-  }
+  const stored = storage.get(STORAGE_KEYS.scenarioFilter);
+  uiState.scenarioFilter = stored || "";
 };
 const loadOfficeSchemaPreference = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.officeOptIn);
-    if (raw === null) {
-      officeSchemaOptIn = true;
-      return;
-    }
-    officeSchemaOptIn = raw === "true";
-  } catch {
+  const raw = storage.get(STORAGE_KEYS.officeOptIn);
+  if (raw === null) {
     officeSchemaOptIn = true;
+    return;
   }
+  officeSchemaOptIn = raw === "true";
 };
 const setOfficeSchemaPreference = (enabled) => {
   officeSchemaOptIn = Boolean(enabled);
-  try {
-    localStorage.setItem(STORAGE_KEYS.officeOptIn, officeSchemaOptIn ? "true" : "false");
-  } catch {
-    // ignore storage failures
-  }
+  storage.set(STORAGE_KEYS.officeOptIn, officeSchemaOptIn ? "true" : "false");
 };
 const flashButton = (btn, msg) => {
   if (!btn) return;
@@ -1551,7 +1634,7 @@ const flashButton = (btn, msg) => {
 
 const saveTemplateFilter = (value) => {
   try {
-    localStorage.setItem(STORAGE_KEYS.scenarioFilter, value);
+    storage.set(STORAGE_KEYS.scenarioFilter, value);
   } catch (err) {
     console.warn("Save scenario filter failed", err?.message || err);
   }
@@ -1584,9 +1667,8 @@ function highlightJson(json = "") {
 }
 
 function loadComparatorPreferences() {
-  if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(COMPARATOR_PREFS_KEY);
+    const raw = storage.get(COMPARATOR_PREFS_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (err) {
@@ -1596,14 +1678,15 @@ function loadComparatorPreferences() {
 }
 
 function applyComparatorPreferences(prefs) {
-  if (typeof window === "undefined") return;
   try {
     if (prefs) {
-      window.localStorage.setItem(COMPARATOR_PREFS_KEY, JSON.stringify(prefs));
+      storage.set(COMPARATOR_PREFS_KEY, JSON.stringify(prefs));
     } else {
-      window.localStorage.removeItem(COMPARATOR_PREFS_KEY);
+      storage.remove(COMPARATOR_PREFS_KEY);
     }
-    window.dispatchEvent(new CustomEvent("cdc:comparator-preferences-set", { detail: prefs || null }));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cdc:comparator-preferences-set", { detail: prefs || null }));
+    }
   } catch (err) {
     console.warn("Comparator prefs apply failed", err);
   }
@@ -4156,7 +4239,7 @@ function importScenario(file) {
       state.scenarioId = scenarioPayload.scenarioId || null;
       state.remoteId = scenarioPayload.remoteId || null;
       if (state.scenarioId) {
-        localStorage.setItem(STORAGE_KEYS.lastTemplate, state.scenarioId);
+        storage.set(STORAGE_KEYS.lastTemplate, state.scenarioId);
       }
       if (state.events.length) selectLastEvent(); else resetEventSelection();
       if (scenarioPayload.comparator?.preferences) {
@@ -4427,7 +4510,7 @@ async function main() {
   if (state.events.length) selectLastEvent();
   let hydratedFromTemplate = false;
   if (!state.schema.length) {
-    const rememberedId = localStorage.getItem(STORAGE_KEYS.lastTemplate);
+    const rememberedId = storage.get(STORAGE_KEYS.lastTemplate);
     const remembered = getTemplateById(rememberedId);
     if (remembered) {
       applyScenarioTemplate(remembered, { focusStep: "events", markSeen: false });
@@ -4468,7 +4551,7 @@ async function main() {
   broadcastComparatorState();
   setShareControlsEnabled(false);
 
-  const shouldShowOnboardingNow = !localStorage.getItem(STORAGE_KEYS.onboarding)
+  const shouldShowOnboardingNow = !storage.get(STORAGE_KEYS.onboarding)
     && (state.scenarioId === "default" || !state.schema.length)
     && state.rows.length === 0
     && state.events.length === 0;
