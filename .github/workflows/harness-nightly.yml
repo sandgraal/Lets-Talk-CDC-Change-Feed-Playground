@@ -33,23 +33,3 @@ jobs:
         with:
           name: harness-report
           path: artifacts
-      - name: Notify Slack
-        if: always()
-        uses: slackapi/slack-github-action@v1.27.0
-        with:
-          payload: |
-            {
-              "text": "Harness Nightly run *${{ github.run_number }}* for `${{ github.ref_name }}` ${JOB_STATUS} | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>",
-              "attachments": [
-                {
-                  "color": "${{ job.status == 'success' && '#15803d' || '#b91c1c' }}",
-                  "fields": [
-                    { "title": "Status", "value": "${JOB_STATUS}", "short": true },
-                    { "title": "Scenario", "value": "orders-transactions", "short": true }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          JOB_STATUS: ${{ job.status }}
