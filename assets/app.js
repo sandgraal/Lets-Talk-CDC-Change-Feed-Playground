@@ -147,6 +147,15 @@ function createSafeStorage() {
 
 const storage = createSafeStorage();
 
+if (typeof window !== "undefined") {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("resetOnboarding")) {
+      storage.remove(STORAGE_KEYS.onboarding);
+    }
+  } catch { /* ignore */ }
+}
+
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
 const SCHEMA_DEMO_COLUMN = { name: "priority_flag", type: "boolean" };
 

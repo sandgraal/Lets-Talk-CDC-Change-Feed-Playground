@@ -4,7 +4,9 @@ import path from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const indexUrl = pathToFileURL(path.resolve(__dirname, "../../index.html")).href;
+const indexFileUrl = pathToFileURL(path.resolve(__dirname, "../../index.html"));
+indexFileUrl.searchParams.set("resetOnboarding", "1");
+const indexUrl = indexFileUrl.href;
 
 const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test.describe;
 
