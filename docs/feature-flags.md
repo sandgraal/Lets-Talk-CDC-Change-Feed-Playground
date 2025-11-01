@@ -1,6 +1,6 @@
 # Feature Flag Matrix
 
-This matrix tracks the major feature flags used in the CDC playground, summarising ownership, intent, defaults, and rollout sequencing so teams can coordinate launches and support.
+This matrix tracks the major feature flags used in the CDC playground, summarising ownership, intent, defaults, and rollout sequencing so teams can coordinate launches and support. Outstanding governance work is tracked in [docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md).
 
 | Flag | Owner | Purpose | Default State | Rollout Plan |
 | --- | --- | --- | --- | --- |

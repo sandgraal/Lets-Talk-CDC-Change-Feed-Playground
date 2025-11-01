@@ -1,5 +1,7 @@
 # Launch Readiness Plan
 
+Follow the tracked tasks in [docs/issues/comparator-v2-rollout.md](./issues/comparator-v2-rollout.md) to complete the staged rollout.
+
 ## Feature flag rollout
 1. **Internal dogfood** (`comparator_v2` enabled for team accounts only).
 2. **Beta cohort** (handful of customers opted in via support macros).

@@ -57,7 +57,7 @@ pgsql
 
 ### Storage integration (Deferred)
 - **Status**: Deferred until external dependencies are ready.
-- **Remaining work**: implement the domain `storage.ts` helper to persist source/destination tables between refreshes and add the optional Appwrite-backed persistence layer/configuration hooks.
+- **Remaining work**: implement the domain `storage.ts` helper to persist source/destination tables between refreshes and add the optional Appwrite-backed persistence layer/configuration hooks. Track via [docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md).
 - **Prerequisites/blockers**:
   - Confirm the data model and interface for the storage helper so it matches upcoming engine/state machine expectations.
   - Provision an Appwrite project (API keys, self-hosted endpoint) and decide on authentication + data retention policies for demo data.
@@ -146,7 +146,7 @@ export type Metrics = {
 
 6. **Trigger-based CDC mode (P1)**
    - Adapter skeleton implemented; emits events with configurable trigger overhead and increments write amplification metric.
-   - Next: surface write amplification in UI and integrate into guided walkthrough.
+   - Next: surface write amplification in UI and integrate into guided walkthrough. See [docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md).
 
 7. **Schema change demo (P1)**
    - ✅ Buttons: Add Column, Drop Column on Source.
@@ -227,7 +227,7 @@ export type Metrics = {
 ## Rollout Plan
 - Feature flags: `ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_trigger_mode`, `ff_schema_demo`, `ff_multitable`, `ff_metrics`, `ff_walkthrough`.
 - Release order: P0 bundle (event bus, pause/resume, query slider, CRUD fix, EventLog) -> P1 (trigger mode, schema demo, multitable, metrics, walkthrough, presets) -> P2 (generator, replay, second consumer).
-- Track owners, default states, and activation sequencing in [`docs/feature-flags.md`](./feature-flags.md).
+- Track owners, default states, and activation sequencing in [`docs/feature-flags.md`](./feature-flags.md); open governance tasks live in [docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md).
 - Add `CHANGELOG.md`.
 
 ## Acceptance Criteria (summarized)
