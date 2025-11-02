@@ -2141,12 +2141,13 @@ export function App() {
   const toggleMethod = useCallback(
     (method: MethodOption) => {
       setActiveMethods(prev => {
-        if (!effectiveMethodOrder.includes(method)) return prev;
+        // Only prevent adding methods not in effectiveMethodOrder; always allow removal
         const minLanes = Math.min(MIN_LANES, effectiveMethodOrder.length);
         if (prev.includes(method)) {
           if (prev.length <= minLanes) return prev;
           return prev.filter(item => item !== method);
         }
+        if (!effectiveMethodOrder.includes(method)) return prev;
         const next = [...prev, method];
         return effectiveMethodOrder.filter(item => next.includes(item));
       });
