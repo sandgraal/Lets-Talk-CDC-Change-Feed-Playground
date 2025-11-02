@@ -1361,6 +1361,8 @@ export function App() {
   useEffect(() => {
     setActiveMethods(prev => {
       const sanitized = sanitizeActiveMethods(prev, effectiveMethodOrder);
+      // sanitizeActiveMethods always returns arrays ordered by effectiveMethodOrder,
+      // so we can use index-based comparison to check for equality
       if (sanitized.length === prev.length && sanitized.every((method, index) => method === prev[index])) {
         return prev;
       }
