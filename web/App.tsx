@@ -975,7 +975,7 @@ export function App() {
   }
   const storedPrefs = storedPrefsRef.current || undefined;
   const safeLocalStorage = useMemo(() => ensureSafeLocalStorage(), []);
-  const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
+  const featureFlags = useMemo<Set<string>>(() => readFeatureFlags(), []);
   const triggerModeEnabled = featureFlags.size === 0 || featureFlags.has("ff_trigger_mode");
   const schemaDemoEnabled = featureFlags.size === 0 || featureFlags.has("ff_schema_demo");
   const multiTableEnabled = featureFlags.size === 0 || featureFlags.has("ff_multitable");
