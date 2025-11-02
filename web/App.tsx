@@ -48,7 +48,12 @@ type FeatureFlagKey =
   | "ff_pause_resume"
   | "ff_query_slider"
   | "ff_event_log"
-  | "ff_crud_fix";
+  | "ff_crud_fix"
+  | "ff_trigger_mode"
+  | "ff_schema_demo"
+  | "ff_multitable"
+  | "ff_metrics"
+  | "ff_walkthrough";
 
 type FeatureFlagApi = {
   has?: (flag: string) => boolean;
@@ -744,15 +749,20 @@ function sanitizeGeneratorRate(value: unknown, fallback = DEFAULT_GENERATOR_RATE
   return clamped;
 }
 
-function sanitizeActiveMethods(methods: unknown): MethodOption[] {
-  if (!Array.isArray(methods)) return [...METHOD_ORDER];
+function sanitizeActiveMethods(
+  methods: unknown,
+  order: readonly MethodOption[] = METHOD_ORDER,
+): MethodOption[] {
+  const fallback = [...order];
+  if (!Array.isArray(methods)) return fallback;
   const unique: MethodOption[] = [];
-  METHOD_ORDER.forEach(method => {
+  order.forEach(method => {
     if ((methods as unknown[]).includes(method) && !unique.includes(method)) {
       unique.push(method);
     }
   });
-  return unique.length >= MIN_LANES ? unique : [...METHOD_ORDER];
+  const min = Math.min(MIN_LANES, order.length);
+  return unique.length >= min ? unique : fallback;
 }
 
 function sanitizeEventOps(ops: unknown): Set<EventOp> {
@@ -770,8 +780,11 @@ function sanitizeEventOps(ops: unknown): Set<EventOp> {
   return active.length ? new Set(active) : new Set(defaults);
 }
 
-function isMethodOption(value: unknown): value is MethodOption {
-  return typeof value === "string" && (METHOD_ORDER as readonly string[]).includes(value as MethodOption);
+function isMethodOption(
+  value: unknown,
+  order: readonly MethodOption[] = METHOD_ORDER,
+): value is MethodOption {
+  return typeof value === "string" && (order as readonly string[]).includes(value as MethodOption);
 }
 
 function sanitizeMethodConfig(partial?: PartialMethodConfigMap): MethodConfigMap {
@@ -962,12 +975,28 @@ export function App() {
   }
   const storedPrefs = storedPrefsRef.current || undefined;
   const safeLocalStorage = useMemo(() => ensureSafeLocalStorage(), []);
-  const initialActiveMethods = sanitizeActiveMethods(storedPrefs?.activeMethods);
+  const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
+  const triggerModeEnabled = featureFlags.size === 0 || featureFlags.has("ff_trigger_mode");
+  const schemaDemoEnabled = featureFlags.size === 0 || featureFlags.has("ff_schema_demo");
+  const multiTableEnabled = featureFlags.size === 0 || featureFlags.has("ff_multitable");
+  const metricsEnabled = featureFlags.size === 0 || featureFlags.has("ff_metrics");
+  const walkthroughEnabled = featureFlags.size === 0 || featureFlags.has("ff_walkthrough");
+  const effectiveMethodOrder = useMemo<MethodOption[]>(
+    () =>
+      triggerModeEnabled
+        ? [...METHOD_ORDER]
+        : METHOD_ORDER.filter((method): method is MethodOption => method !== "trigger"),
+    [triggerModeEnabled],
+  );
+  const initialActiveMethods = useMemo(
+    () => sanitizeActiveMethods(storedPrefs?.activeMethods, effectiveMethodOrder),
+    [effectiveMethodOrder, storedPrefs?.activeMethods],
+  );
   const initialMethodConfig = sanitizeMethodConfig(storedPrefs?.methodConfig);
   const initialPresetId: VendorPresetId = storedPrefs?.presetId && isVendorPresetId(storedPrefs.presetId)
     ? storedPrefs.presetId
     : DEFAULT_PRESET_ID;
-  const initialEventLogMethod = isMethodOption(storedPrefs?.eventLogMethod)
+  const initialEventLogMethod = isMethodOption(storedPrefs?.eventLogMethod, effectiveMethodOrder)
     ? (storedPrefs?.eventLogMethod as MethodOption)
     : null;
   const initialEventLogOp =
@@ -991,14 +1020,12 @@ export function App() {
   const [scenarioTags, setScenarioTags] = useState<string[]>(
     () => initialScenarioFilterDetail.tags,
   );
-  const [activeMethods, setActiveMethods] = useState<MethodOption[]>(
-    () => initialActiveMethods,
+  const [activeMethods, setActiveMethods] = useState<MethodOption[]>(() => initialActiveMethods);
+  const [laneEvents, setLaneEvents] = useState<Partial<Record<MethodOption, CdcEvent[]>>>(
+    () => emptyEventMap<CdcEvent>(initialActiveMethods),
   );
-  const [laneEvents, setLaneEvents] = useState<Partial<Record<MethodOption, CdcEvent[]>>>(() =>
-    emptyEventMap<CdcEvent>(initialActiveMethods),
-  );
-  const [busEvents, setBusEvents] = useState<Partial<Record<MethodOption, BusEvent[]>>>(() =>
-    emptyEventMap<BusEvent>(initialActiveMethods),
+  const [busEvents, setBusEvents] = useState<Partial<Record<MethodOption, BusEvent[]>>>(
+    () => emptyEventMap<BusEvent>(initialActiveMethods),
   );
   const [laneStats, setLaneStats] = useState<Partial<Record<MethodOption, LaneStats>>>(
     () => ({}),
@@ -1029,7 +1056,6 @@ export function App() {
   const [generatorRate, setGeneratorRate] = useState(() =>
     sanitizeGeneratorRate(storedPrefs?.generatorRate, DEFAULT_GENERATOR_RATE),
   );
-  const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const laneRuntimeRef = useRef<Partial<Record<MethodOption, LaneRuntime>>>({});
   const pendingTxnRef = useRef<Partial<Record<MethodOption, EngineEvent[]>>>({});
   const laneStorageRef = useRef<Partial<Record<MethodOption, InMemoryTableStorage>>>({});
@@ -1120,7 +1146,7 @@ export function App() {
       }
 
       if (prefs.activeMethods) {
-        setActiveMethods(sanitizeActiveMethods(prefs.activeMethods));
+        setActiveMethods(sanitizeActiveMethods(prefs.activeMethods, effectiveMethodOrder));
       }
 
       if (prefs.methodConfig) {
@@ -1160,7 +1186,7 @@ export function App() {
       }
 
       if ("eventLogMethod" in prefs) {
-        const methodValue = isMethodOption(prefs.eventLogMethod)
+        const methodValue = isMethodOption(prefs.eventLogMethod, effectiveMethodOrder)
           ? (prefs.eventLogMethod as MethodOption)
           : null;
         setEventLogMethod(methodValue);
@@ -1196,6 +1222,7 @@ export function App() {
       }
     },
     [
+      effectiveMethodOrder,
       setActiveMethods,
       setMethodConfig,
       setScenarioId,
@@ -1331,6 +1358,20 @@ export function App() {
   const pauseResumeEnabled = hasFeatureFlag("ff_pause_resume");
   const querySliderEnabled = hasFeatureFlag("ff_query_slider");
   const eventLogEnabled = hasFeatureFlag("ff_event_log");
+  useEffect(() => {
+    setActiveMethods(prev => {
+      const sanitized = sanitizeActiveMethods(prev, effectiveMethodOrder);
+      if (sanitized.length === prev.length && sanitized.every((method, index) => method === prev[index])) {
+        return prev;
+      }
+      return sanitized;
+    });
+  }, [effectiveMethodOrder]);
+  useEffect(() => {
+    if (!multiTableEnabled && applyOnCommit) {
+      setApplyOnCommit(false);
+    }
+  }, [applyOnCommit, multiTableEnabled]);
   const eventOpsArray = useMemo(() => Array.from(activeEventOps).sort(), [activeEventOps]);
   const eventOpsSet = useMemo(() => new Set(eventOpsArray), [eventOpsArray]);
   const eventSearchTerms = useMemo(
@@ -1497,12 +1538,12 @@ export function App() {
   );
   const eventLogFilterOptions = useMemo(
     () => ({
-      methods: METHOD_ORDER.map(method => ({ id: method, label: methodCopy[method].label })),
+      methods: effectiveMethodOrder.map(method => ({ id: method, label: methodCopy[method].label })),
       ops: availableEventLogOps,
       tables: availableEventLogTables,
       txns: availableEventLogTxns,
     }),
-    [availableEventLogTables, availableEventLogTxns, methodCopy],
+    [availableEventLogTables, availableEventLogTxns, effectiveMethodOrder, methodCopy],
   );
   const laneDestinations = useMemo(() => {
     const snapshots = new Map<MethodOption, LaneDestinationSnapshot>();
@@ -2097,16 +2138,21 @@ export function App() {
     };
   }, [activeMethods, scenario, stopLoop, methodConfig, updateLaneSnapshot, handleProduced, initializeGeneratorState]);
 
-  const toggleMethod = useCallback((method: MethodOption) => {
-    setActiveMethods(prev => {
-      if (prev.includes(method)) {
-        if (prev.length <= MIN_LANES) return prev;
-        return prev.filter(item => item !== method);
-      }
-      const next = [...prev, method];
-      return METHOD_ORDER.filter(item => next.includes(item));
-    });
-  }, []);
+  const toggleMethod = useCallback(
+    (method: MethodOption) => {
+      setActiveMethods(prev => {
+        if (!effectiveMethodOrder.includes(method)) return prev;
+        const minLanes = Math.min(MIN_LANES, effectiveMethodOrder.length);
+        if (prev.includes(method)) {
+          if (prev.length <= minLanes) return prev;
+          return prev.filter(item => item !== method);
+        }
+        const next = [...prev, method];
+        return effectiveMethodOrder.filter(item => next.includes(item));
+      });
+    },
+    [effectiveMethodOrder],
+  );
 
   const toggleEventOp = useCallback((op: EventOp) => {
     setActiveEventOps(prev => {
@@ -2586,28 +2632,31 @@ export function App() {
 
   const metricsDashboardLanes = useMemo(
     () =>
-    activeMethods.map(method => {
-      const runtimeSummary = laneRuntimeSummaries.get(method);
-      const mix = analyticsByMethod.get(method);
-      return {
-        id: method,
-        label: methodCopy[method].label,
-        tooltip: methodCopy[method].tooltip,
-        produced: runtimeSummary?.produced ?? 0,
-        consumed: runtimeSummary?.consumed ?? 0,
-        backlog: runtimeSummary?.backlog ?? 0,
-        lagP50: runtimeSummary?.lagMsP50 ?? 0,
-        lagP95: runtimeSummary?.lagMsP95 ?? 0,
-        missedDeletes: runtimeSummary?.missedDeletes,
-        writeAmplification: runtimeSummary?.writeAmplification,
-        snapshotRows: runtimeSummary?.snapshotRows,
-        inserts: mix?.inserts ?? 0,
-        updates: mix?.updates ?? 0,
-        deletes: mix?.deletes ?? 0,
-        schemaChanges: mix?.schemaChanges ?? 0,
-      };
-    }),
-  [activeMethods, analyticsByMethod, laneRuntimeSummaries, methodCopy]);
+      metricsEnabled
+        ? activeMethods.map(method => {
+            const runtimeSummary = laneRuntimeSummaries.get(method);
+            const mix = analyticsByMethod.get(method);
+            return {
+              id: method,
+              label: methodCopy[method].label,
+              tooltip: methodCopy[method].tooltip,
+              produced: runtimeSummary?.produced ?? 0,
+              consumed: runtimeSummary?.consumed ?? 0,
+              backlog: runtimeSummary?.backlog ?? 0,
+              lagP50: runtimeSummary?.lagMsP50 ?? 0,
+              lagP95: runtimeSummary?.lagMsP95 ?? 0,
+              missedDeletes: runtimeSummary?.missedDeletes,
+              writeAmplification: runtimeSummary?.writeAmplification,
+              snapshotRows: runtimeSummary?.snapshotRows,
+              inserts: mix?.inserts ?? 0,
+              updates: mix?.updates ?? 0,
+              deletes: mix?.deletes ?? 0,
+              schemaChanges: mix?.schemaChanges ?? 0,
+            };
+          })
+        : [],
+    [activeMethods, analyticsByMethod, laneRuntimeSummaries, metricsEnabled, methodCopy],
+  );
 
   const snapshotSummaryList = useMemo(
     () =>
@@ -2827,7 +2876,7 @@ export function App() {
 
   const handleSchemaChange = useCallback(
     (action: SchemaDemoAction) => {
-      if (!scenario.tags?.includes("schema")) return;
+      if (!schemaDemoEnabled || !scenario.tags?.includes("schema")) return;
       const commitTs = Math.max(clock, schemaCommitRef.current + STEP_MS);
       schemaCommitRef.current = commitTs;
       activeMethods.forEach(method => {
@@ -2843,11 +2892,20 @@ export function App() {
         methods: activeMethods,
       });
     },
-    [activeMethods, clock, laneRuntimeRef, schemaTableName, scenario.name, scenario.tags, updateLaneSnapshot],
+    [
+      activeMethods,
+      clock,
+      laneRuntimeRef,
+      schemaDemoEnabled,
+      schemaTableName,
+      scenario.name,
+      scenario.tags,
+      updateLaneSnapshot,
+    ],
   );
 
   const schemaWalkthroughRenderer = useMemo(() => {
-    if (!scenario.tags?.includes("schema")) return undefined;
+    if (!schemaDemoEnabled || !scenario.tags?.includes("schema")) return undefined;
     const primaryLane = activeMethods[0];
     if (!primaryLane) return undefined;
     return (laneId: string) => {
@@ -2863,7 +2921,7 @@ export function App() {
         />
       );
     };
-  }, [activeMethods, handleSchemaChange, schemaColumnPresent, schemaStatusText, scenario.tags]);
+  }, [activeMethods, handleSchemaChange, schemaColumnPresent, schemaDemoEnabled, schemaStatusText, scenario.tags]);
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -3142,7 +3200,7 @@ export function App() {
         label: preset.destinationLabel,
         tooltip: preset.destinationTooltip,
       },
-      methods: METHOD_ORDER.map(method => ({
+      methods: effectiveMethodOrder.map(method => ({
         id: method,
         label: methodCopy[method].label,
         tooltip: methodCopy[method].tooltip ?? null,
@@ -3360,13 +3418,13 @@ export function App() {
               Preview
             </button>
           </div>
-          <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
-            {METHOD_ORDER.map(method => (
-              <button
-                key={method}
-                type="button"
-                className="sim-shell__method-chip"
-                aria-pressed={activeMethods.includes(method)}
+        <div className="sim-shell__method-toggle" role="group" aria-label="Methods to display">
+          {effectiveMethodOrder.map(method => (
+            <button
+              key={method}
+              type="button"
+              className="sim-shell__method-chip"
+              aria-pressed={activeMethods.includes(method)}
                 onClick={() => toggleMethod(method)}
                 data-tooltip={methodCopy[method].tooltip || undefined}
               >
@@ -3495,7 +3553,7 @@ export function App() {
         className="sim-shell__actions"
         role="group"
         aria-label="Playback controls"
-        data-tour-target="comparator-actions"
+        data-tour-target={walkthroughEnabled ? "comparator-actions" : undefined}
       >
         <button type="button" onClick={handleStart} disabled={isPlaying}>
           Start
@@ -3520,14 +3578,16 @@ export function App() {
             {eventBusEnabled ? ` (${totalBacklog} queued)` : ""}
           </button>
         )}
-        <label className="sim-shell__apply-toggle" data-tooltip={TOOLTIP_COPY.txnAtomic || undefined}>
-          <input
-            type="checkbox"
-            checked={applyOnCommit}
-            onChange={event => setApplyOnCommit(event.target.checked)}
-          />
-          <span>Apply on commit</span>
-        </label>
+        {multiTableEnabled && (
+          <label className="sim-shell__apply-toggle" data-tooltip={TOOLTIP_COPY.txnAtomic || undefined}>
+            <input
+              type="checkbox"
+              checked={applyOnCommit}
+              onChange={event => setApplyOnCommit(event.target.checked)}
+            />
+            <span>Apply on commit</span>
+          </label>
+        )}
         <div
           className="sim-shell__consumer-rate"
           role="group"
@@ -3580,7 +3640,7 @@ export function App() {
       </div>
 
       <div className="sim-shell__controls" aria-label="Method tuning controls">
-        {METHOD_ORDER.map(method => {
+        {effectiveMethodOrder.map(method => {
           const active = activeMethods.includes(method);
 
           if (method === "polling") {
@@ -3719,40 +3779,40 @@ export function App() {
         })}
       </div>
 
-      {summary && (
-      <div className="sim-shell__summary" aria-live="polite">
-        <ul>
-          <li>
+      {metricsEnabled && summary && (
+        <div className="sim-shell__summary" aria-live="polite">
+          <ul>
+            <li>
             <strong data-tooltip={TOOLTIP_COPY.lagSpread}>Lag spread:</strong> {methodCopy[summary.bestLag.method].label} is leading at
             {` ${summary.bestLag.metrics.lagMs.toFixed(0)}ms`}
             {summary.lagSpread > 0
               ? ` — ${methodCopy[summary.worstLag.method].label} trails by ${summary.lagSpread.toFixed(0)}ms`
               : " (no spread)"}
-          </li>
-          <li>
+            </li>
+            <li>
             <strong data-tooltip={TOOLTIP_COPY.deleteCapture}>Delete capture:</strong> {methodCopy[summary.lowestDeletes.method].label} is lowest at
             {` ${summary.lowestDeletes.metrics.deletesPct.toFixed(0)}%`} · best is {methodCopy[summary.highestDeletes.method].label}
             {` (${summary.highestDeletes.metrics.deletesPct.toFixed(0)}%)`}
-          </li>
-          {snapshotSummaryList && (
-            <li>
-              <strong data-tooltip={TOOLTIP_COPY.snapshot}>Snapshot rows:</strong> {snapshotSummaryList}
             </li>
-          )}
-          {summary.triggerWriteAmplification && (
+            {snapshotSummaryList && (
+              <li>
+                <strong data-tooltip={TOOLTIP_COPY.snapshot}>Snapshot rows:</strong> {snapshotSummaryList}
+              </li>
+            )}
+            {summary.triggerWriteAmplification && (
+              <li>
+                <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
+                {" "}
+                {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
+              </li>
+            )}
             <li>
-              <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
-              {" "}
-              {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
+              <strong>Ordering:</strong>
+              {summary.orderingIssues.length === 0
+                ? " All methods preserved ordering"
+                : ` Issues: ${summary.orderingIssues.map(method => methodCopy[method].label).join(", ")}`}
             </li>
-          )}
-          <li>
-            <strong>Ordering:</strong>
-            {summary.orderingIssues.length === 0
-              ? " All methods preserved ordering"
-              : ` Issues: ${summary.orderingIssues.map(method => methodCopy[method].label).join(", ")}`}
-          </li>
-        </ul>
+          </ul>
           <button type="button" className="sim-shell__summary-copy" onClick={handleCopySummary}>
             {summaryCopied ? "Copied" : "Copy summary"}
           </button>
@@ -3798,7 +3858,10 @@ export function App() {
         />
       )}
 
-      <div className="sim-shell__lane-grid" data-tour-target="comparator-lanes">
+      <div
+        className="sim-shell__lane-grid"
+        data-tour-target={walkthroughEnabled ? "comparator-lanes" : undefined}
+      >
         {laneMetrics.map(({ method, metrics, events }, laneIndex) => {
           const copy = methodCopy[method];
           const description = copy.laneDescription;
@@ -3812,14 +3875,14 @@ export function App() {
           const destinationTruncated =
             (destinationSnapshot?.rows.length ?? 0) > destinationRows.length;
           const schemaStatus =
-            scenarioHasSchema && destinationSnapshot
+            schemaDemoEnabled && scenarioHasSchema && destinationSnapshot
               ? {
                   version: destinationSnapshot.schemaVersion,
                   expectedVersion: schemaMaxVersion,
                   hasColumn: destinationSnapshot.hasSchemaColumn,
                   columnName: SCHEMA_DEMO_COLUMN.name,
                 }
-              : scenarioHasSchema
+              : schemaDemoEnabled && scenarioHasSchema
                 ? {
                     version: 0,
                     expectedVersion: schemaMaxVersion,
@@ -3843,7 +3906,7 @@ export function App() {
               callouts.push({ text: copy.callout, tone });
             }
           }
-          if (scenario.tags?.includes("schema")) {
+          if (schemaDemoEnabled && scenario.tags?.includes("schema")) {
             if (method === "trigger" && typeof writeAmplificationValue === "number" && writeAmplificationValue > 0) {
               callouts.push({
                 text: `Write amplification ${writeAmplificationValue.toFixed(1)}x (extra audit writes per change)`,
@@ -3882,7 +3945,14 @@ export function App() {
             : [];
           return (
             <article key={method} className="sim-shell__lane-card">
-              <header className="sim-shell__lane-header">
+              <header
+                className="sim-shell__lane-header"
+                data-tour-target={
+                  walkthroughEnabled && isPrimaryLane && laneIndex === 0
+                    ? "comparator-callouts"
+                    : undefined
+                }
+              >
                 <div>
                   <h3
                     className="sim-shell__lane-title"
@@ -3898,12 +3968,16 @@ export function App() {
                 </span>
               </header>
 
-              <div
-                className="sim-shell__metrics"
-                data-tour-target={isPrimaryLane ? "comparator-metrics" : undefined}
-              >
-                <MetricsStrip {...metrics} />
-              </div>
+              {metricsEnabled && (
+                <div
+                  className="sim-shell__metrics"
+                  data-tour-target={
+                    walkthroughEnabled && isPrimaryLane ? "comparator-metrics" : undefined
+                  }
+                >
+                  <MetricsStrip {...metrics} />
+                </div>
+              )}
 
               <LaneDiffOverlay
                 diff={diff}
@@ -4081,7 +4155,11 @@ export function App() {
                     <p
                       key={`${method}-callout-${index}`}
                       className={`sim-shell__callout${callout.tone === "warning" ? " sim-shell__callout--warning" : ""}`}
-                      data-tour-target={isPrimaryLane && index === 0 ? "comparator-callouts" : undefined}
+                      data-tour-target={
+                        walkthroughEnabled && isPrimaryLane && index === 0
+                          ? "comparator-callouts"
+                          : undefined
+                      }
                     >
                       {callout.text}
                     </p>
