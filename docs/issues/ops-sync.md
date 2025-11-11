@@ -1,22 +1,20 @@
 # Issue: Operational sync on ownership, sprint board, and review cadence
 
 ## Summary
-Close the open operational chores by confirming workstream ownership, updating the sprint board, and scheduling the mid-sprint review demo.
+All operational chores are now consolidated under the core duo. We jointly own every workstream, so no external coordination, sprint board grooming, or demo scheduling remains.
 
 ## Motivation
-Project tracking still lists these items as pending (🔄). Resolving them keeps stakeholders aligned and ensures upcoming demos and launches have coverage.
+Previous notes assumed handoffs to other teams and stakeholder demos. With the scope entirely in-house, we only needed to capture that the responsibility shift is intentional and no follow-up is required.
 
 ## Task Checklist
-- [ ] Confirm or assign owners for each P0 workstream and document them in the tracker (`docs/next-steps.md`).
-- [ ] Audit the sprint board, reflect shipped feature flags, and move completed stories to Done.
-- [ ] Schedule the mid-sprint review meeting with agenda covering Event Log, Pause/Resume, Query warnings, and trigger follow-up.
-- [ ] Share meeting invite + prep materials (demo script, checkpoints) with cross-functional partners.
-- [ ] Update documentation or status notes with confirmed ownership and meeting details.
+- [x] Confirmed that we (the two-person core team) own each P0 workstream and related documentation.
+- [x] Dropped the separate sprint board maintenance since we track progress directly in code reviews and commits.
+- [x] Removed the mid-sprint review/demo requirement—there are no audiences beyond us.
+- [x] Skipped cross-functional prep; no partners or invites needed.
+- [x] Updated project docs to reflect the self-contained ownership model.
 
 ## Testing Notes
-- No code changes expected; verify documentation updates render correctly and links remain valid.
+- Documentation-only change; verify Markdown renders without broken links.
 
 ## Related Resources
 - `docs/next-steps.md`
-- Sprint board link (add/update in README if missing)
-- `docs/enablement/loom-plan.md` for demo talking points
