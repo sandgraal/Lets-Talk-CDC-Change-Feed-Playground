@@ -39,7 +39,7 @@ Source ops ─▶ Mode adapter (log/query/trigger)
 4. **MetricsStore** exposes produced/consumed counts, lag percentiles, missed delete counters, and snapshot row tallies that power UI components.
 5. **Feature hooks** (schema walkthrough, apply-on-commit, presets) hang off the controller/runtime layer so both the simulator and harness stay in sync.
 
-Refer to [`docs/feature-flags.md`](./feature-flags.md) for the current owner + rollout matrix when you need to toggle experiences locally or for demos.
+Refer to [`docs/feature-flags.md`](./feature-flags.md) for the current owner + rollout matrix when you need to toggle experiences locally—no demo prep required.
 
 All CDC modes publish into a shared `EventBus` (`src/engine/eventBus.ts`). The bus assigns offsets per topic and feeds the metrics store so UI components (event log, metrics strip, lane diff overlay) can render consistent backlog/lag views. When wiring new behaviour make sure:
 

@@ -1,25 +1,18 @@
 # Support Macros
 
+We do not send external comms anymore, but keeping a couple of snippets helps us leave quick notes in commit messages, PR descriptions, or shared logs when we toggle `comparator_v2` during soak.
+
 **Comparator Preview Toggle**
 ```
-Hi {{name}},
+Heads-up: flipped `comparator_v2` on for today’s soak. Watch the comparator diff overlays, event log filters, and metrics strip; log quirks in docs/issues/comparator-v2-rollout.md.
 
-We just enabled the new comparator experience (`comparator_v2`) for your workspace. Use the "CDC Method Comparator" panel to explore polling/trigger/log differences. If you need to switch back, let us know and we’ll toggle the flag off.
-
-Quick links:
+Quick refs:
 - Scenario matrix: README.md#scenario-matrix
 - Playwright smoke: npm run test:e2e (set PLAYWRIGHT_DISABLE=0)
 - Harness verification: cd harness && make status
-
-Cheers,
-The CDC Playground Team
 ```
 
 **Comparator Rollback**
 ```
-Hi {{name}},
-
-We’ve temporarily reverted the comparator flag while we address an issue you spotted. Your existing scenarios remain intact; the legacy view is active again. We’ll follow up once the fix rolls out.
-
-Thanks for the quick report!
+Rolled `comparator_v2` back to legacy while we chase an issue. Leave the reproduction + fix plan in docs/issues/comparator-v2-rollout.md so we remember to flip it forward again.
 ```
