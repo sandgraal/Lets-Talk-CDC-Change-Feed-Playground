@@ -14,6 +14,8 @@ export class MetricsStore {
   private lagSamples: number[] = [];
   private missedDeletes = 0;
   private writeAmplification = 0;
+  private triggerWrites = 0;
+  private sourceWrites = 0;
   private snapshotRows = 0;
   private errors = 0;
   private readonly lagAggregators = new Set<LagSampleAggregator>();
@@ -55,8 +57,19 @@ export class MetricsStore {
     this.missedDeletes += count;
   }
 
-  recordWriteAmplification(delta = 1) {
-    this.writeAmplification += delta;
+  recordWriteAmplification(triggerDelta = 1, sourceDelta = 1) {
+    if (Number.isFinite(triggerDelta) && triggerDelta > 0) {
+      this.triggerWrites += triggerDelta;
+    }
+    if (Number.isFinite(sourceDelta) && sourceDelta > 0) {
+      this.sourceWrites += sourceDelta;
+    }
+    if (this.sourceWrites > 0) {
+      this.writeAmplification =
+        (this.sourceWrites + this.triggerWrites) / this.sourceWrites;
+    } else {
+      this.writeAmplification = 0;
+    }
   }
 
   recordSnapshotRows(count: number) {
@@ -74,6 +87,8 @@ export class MetricsStore {
     this.lagSamples = [];
     this.missedDeletes = 0;
     this.writeAmplification = 0;
+    this.triggerWrites = 0;
+    this.sourceWrites = 0;
     this.snapshotRows = 0;
     this.errors = 0;
     this.notifyLagAggregators();
