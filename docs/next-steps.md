@@ -20,7 +20,7 @@
 ## Definition of Ready
 - Implementation plan captured at `docs/IMPLEMENTATION_PLAN.md` and linked in team tooling. ✅
 - Ownership for every P0 workstream sits entirely with us; no external assignments or ticket handoffs remain. ✅ Documented in [docs/issues/ops-sync.md](./issues/ops-sync.md).
-- UI copy agreed for warning/info badges and pause help text; visual mocks shared with design partners. ✅
+- UI copy agreed for warning/info badges and pause help text; visual mocks archived for our own reference. ✅
 - Test data scenarios scripted (rapid updates, delete between polls) and automated where feasible. ✅ (scenarios in `src/features/scenarios.ts`).
 
 ## Tracking
@@ -37,7 +37,6 @@
 ## Outstanding backlog
 - [ ] Appwrite persistence + configuration ([docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md))
 - [ ] Trigger write amplification surfaced in UI/walkthrough ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
-- [ ] Operational sync on owners + mid-sprint review ([docs/issues/ops-sync.md](./issues/ops-sync.md))
 - [ ] `comparator_v2` staged rollout readiness ([docs/issues/comparator-v2-rollout.md](./issues/comparator-v2-rollout.md))
 - [ ] Feature flag activation governance ([docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md))
 - [ ] Persistent scenarios & shareable experiences ([docs/issues/shareable-experiences.md](./issues/shareable-experiences.md))
