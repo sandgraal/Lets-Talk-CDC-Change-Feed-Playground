@@ -19,13 +19,13 @@
 
 ## Definition of Ready
 - Implementation plan captured at `docs/IMPLEMENTATION_PLAN.md` and linked in team tooling. ✅
-- Owners identified for each P0 workstream; story tickets created with acceptance criteria above. 🔄 Confirm assignment. See [docs/issues/ops-sync.md](./issues/ops-sync.md).
+- Ownership for every P0 workstream sits entirely with us; no external assignments or ticket handoffs remain. ✅ Documented in [docs/issues/ops-sync.md](./issues/ops-sync.md).
 - UI copy agreed for warning/info badges and pause help text; visual mocks shared with design partners. ✅
 - Test data scenarios scripted (rapid updates, delete between polls) and automated where feasible. ✅ (scenarios in `src/features/scenarios.ts`).
 
 ## Tracking
-- Capture progress in the sprint board using the P0 feature flags as epics. 🔄 Update board to reflect shipped flags. Tracked in [docs/issues/ops-sync.md](./issues/ops-sync.md).
-- Schedule mid-sprint review to demo Event Log, Pause/Resume, and Query mode warning behaviors. 🔄 Included in [docs/issues/ops-sync.md](./issues/ops-sync.md).
+- Progress is tracked directly through our shared commit history and PRs; no separate sprint board is maintained. ✅ See [docs/issues/ops-sync.md](./issues/ops-sync.md).
+- Mid-sprint demos are no longer required—there are no external stakeholders. ✅ Decision captured in [docs/issues/ops-sync.md](./issues/ops-sync.md).
 
 ## Near-Term Priorities (handoff)
 - Flesh out mode adapters with richer telemetry (write amplification, missed deletes) reflected in UI summaries. ✅ Lane checks panel now surfaces diff + lag chips; schema drift chips land in summary.
