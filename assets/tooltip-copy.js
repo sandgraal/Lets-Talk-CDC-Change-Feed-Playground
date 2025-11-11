@@ -3,7 +3,8 @@ export const TOOLTIP_COPY = {
   pollingSoftDeletes: "Surface soft-delete markers so downstream consumers can emit tombstones.",
   triggerExtractorInterval: "Stretching the extractor interval reduces read load but adds latency before events land.",
   triggerOverhead: "Injected synchronous time per write while the trigger captures change rows.",
-  triggerWriteAmplification: "Audit-table writes compared to source operations; >1x means extra storage + IO.",
+  triggerWriteAmplification:
+    "Trigger audit-table writes versus source ops; >1x highlights extra load (~extra writes per change).",
   logFetchInterval: "Shorter fetch intervals decrease lag but require more connector and network throughput.",
   backlog: "Events queued on the bus waiting for apply to catch up.",
   lagPercentile: "Latency from commit to apply; percentiles show typical versus tail delay.",

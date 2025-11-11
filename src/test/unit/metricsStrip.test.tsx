@@ -26,6 +26,6 @@ describe("MetricsStrip", () => {
     expect(screen.getByText(/Consistency: OK/i)).toBeInTheDocument();
     expect(screen.getByText(/Ops C\/U\/D: 3\/4\/5/i)).toBeInTheDocument();
     expect(screen.getByText(/Schema: 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Trigger WA: 2\.5x/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trigger WA: 2\.5x \(~1\.5 extra writes\/change\)/i)).toBeInTheDocument();
   });
 });

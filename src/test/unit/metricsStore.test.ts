@@ -66,4 +66,19 @@ describe("MetricsStore", () => {
 
     nowSpy.mockRestore();
   });
+
+  it("derives trigger write amplification ratios from source and change writes", () => {
+    const store = new MetricsStore();
+
+    expect(store.snapshot().writeAmplification).toBe(0);
+
+    store.recordWriteAmplification();
+    expect(store.snapshot().writeAmplification).toBeCloseTo(2);
+
+    store.recordWriteAmplification(2, 1);
+    expect(store.snapshot().writeAmplification).toBeCloseTo(2.5);
+
+    store.reset();
+    expect(store.snapshot().writeAmplification).toBe(0);
+  });
 });

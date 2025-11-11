@@ -42,6 +42,10 @@ import {
   createGeneratorStateFromScenario,
   type GeneratorState,
 } from "../src/ui/generator";
+import {
+  describeWriteAmplification,
+  hasMeaningfulWriteAmplification,
+} from "../src/ui/writeAmplification";
 
 type FeatureFlagKey =
   | "ff_event_bus"
@@ -947,12 +951,14 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
   const orderingIssues = lanes.filter(lane => !lane.metrics.orderingOk).map(lane => lane.method);
 
   const triggerLanes = lanes.filter(
-    lane => lane.method === "trigger" && typeof lane.metrics.writeAmplification === "number",
+    lane =>
+      lane.method === "trigger" &&
+      hasMeaningfulWriteAmplification(lane.metrics.writeAmplification),
   );
   const triggerWriteAmplification = triggerLanes.length
     ? triggerLanes.reduce((max, lane) => {
-        if (!max.metrics.writeAmplification) return lane;
-        if (!lane.metrics.writeAmplification) return max;
+        if (!hasMeaningfulWriteAmplification(max.metrics.writeAmplification)) return lane;
+        if (!hasMeaningfulWriteAmplification(lane.metrics.writeAmplification)) return max;
         return lane.metrics.writeAmplification > max.metrics.writeAmplification ? lane : max;
       })
     : null;
@@ -2842,9 +2848,15 @@ export function App() {
       parts.push(`${methodCopy[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
     }
     parts.push(`Lowest delete capture: ${methodCopy[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
-    if (summary.triggerWriteAmplification) {
+    if (
+      summary.triggerWriteAmplification &&
+      hasMeaningfulWriteAmplification(summary.triggerWriteAmplification.metrics.writeAmplification)
+    ) {
+      const label = describeWriteAmplification(
+        summary.triggerWriteAmplification.metrics.writeAmplification,
+      );
       parts.push(
-        `Trigger write amplification: ${methodCopy[summary.triggerWriteAmplification.method].label} ${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`,
+        `Trigger write amplification: ${methodCopy[summary.triggerWriteAmplification.method].label} ${label}`,
       );
     }
     if (snapshotSummaryList) {
@@ -3154,13 +3166,15 @@ export function App() {
             method,
             label: methodCopy[method].label,
           })),
-          triggerWriteAmplification: summary.triggerWriteAmplification
-            ? {
-                method: summary.triggerWriteAmplification.method,
-                label: methodCopy[summary.triggerWriteAmplification.method].label,
-                value: summary.triggerWriteAmplification.metrics.writeAmplification ?? 0,
-              }
-            : null,
+          triggerWriteAmplification:
+            summary.triggerWriteAmplification &&
+            hasMeaningfulWriteAmplification(summary.triggerWriteAmplification.metrics.writeAmplification)
+              ? {
+                  method: summary.triggerWriteAmplification.method,
+                  label: methodCopy[summary.triggerWriteAmplification.method].label,
+                  value: summary.triggerWriteAmplification.metrics.writeAmplification ?? 0,
+                }
+              : null,
         }
       : null;
 
@@ -3802,13 +3816,20 @@ export function App() {
                 <strong data-tooltip={TOOLTIP_COPY.snapshot}>Snapshot rows:</strong> {snapshotSummaryList}
               </li>
             )}
-            {summary.triggerWriteAmplification && (
-              <li>
-                <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong> {methodCopy[summary.triggerWriteAmplification.method].label} is at
-                {" "}
-                {`${(summary.triggerWriteAmplification.metrics.writeAmplification ?? 0).toFixed(1)}x`} write amplification
-              </li>
-            )}
+            {summary.triggerWriteAmplification &&
+              hasMeaningfulWriteAmplification(
+                summary.triggerWriteAmplification.metrics.writeAmplification,
+              ) && (
+                <li>
+                  <strong data-tooltip={TOOLTIP_COPY.triggerOverhead}>Trigger overhead:</strong>{" "}
+                  {methodCopy[summary.triggerWriteAmplification.method].label} is at
+                  {" "}
+                  {describeWriteAmplification(
+                    summary.triggerWriteAmplification.metrics.writeAmplification,
+                  )}
+                  {" "}write amplification
+                </li>
+              )}
             <li>
               <strong>Ordering:</strong>
               {summary.orderingIssues.length === 0
@@ -3893,10 +3914,13 @@ export function App() {
                     columnName: SCHEMA_DEMO_COLUMN.name,
                   }
                 : undefined;
-          const writeAmplificationValue =
+          const rawWriteAmplification =
             method === "trigger"
-              ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification ?? 0
+              ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification
               : undefined;
+          const writeAmplificationValue = hasMeaningfulWriteAmplification(rawWriteAmplification)
+            ? rawWriteAmplification
+            : undefined;
           const callouts: Array<{ text: string; tone: "warning" | "info" }> = [];
           const tone = method === "polling" ? "warning" : "info";
           if (copy.callout) {
@@ -3910,9 +3934,9 @@ export function App() {
             }
           }
           if (schemaDemoEnabled && scenario.tags?.includes("schema")) {
-            if (method === "trigger" && typeof writeAmplificationValue === "number" && writeAmplificationValue > 0) {
+            if (method === "trigger" && typeof writeAmplificationValue === "number") {
               callouts.push({
-                text: `Write amplification ${writeAmplificationValue.toFixed(1)}x (extra audit writes per change)`,
+                text: `Write amplification ${describeWriteAmplification(writeAmplificationValue)}`,
                 tone: "info",
               });
             }
@@ -4018,9 +4042,9 @@ export function App() {
                   <p data-tooltip={TOOLTIP_COPY.lagPercentile}>
                     Lag p50 {Math.round(runtimeSummary?.lagMsP50 ?? 0)}ms · p95 {Math.round(runtimeSummary?.lagMsP95 ?? 0)}ms
                   </p>
-                  {method === "trigger" && (
+                  {method === "trigger" && typeof writeAmplificationValue === "number" && (
                     <p data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
-                      Write amplification: {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
+                      Write amplification: {describeWriteAmplification(writeAmplificationValue)}
                     </p>
                   )}
                   {method === "polling" && (
@@ -4132,12 +4156,14 @@ export function App() {
                     <dt>Trigger overhead</dt>
                     <dd data-tooltip={TOOLTIP_COPY.triggerOverhead}>{config.triggerOverheadMs} ms</dd>
                   </div>
-                  <div>
-                    <dt>Write amplification</dt>
-                    <dd data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
-                      {writeAmplificationValue?.toFixed(1) ?? "0.0"}x
-                    </dd>
-                  </div>
+                  {typeof writeAmplificationValue === "number" && (
+                    <div>
+                      <dt>Write amplification</dt>
+                      <dd data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
+                        {describeWriteAmplification(writeAmplificationValue)}
+                      </dd>
+                    </div>
+                  )}
                 </>
                 );
               })()}

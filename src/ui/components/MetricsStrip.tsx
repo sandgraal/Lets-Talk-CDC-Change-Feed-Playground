@@ -1,4 +1,6 @@
 import type { FC } from "react";
+import { TOOLTIP_COPY } from "../tooltips";
+import { describeWriteAmplification, hasMeaningfulWriteAmplification } from "../writeAmplification";
 
 export type MetricsStripProps = {
   lagMs: number;
@@ -39,9 +41,12 @@ export const MetricsStrip: FC<MetricsStripProps> = ({
           {" "}·<span>Schema: {schemaChangeCount}</span>
         </>
       )}
-      {typeof writeAmplification === "number" && (
+      {hasMeaningfulWriteAmplification(writeAmplification) && (
         <>
-          {" "}·<span>Trigger WA: {writeAmplification.toFixed(1)}x</span>
+          {" "}·
+          <span data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
+            Trigger WA: {describeWriteAmplification(writeAmplification)}
+          </span>
         </>
       )}
     </div>

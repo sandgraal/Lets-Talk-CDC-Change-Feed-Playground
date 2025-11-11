@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from "react";
 import { TOOLTIP_COPY } from "../tooltips";
+import { describeWriteAmplification, hasMeaningfulWriteAmplification } from "../writeAmplification";
 
 export type MetricsDashboardLane = {
   id: string;
@@ -111,10 +112,12 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
                   <dd data-tooltip={TOOLTIP_COPY.deleteCapture}>{formatNumber(lane.missedDeletes)}</dd>
                 </div>
               )}
-              {typeof lane.writeAmplification === "number" && (
+              {hasMeaningfulWriteAmplification(lane.writeAmplification) && (
                 <div>
                   <dt>Write amplification</dt>
-                  <dd data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>{lane.writeAmplification.toFixed(1)}x</dd>
+                  <dd data-tooltip={TOOLTIP_COPY.triggerWriteAmplification}>
+                    {describeWriteAmplification(lane.writeAmplification)}
+                  </dd>
                 </div>
               )}
             </dl>
