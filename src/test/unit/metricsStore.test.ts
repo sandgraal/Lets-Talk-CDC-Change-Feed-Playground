@@ -74,14 +74,14 @@ describe("MetricsStore", () => {
     expect(store.snapshot().writeAmplification).toBe(0);
 
     // With defaults: 1 trigger write, 1 source write.
-    // Write amplification = (trigger writes + source writes) / source writes = (1 + 1) / 1 = 2
+    // Write amplification = (source writes + trigger writes) / source writes = (1 + 1) / 1 = 2
     store.recordWriteAmplification();
     expect(store.snapshot().writeAmplification).toBeCloseTo(2);
 
     // Add 2 trigger writes, 1 source write.
     // Total trigger writes = 1 (previous) + 2 = 3
     // Total source writes = 1 (previous) + 1 = 2
-    // Write amplification = (trigger writes + source writes) / source writes = (3 + 2) / 2 = 2.5
+    // Write amplification = (source writes + trigger writes) / source writes = (2 + 3) / 2 = 2.5
     store.recordWriteAmplification(2, 1);
     expect(store.snapshot().writeAmplification).toBeCloseTo(2.5);
 
