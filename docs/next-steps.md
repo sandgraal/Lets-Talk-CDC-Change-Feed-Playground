@@ -36,7 +36,7 @@
 
 ## Outstanding backlog
 - [ ] Appwrite persistence + configuration ([docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md))
-- [ ] Trigger write amplification surfaced in UI/walkthrough ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
+- [x] Trigger write amplification surfaced in UI/walkthrough ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
 - [ ] `comparator_v2` staged rollout readiness ([docs/issues/comparator-v2-rollout.md](./issues/comparator-v2-rollout.md))
 - [ ] Feature flag activation governance ([docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md))
 - [ ] Persistent scenarios & shareable experiences ([docs/issues/shareable-experiences.md](./issues/shareable-experiences.md))

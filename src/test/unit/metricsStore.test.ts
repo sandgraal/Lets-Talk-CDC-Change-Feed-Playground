@@ -70,22 +70,19 @@ describe("MetricsStore", () => {
   it("derives trigger write amplification ratios from source and change writes", () => {
     const store = new MetricsStore();
 
-    // Initially, no writes have been recorded, so write amplification is 0.
     expect(store.snapshot().writeAmplification).toBe(0);
 
-    // With defaults: 1 trigger write, 1 source write.
-    // Write amplification = (source writes + trigger writes) / source writes = (1 + 1) / 1 = 2
     store.recordWriteAmplification();
     expect(store.snapshot().writeAmplification).toBeCloseTo(2);
 
-    // Add 2 trigger writes, 1 source write.
-    // Total trigger writes = 1 (previous) + 2 = 3
-    // Total source writes = 1 (previous) + 1 = 2
-    // Write amplification = (source writes + trigger writes) / source writes = (2 + 3) / 2 = 2.5
     store.recordWriteAmplification(2, 1);
+    // After two calls to recordWriteAmplification:
+    // First call (defaults): sourceWrites=1, triggerWrites=1
+    // Second call: sourceWrites+=1, triggerWrites+=2 (since 2 source, 1 trigger)
+    // Total: sourceWrites=2, triggerWrites=3
+    // Amplification = (sourceWrites + triggerWrites) / sourceWrites = (2 + 3) / 2 = 2.5
     expect(store.snapshot().writeAmplification).toBeCloseTo(2.5);
 
-    // After reset, all counters are zero, so write amplification is 0.
     store.reset();
     expect(store.snapshot().writeAmplification).toBe(0);
   });

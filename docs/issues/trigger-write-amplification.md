@@ -7,12 +7,14 @@ Expose trigger-based CDC write amplification metrics in the comparator UI and in
 The trigger mode adapter already captures write amplification metadata, but the UI does not surface it. Highlighting the cost in both dashboards and the walkthrough keeps the demo accurate and educational.
 
 ## Task Checklist
-- [ ] Audit trigger mode metrics emitted from `src/modes/triggerBased.ts` and confirm write amplification counters are available.
-- [ ] Design UI presentation for amplification (metrics strip, tooltips, or dedicated panel) and update components under `src/ui/components` accordingly.
-- [ ] Extend the guided walkthrough content to call out write amplification implications for trigger mode.
-- [ ] Gate the new visuals/content behind the relevant feature flag (`ff_trigger_mode`) and ensure sensible fallbacks when disabled.
+- [x] Audit trigger mode metrics emitted from `src/modes/triggerBased.ts` and confirm write amplification counters are available.
+- [x] Design UI presentation for amplification (metrics strip, tooltips, or dedicated panel) and update components under `src/ui/components` accordingly.
+- [x] Extend the guided walkthrough content to call out write amplification implications for trigger mode.
+- [x] Gate the new visuals/content behind the relevant feature flag (`ff_trigger_mode`) and ensure sensible fallbacks when disabled.
 - [ ] Add unit + story coverage for the new UI surfaces and extend Playwright smoke to validate walkthrough updates.
-- [ ] Refresh docs (feature flags, release notes, enablement collateral) describing the new insight.
+  - [x] Unit assertions land in `metricsStrip`/`metricsDashboard`; existing Ladle stories inherit the new formatting.
+  - [ ] Extend Playwright smoke to validate walkthrough updates.
+- [x] Refresh docs (feature flags, release notes, enablement collateral) describing the new insight.
 
 ## Testing Notes
 - `npm run test:unit` for component coverage.

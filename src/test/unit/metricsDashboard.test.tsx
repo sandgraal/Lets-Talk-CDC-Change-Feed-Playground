@@ -45,6 +45,9 @@ describe("MetricsDashboard", () => {
     expect(screen.getByText(/Trigger/)).toBeInTheDocument();
     expect(screen.getByText(/Missed deletes/i)).toBeInTheDocument();
     expect(screen.getByText(/Write amplification/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2\.1x \(~1\.1 extra writes\/change\)/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Snapshot rows/i)).toHaveLength(2);
     expect(screen.getAllByText(/Change mix/i)).toHaveLength(2);
     expect(screen.getByText(/C 4 · U 3 · D 1 · Schema 1/i)).toBeInTheDocument();
