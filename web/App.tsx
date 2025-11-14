@@ -2707,6 +2707,8 @@ export function App() {
         if (totals.extra > 0) chips.push({ key: "extra", text: `${totals.extra} extra`, tone: "extra" });
         if (totals.ordering > 0) chips.push({ key: "ordering", text: `${totals.ordering} ordering`, tone: "ordering" });
         if (maxLag > 0) chips.push({ key: "lag", text: `${Math.round(maxLag)}ms lag`, tone: "lag" });
+        // Write amplification is specific to trigger-based CDC, which writes extra audit table records
+        // alongside source table changes. Other methods (polling, log) don't have this overhead.
         if (method === "trigger") {
           const amplification = laneRuntimeSummaries.get(method)?.writeAmplification ?? 0;
           const chip = formatWriteAmplificationChip(amplification);
@@ -3927,6 +3929,8 @@ export function App() {
                     columnName: SCHEMA_DEMO_COLUMN.name,
                   }
                 : undefined;
+          // Write amplification is specific to trigger-based CDC, which writes extra audit table records
+          // alongside source table changes. Other methods (polling, log) don't have this overhead.
           const writeAmplificationValue =
             method === "trigger"
               ? runtimeSummary?.writeAmplification ?? metrics.writeAmplification ?? 0
