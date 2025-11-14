@@ -441,6 +441,16 @@
   color: #1d4ed8;
 }
 
+.sim-shell__overlay-chip--schema {
+  background: rgba(217, 70, 239, 0.2);
+  color: #a21caf;
+}
+
+.sim-shell__overlay-chip--amplification {
+  background: rgba(251, 146, 60, 0.25);
+  color: #c2410c;
+}
+
 .sim-shell__overlay-chip--ok {
   background: rgba(34, 197, 94, 0.2);
   color: #047857;

@@ -158,6 +158,27 @@ function computeTriggerWriteAmplification(
   return events.length / sourceOps.length;
 }
 
+export type LaneOverlayChipTone =
+  | "missing"
+  | "extra"
+  | "ordering"
+  | "lag"
+  | "schema"
+  | "ok"
+  | "amplification";
+
+export type LaneOverlayChip = { key: string; text: string; tone: LaneOverlayChipTone };
+
+export function formatWriteAmplificationChip(value: number): LaneOverlayChip | null {
+  if (!Number.isFinite(value)) return null;
+  if (value <= 0) return null;
+  return {
+    key: "write-amplification",
+    text: `${value.toFixed(1)}x write amplification`,
+    tone: "amplification",
+  } as const;
+}
+
 const METHOD_ORDER = ["polling", "trigger", "log"] as const;
 const MIN_LANES = 2;
 const STEP_MS = 100;
@@ -2687,11 +2708,16 @@ export function App() {
         const label = methodCopy[method].label;
         const totals = diff?.totals ?? { missing: 0, extra: 0, ordering: 0 };
         const maxLag = diff?.lag?.max ?? 0;
-        const chips: Array<{ key: string; text: string; tone: "missing" | "extra" | "ordering" | "lag" | "schema" | "ok" }> = [];
+        const chips: LaneOverlayChip[] = [];
         if (totals.missing > 0) chips.push({ key: "missing", text: `${totals.missing} missing`, tone: "missing" });
         if (totals.extra > 0) chips.push({ key: "extra", text: `${totals.extra} extra`, tone: "extra" });
         if (totals.ordering > 0) chips.push({ key: "ordering", text: `${totals.ordering} ordering`, tone: "ordering" });
         if (maxLag > 0) chips.push({ key: "lag", text: `${Math.round(maxLag)}ms lag`, tone: "lag" });
+        if (method === "trigger") {
+          const amplification = laneRuntimeSummaries.get(method)?.writeAmplification ?? 0;
+          const chip = formatWriteAmplificationChip(amplification);
+          if (chip) chips.push(chip);
+        }
         if (scenarioHasSchema) {
           const snapshot = laneDestinations.get(method);
           const schemaVersion = snapshot?.schemaVersion ?? 1;
@@ -2717,7 +2743,15 @@ export function App() {
           hasDetails,
         };
       }),
-    [activeMethods, laneDestinations, laneDiffs, methodCopy, schemaMaxVersion, scenarioHasSchema],
+    [
+      activeMethods,
+      laneDestinations,
+      laneDiffs,
+      laneRuntimeSummaries,
+      methodCopy,
+      schemaMaxVersion,
+      scenarioHasSchema,
+    ],
   );
 
   const userPinnedScenario = userSelectedScenarioRef.current;
