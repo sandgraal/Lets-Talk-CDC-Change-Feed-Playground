@@ -107,6 +107,12 @@
       "after": {
         "status": "shipped",
         "shipped_ts": 520
+      },
+      "txn": {
+        "id": "TX-721",
+        "index": 0,
+        "total": 1,
+        "last": true
       }
     }
   ]
