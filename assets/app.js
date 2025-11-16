@@ -1702,7 +1702,7 @@ function applyComparatorPreferences(prefs) {
 }
 
 function resetOfficeShenanigans(options = {}) {
-  const { resetMegadesk = false } = options || {};
+  const { resetMegadesk = false } = options;
   officeEasterEgg.toastShown = false;
   officeEasterEgg.schruteToastShown = false;
   officeEasterEgg.seedCount = 0;
