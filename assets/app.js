@@ -1701,6 +1701,34 @@ function applyComparatorPreferences(prefs) {
   }
 }
 
+function resetOfficeShenanigans(options = {}) {
+  const { resetMegadesk = false } = options;
+  officeEasterEgg.toastShown = false;
+  officeEasterEgg.schruteToastShown = false;
+  officeEasterEgg.seedCount = 0;
+  officeEasterEgg.bankruptcyShown = false;
+
+  hideOfficeBankruptcyModal();
+
+  if (resetMegadesk) {
+    officeEasterEgg.megadeskActive = false;
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.remove("megadesk-mode");
+    }
+  }
+
+  if (typeof document !== "undefined") {
+    const selectors = [
+      ".office-confetti-piece",
+      ".office-schrute-buck",
+      ".stapler-blob",
+    ];
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(node => node.remove());
+    });
+  }
+}
+
 function showOfficeToastOnce() {
   if (officeEasterEgg.toastShown) return;
   officeEasterEgg.toastShown = true;
@@ -1909,6 +1937,51 @@ function toggleMegadeskMode(force) {
   } else if (!rewardDisplayed) {
     refreshSchemaStatus(message, "success");
     setTimeout(() => refreshSchemaStatus(), 3200);
+  }
+}
+
+function launchSchruteBucks() {
+  if (typeof document === "undefined") return;
+  const host = document.body;
+  if (!host) return;
+
+  const originRect = els.rowEditor?.getBoundingClientRect?.();
+  const viewportWidth = typeof window !== "undefined"
+    ? window.innerWidth
+    : document.documentElement?.clientWidth || 0;
+  const viewportHeight = typeof window !== "undefined"
+    ? window.innerHeight
+    : document.documentElement?.clientHeight || 0;
+  const originX = originRect ? originRect.left + originRect.width / 2 : viewportWidth / 2;
+  const originY = originRect ? originRect.top + originRect.height / 2 : viewportHeight / 2;
+  const bills = 3 + Math.floor(Math.random() * 3);
+
+  for (let i = 0; i < bills; i++) {
+    const buck = document.createElement("span");
+    buck.className = "office-schrute-buck";
+    buck.textContent = "Schrute Buck";
+    buck.style.left = `${originX}px`;
+    buck.style.top = `${originY}px`;
+    host.appendChild(buck);
+
+    const driftX = (Math.random() - 0.5) * 220;
+    const driftY = -140 - Math.random() * 180;
+    const spin = (Math.random() * 30) - 15;
+    const duration = 1400 + Math.random() * 500;
+    const delay = i * 90;
+
+    const animation = buck.animate([
+      { transform: "translate(-50%, -50%) scale(0.85)", opacity: 0 },
+      { transform: `translate(-50%, -50%) translate(${driftX / 2}px, ${driftY / 2}px) rotate(${spin}deg) scale(1)`, opacity: 1 },
+      { transform: `translate(-50%, -50%) translate(${driftX}px, ${driftY}px) rotate(${spin * 1.5}deg) scale(0.85)`, opacity: 0 }
+    ], { duration, delay, easing: "cubic-bezier(0.3, 0.7, 0.3, 1)" });
+
+    const cleanup = () => buck.remove();
+    if (animation?.finished) {
+      animation.finished.then(cleanup).catch(cleanup);
+    } else {
+      animation.onfinish = cleanup;
+    }
   }
 }
 
