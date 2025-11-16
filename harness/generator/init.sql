@@ -9,8 +9,10 @@ create table if not exists customers (
 
 create table if not exists orders (
   id text primary key,
+  customer_id text,
   status text,
-  total numeric,
+  subtotal numeric,
+  shipped_ts bigint,
   updated_at timestamptz default now()
 );
 
@@ -19,5 +21,6 @@ create table if not exists order_items (
   order_id text references orders(id) on delete cascade,
   sku text,
   qty integer,
+  price numeric,
   updated_at timestamptz default now()
 );

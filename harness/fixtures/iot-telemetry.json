@@ -1,0 +1,102 @@
+{
+  "id": "iot-telemetry",
+  "name": "IoT Telemetry",
+  "description": "Showing rolling measurements with anomaly flags.",
+  "tags": [
+    "iot",
+    "telemetry",
+    "anomaly"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "device_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "temp_c",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "humidity",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "anomaly",
+      "type": "bool",
+      "pk": false
+    },
+    {
+      "name": "anomaly_reason",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "DEV-5@130",
+      "device_id": "DEV-5",
+      "temp_c": 19.2,
+      "humidity": 0.39,
+      "anomaly": false
+    }
+  ],
+  "ops": [
+    {
+      "t": 10,
+      "op": "insert",
+      "table": "device_readings",
+      "pk": {
+        "id": "DEV-5@10"
+      },
+      "after": {
+        "device_id": "DEV-5",
+        "temp_c": 18.4,
+        "humidity": 0.41,
+        "anomaly": false
+      }
+    },
+    {
+      "t": 55,
+      "op": "update",
+      "table": "device_readings",
+      "pk": {
+        "id": "DEV-5@10"
+      },
+      "after": {
+        "temp_c": 28.9,
+        "anomaly": true,
+        "anomaly_reason": "spike"
+      }
+    },
+    {
+      "t": 130,
+      "op": "insert",
+      "table": "device_readings",
+      "pk": {
+        "id": "DEV-5@130"
+      },
+      "after": {
+        "device_id": "DEV-5",
+        "temp_c": 19.2,
+        "humidity": 0.39,
+        "anomaly": false
+      }
+    },
+    {
+      "t": 200,
+      "op": "delete",
+      "table": "device_readings",
+      "pk": {
+        "id": "DEV-5@10"
+      }
+    }
+  ]
+}

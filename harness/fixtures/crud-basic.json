@@ -1,11 +1,34 @@
 {
   "id": "crud-basic",
   "name": "CRUD Basic",
-  "description": "Insert, update, and delete a single customer to highlight delete visibility.",
+  "description": "Teaching delete visibility basics.",
   "tags": [
     "crud",
-    "polling",
     "basics"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "1",
+      "name": "Alice",
+      "email": "alice@contoso.io"
+    }
   ],
   "ops": [
     {
@@ -16,20 +39,19 @@
         "id": "1"
       },
       "after": {
-        "name": "A",
-        "email": "a@example.com"
+        "name": "Alice",
+        "email": "alice@example.com"
       }
     },
     {
-      "t": 400,
+      "t": 350,
       "op": "update",
       "table": "customers",
       "pk": {
         "id": "1"
       },
       "after": {
-        "name": "A1",
-        "email": "a@example.com"
+        "email": "alice@contoso.io"
       }
     },
     {
