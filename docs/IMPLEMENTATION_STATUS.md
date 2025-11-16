@@ -169,19 +169,8 @@ The CDC Change Feed Playground is in a **healthy and production-ready state** wi
 
 ## 5. Security & Dependencies
 
-### ⚠️ Known Vulnerabilities
+### ✅ Previously Known Vulnerabilities (Fixed)
 
-```
-npm audit report:
-- koa 2.16.2
-  Severity: moderate
-  Issue: Vulnerable to Open Redirect via Trailing Double-Slash (//)
-  Advisory: GHSA-g8mr-fgfg-5qpc
-  Fix: npm audit fix
-```
-
-### 📋 Security Actions Required
-- [ ] **P0: Run npm audit fix** for koa vulnerability
 - [ ] Review if koa is actually used (may be transitive dependency)
 - [ ] Set up automated dependency scanning in CI
 - [ ] Document security update policy
