@@ -35,8 +35,18 @@
 - ✅ Multi-table + transactional demo landed with apply-on-commit toggle; follow-up e2e for transaction drift still on backlog. See [docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md).
 
 ## Outstanding backlog
-- [ ] Appwrite persistence + configuration ([docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md))
-- [x] Trigger write amplification surfaced in UI/walkthrough ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
-- [ ] `comparator_v2` staged rollout readiness ([docs/issues/comparator-v2-rollout.md](./issues/comparator-v2-rollout.md))
+
+### P0 - Critical (Address Immediately)
+- [x] Security vulnerability fix (koa dependency) - **COMPLETED**
+- [ ] Fix harness CI Docker certificate issues
+- [ ] Complete `comparator_v2` staged rollout readiness ([docs/issues/comparator-v2-rollout.md](./issues/comparator-v2-rollout.md))
+
+### P1 - Important (Next Sprint)
 - [ ] Feature flag activation governance ([docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md))
+- [ ] Add transaction drift E2E test ([docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md))
+- [ ] Enable `ff_walkthrough` after content review
+- [ ] Enable `ff_trigger_mode` after UI work completion ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
+
+### P2 - Future Work
+- [ ] Appwrite persistence + configuration ([docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md))
 - [ ] Persistent scenarios & shareable experiences ([docs/issues/shareable-experiences.md](./issues/shareable-experiences.md))
