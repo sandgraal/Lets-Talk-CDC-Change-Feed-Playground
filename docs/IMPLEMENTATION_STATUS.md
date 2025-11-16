@@ -116,7 +116,7 @@ The CDC Change Feed Playground is in a **healthy and production-ready state** wi
 | `ff_multitable` | ✅ Enabled | Multi-table transactions | Low |
 | `ff_metrics` | ✅ Enabled | Metrics dashboard | Low |
 | `ff_walkthrough` | ⚠️ NOT in index.html | Guided tooltips | Medium |
-| `ff_trigger_mode` | ⚠️ NOT documented | Trigger-based CDC | Medium |
+| `ff_trigger_mode` | ⚠️ NOT in index.html | Trigger-based CDC | Medium |
 
 ### 🚨 Flag Inconsistencies Found
 1. **ff_walkthrough** - Listed as "disabled by default" in docs but goal is to enable
