@@ -1952,8 +1952,8 @@ function launchSchruteBucks() {
   const viewportHeight = typeof window !== "undefined"
     ? window.innerHeight
     : document.documentElement?.clientHeight || 0;
-  const originX = originRect ? originRect.left + originRect.width / 2 : viewportWidth / 2 || 0;
-  const originY = originRect ? originRect.top + originRect.height / 2 : viewportHeight / 2 || 0;
+  const originX = originRect ? originRect.left + originRect.width / 2 : viewportWidth / 2;
+  const originY = originRect ? originRect.top + originRect.height / 2 : viewportHeight / 2;
   const bills = 3 + Math.floor(Math.random() * 3);
 
   for (let i = 0; i < bills; i++) {
