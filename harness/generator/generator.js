@@ -56,11 +56,11 @@ const TABLE_CONFIG = {
     hasUpdatedAt: true,
   },
   orders: {
-    columns: ["status", "total"],
+    columns: ["customer_id", "status", "subtotal", "shipped_ts"],
     hasUpdatedAt: true,
   },
   order_items: {
-    columns: ["order_id", "sku", "qty"],
+    columns: ["order_id", "sku", "qty", "price"],
     hasUpdatedAt: true,
   },
 };

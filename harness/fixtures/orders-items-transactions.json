@@ -2,7 +2,10 @@
   "id": "orders-items-transactions",
   "name": "Orders + Items Transactions",
   "description": "Teaching multi-table commit semantics.",
-  "highlight": "Toggle apply-on-commit to keep orders/items destinations consistent.",
+  "tags": [
+    "transactions",
+    "orders"
+  ],
   "schema": [
     {
       "name": "id",

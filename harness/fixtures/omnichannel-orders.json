@@ -1,0 +1,113 @@
+{
+  "id": "omnichannel-orders",
+  "name": "Omnichannel Orders",
+  "description": "Walking through status transitions and fulfilment edge cases.",
+  "tags": [
+    "orders",
+    "lag",
+    "fulfilment"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "channel",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "total",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "pickup_ts",
+      "type": "number",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "ORD-501",
+      "customer_id": "C-19",
+      "status": "collected",
+      "channel": "store-108",
+      "total": 189.5,
+      "pickup_ts": 420
+    }
+  ],
+  "ops": [
+    {
+      "t": 120,
+      "op": "insert",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-501"
+      },
+      "after": {
+        "customer_id": "C-19",
+        "status": "pending",
+        "channel": "web",
+        "total": 189.5
+      }
+    },
+    {
+      "t": 240,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-501"
+      },
+      "after": {
+        "status": "ready_for_pickup",
+        "channel": "store-108"
+      }
+    },
+    {
+      "t": 260,
+      "op": "insert",
+      "table": "fulfilment_events",
+      "pk": {
+        "id": "FUL-501-1"
+      },
+      "after": {
+        "order_id": "ORD-501",
+        "type": "picking",
+        "associate": "EMP-88"
+      }
+    },
+    {
+      "t": 420,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-501"
+      },
+      "after": {
+        "status": "collected",
+        "pickup_ts": 420
+      }
+    },
+    {
+      "t": 600,
+      "op": "delete",
+      "table": "fulfilment_events",
+      "pk": {
+        "id": "FUL-501-1"
+      }
+    }
+  ]
+}

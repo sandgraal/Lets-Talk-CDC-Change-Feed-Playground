@@ -1,0 +1,104 @@
+{
+  "id": "schema-evolution",
+  "name": "Schema Evolution",
+  "description": "Demonstrating column additions while capturing changes.",
+  "tags": [
+    "schema",
+    "backfill"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "loyalty_tier",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "preferences",
+      "type": "json",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "C-881",
+      "name": "Ishaan",
+      "email": "ishaan@example.net",
+      "loyalty_tier": "bronze",
+      "preferences": {
+        "marketing_opt_in": false,
+        "locale": "en-GB"
+      }
+    }
+  ],
+  "ops": [
+    {
+      "t": 75,
+      "op": "insert",
+      "table": "customers",
+      "pk": {
+        "id": "C-880"
+      },
+      "after": {
+        "name": "Mira",
+        "email": "mira@example.net",
+        "loyalty_tier": "silver"
+      }
+    },
+    {
+      "t": 140,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "C-880"
+      },
+      "after": {
+        "loyalty_tier": "gold",
+        "preferences": {
+          "marketing_opt_in": true
+        }
+      }
+    },
+    {
+      "t": 210,
+      "op": "insert",
+      "table": "customers",
+      "pk": {
+        "id": "C-881"
+      },
+      "after": {
+        "name": "Ishaan",
+        "email": "ishaan@example.net",
+        "loyalty_tier": "bronze"
+      }
+    },
+    {
+      "t": 360,
+      "op": "update",
+      "table": "customers",
+      "pk": {
+        "id": "C-881"
+      },
+      "after": {
+        "preferences": {
+          "marketing_opt_in": false,
+          "locale": "en-GB"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "id": "real-time-payments",
+  "name": "Real-time Payments",
+  "description": "Demonstrating idempotent updates or risk review flows.",
+  "tags": [
+    "payments",
+    "risk",
+    "latency"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "account_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "released_by",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "settled_ts",
+      "type": "number",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "PAY-009",
+      "account_id": "AC-77",
+      "amount": 985.4,
+      "currency": "USD",
+      "status": "settled",
+      "settled_ts": 280
+    }
+  ],
+  "ops": [
+    {
+      "t": 50,
+      "op": "insert",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-009"
+      },
+      "after": {
+        "account_id": "AC-77",
+        "amount": 985.4,
+        "currency": "USD",
+        "status": "authorised"
+      }
+    },
+    {
+      "t": 95,
+      "op": "insert",
+      "table": "risk_reviews",
+      "pk": {
+        "id": "RR-009"
+      },
+      "after": {
+        "payment_id": "PAY-009",
+        "score": 412,
+        "disposition": "manual"
+      }
+    },
+    {
+      "t": 140,
+      "op": "update",
+      "table": "risk_reviews",
+      "pk": {
+        "id": "RR-009"
+      },
+      "after": {
+        "disposition": "approved"
+      }
+    },
+    {
+      "t": 180,
+      "op": "update",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-009"
+      },
+      "after": {
+        "status": "released",
+        "released_by": "agent-5"
+      }
+    },
+    {
+      "t": 220,
+      "op": "delete",
+      "table": "risk_reviews",
+      "pk": {
+        "id": "RR-009"
+      }
+    },
+    {
+      "t": 280,
+      "op": "update",
+      "table": "payments",
+      "pk": {
+        "id": "PAY-009"
+      },
+      "after": {
+        "status": "settled",
+        "settled_ts": 280
+      }
+    }
+  ]
+}

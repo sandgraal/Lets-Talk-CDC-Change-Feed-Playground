@@ -1,83 +1,83 @@
 {
   "id": "burst-updates",
   "name": "Burst Updates",
-  "description": "Five quick updates to expose lost intermediate writes for polling.",
+  "description": "Stressing lag/ordering behaviour under rapid updates.",
   "tags": [
-    "throughput",
-    "polling",
-    "lag"
+    "lag",
+    "polling"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "W-1",
+      "status": "ready"
+    }
   ],
   "ops": [
     {
       "t": 100,
       "op": "insert",
-      "table": "customers",
+      "table": "widgets",
       "pk": {
-        "id": "200"
+        "id": "W-1"
       },
       "after": {
-        "name": "Burst",
-        "email": "burst@example.com"
+        "status": "new"
       }
     },
     {
       "t": 150,
       "op": "update",
-      "table": "customers",
+      "table": "widgets",
       "pk": {
-        "id": "200"
+        "id": "W-1"
       },
       "after": {
-        "name": "Burst-1",
-        "email": "burst@example.com"
+        "status": "processing"
       }
     },
     {
-      "t": 180,
+      "t": 200,
       "op": "update",
-      "table": "customers",
+      "table": "widgets",
       "pk": {
-        "id": "200"
+        "id": "W-1"
       },
       "after": {
-        "name": "Burst-2",
-        "email": "burst@example.com"
+        "status": "picking"
       }
     },
     {
-      "t": 210,
+      "t": 260,
       "op": "update",
-      "table": "customers",
+      "table": "widgets",
       "pk": {
-        "id": "200"
+        "id": "W-1"
       },
       "after": {
-        "name": "Burst-3",
-        "email": "burst@example.com"
+        "status": "packing"
       }
     },
     {
-      "t": 240,
+      "t": 320,
       "op": "update",
-      "table": "customers",
+      "table": "widgets",
       "pk": {
-        "id": "200"
+        "id": "W-1"
       },
       "after": {
-        "name": "Burst-4",
-        "email": "burst@example.com"
-      }
-    },
-    {
-      "t": 600,
-      "op": "update",
-      "table": "customers",
-      "pk": {
-        "id": "200"
-      },
-      "after": {
-        "name": "Burst-Final",
-        "email": "burst@example.com"
+        "status": "ready"
       }
     }
   ]
