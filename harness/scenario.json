@@ -1,91 +1,100 @@
 {
-  "id": "orders-transactions",
+  "id": "orders-items-transactions",
   "name": "Orders + Items Transactions",
-  "description": "Coordinate changes across orders and order_items within the same transaction.",
-  "highlight": "Apply-on-commit keeps multi-table writes atomic across downstream lanes.",
+  "description": "Teaching multi-table commit semantics.",
+  "highlight": "Toggle apply-on-commit to keep orders/items destinations consistent.",
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "subtotal",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "shipped_ts",
+      "type": "number",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "ORD-720",
+      "customer_id": "C-32",
+      "status": "shipped",
+      "subtotal": 412.5,
+      "shipped_ts": 520
+    }
+  ],
   "ops": [
     {
-      "t": 120,
+      "t": 300,
       "op": "insert",
       "table": "orders",
       "pk": {
-        "id": "ORD-5001"
+        "id": "ORD-720"
       },
       "after": {
+        "customer_id": "C-32",
         "status": "pending",
-        "total": 128.5
+        "subtotal": 412.5
       },
       "txn": {
-        "id": "txn-5001",
+        "id": "TX-720",
         "index": 0,
-        "total": 2
+        "total": 3
       }
     },
     {
-      "t": 120,
+      "t": 300,
       "op": "insert",
       "table": "order_items",
       "pk": {
-        "id": "ORD-5001-1"
+        "id": "ORD-720-1"
       },
       "after": {
-        "order_id": "ORD-5001",
-        "sku": "SKU-1",
-        "qty": 1
+        "order_id": "ORD-720",
+        "sku": "SKU-9",
+        "qty": 2,
+        "price": 99.5
       },
       "txn": {
-        "id": "txn-5001",
+        "id": "TX-720",
         "index": 1,
-        "total": 2,
-        "last": true
+        "total": 3
       }
     },
     {
-      "t": 360,
-      "op": "update",
-      "table": "orders",
-      "pk": {
-        "id": "ORD-5001"
-      },
-      "after": {
-        "status": "fulfilled"
-      },
-      "txn": {
-        "id": "txn-5002",
-        "index": 0,
-        "total": 2
-      }
-    },
-    {
-      "t": 360,
+      "t": 300,
       "op": "insert",
       "table": "order_items",
       "pk": {
-        "id": "ORD-5001-2"
+        "id": "ORD-720-2"
       },
       "after": {
-        "order_id": "ORD-5001",
-        "sku": "SKU-99",
-        "qty": 1
+        "order_id": "ORD-720",
+        "sku": "SKU-44",
+        "qty": 1,
+        "price": 213.5
       },
       "txn": {
-        "id": "txn-5002",
-        "index": 1,
-        "total": 2,
+        "id": "TX-720",
+        "index": 2,
+        "total": 3,
         "last": true
-      }
-    },
-    {
-      "t": 520,
-      "op": "delete",
-      "table": "order_items",
-      "pk": {
-        "id": "ORD-5001-1"
-      },
-      "txn": {
-        "id": "txn-5003",
-        "index": 0,
-        "total": 2
       }
     },
     {
@@ -93,16 +102,11 @@
       "op": "update",
       "table": "orders",
       "pk": {
-        "id": "ORD-5001"
+        "id": "ORD-720"
       },
       "after": {
-        "status": "partially_refunded"
-      },
-      "txn": {
-        "id": "txn-5003",
-        "index": 1,
-        "total": 2,
-        "last": true
+        "status": "shipped",
+        "shipped_ts": 520
       }
     }
   ]
