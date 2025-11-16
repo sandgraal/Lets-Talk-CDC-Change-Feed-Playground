@@ -66,6 +66,15 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Browse open issues labeled `hacktoberfest`, `good first issue`, or `help wanted` to find a place to jump in.
 - Follow the contribution workflow described in `CONTRIBUTING.md` so pull requests can be reviewed and merged quickly.
 
+## Project Status & Documentation
+
+**Current Status:** v1.0.0 Released (Health Score: 8.5/10) 🟢
+
+For detailed implementation status, priorities, and next steps:
+- 📊 [Implementation Status Review](docs/REVIEW_SUMMARY.md) - Quick overview
+- 📋 [Detailed Status Report](docs/IMPLEMENTATION_STATUS.md) - Comprehensive analysis
+- 🎯 [Action Plan](docs/ACTION_PLAN.md) - Prioritized next steps
+
 ## Contributing
 We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) and the day-to-day [`Development Playbook`](docs/development.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
 
