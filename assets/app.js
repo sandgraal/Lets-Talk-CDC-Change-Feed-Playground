@@ -1981,7 +1981,6 @@ function launchSchruteBucks() {
       animation.finished.then(cleanup).catch(cleanup);
     } else {
       animation.onfinish = cleanup;
-      setTimeout(cleanup, duration + delay + 200);
     }
   }
 }
