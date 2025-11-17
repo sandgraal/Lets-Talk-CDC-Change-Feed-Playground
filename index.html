@@ -79,6 +79,8 @@
   </script>
   <script>
     (() => {
+      const DEFAULT_STATUS_TEXT = "Add a column to begin";
+
       const overlay = document.getElementById("onboardingOverlay");
       const status = document.getElementById("schemaStatus");
       const pills = document.getElementById("schemaPills");
@@ -100,8 +102,8 @@
         } catch {
           /* ignore storage errors */
         }
-        if (status) status.textContent = "Add a column to begin";
-        if (pills) pills.innerHTML = "";
+        if (status) status.textContent = DEFAULT_STATUS_TEXT;
+        if (pills) pills.replaceChildren();
         if (overlay) overlay.style.display = "none";
       }
 
@@ -110,16 +112,12 @@
         seedBlankWorkspace();
       });
 
-      window.addEventListener(
-        "DOMContentLoaded",
-        () => {
-          if (status && !status.textContent) {
-            status.textContent = "Add a column to begin";
-          }
-          if (overlay) overlay.style.display = "";
-        },
-        { once: true }
-      );
+      function initializeOverlay() {
+        if (status && !status.textContent) {
+          status.textContent = DEFAULT_STATUS_TEXT;
+        }
+        if (overlay) overlay.style.display = "";
+      }
 
       window.seedBlankWorkspace = seedBlankWorkspace;
     })();
