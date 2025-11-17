@@ -68,12 +68,12 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 
 ## Project Status & Documentation
 
-**Current Status:** v1.0.0 Released (Health Score: 8.5/10) 🟢
+**Current Status:** Snapshot build `0.1.0` (Health Score: 8.0/10) 🟡
 
-For detailed implementation status, priorities, and next steps:
-- 📊 [Implementation Status Review](docs/REVIEW_SUMMARY.md) - Quick overview
-- 📋 [Detailed Status Report](docs/IMPLEMENTATION_STATUS.md) - Comprehensive analysis
-- 🎯 [Action Plan](docs/ACTION_PLAN.md) - Prioritized next steps
+Latest assessment:
+- 📊 [Implementation Review Summary](docs/REVIEW_SUMMARY.md) – Quick overview of strengths, gaps, and risks
+- 📋 [Implementation Status Report](docs/IMPLEMENTATION_STATUS.md) – Deep dive across architecture, tests, and feature flags
+- 🎯 [Action Plan](docs/ACTION_PLAN.md) – Prioritized follow-ups to reach world-class readiness
 
 ## Contributing
 We welcome improvements to the simulator, documentation, and learning resources. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) and the day-to-day [`Development Playbook`](docs/development.md) for branching conventions, pull request expectations, and quality guidelines before you start work.
