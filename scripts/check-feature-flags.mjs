@@ -9,7 +9,11 @@ const indexPath = path.join(rootDir, "index.html");
 
 function readJson(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from ${filePath}: ${error.message}`);
+  }
 }
 
 function extractFlags(html, pattern, label) {
