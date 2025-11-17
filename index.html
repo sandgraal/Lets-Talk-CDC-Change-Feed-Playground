@@ -6,6 +6,7 @@
   <title>CDC Playground</title>
   <link rel="stylesheet" href="./assets/styles.css" />
   <link rel="stylesheet" href="./assets/generated/ui-shell.css" />
+  <link rel="stylesheet" href="./assets/generated/ui-main.css" />
 </head>
 <body>
   <header class="sim-shell__header">
@@ -52,6 +53,30 @@
   </script>
   <script src="./assets/feature-flags.js"></script>
   <script src="./assets/ui-shell-loader.js"></script>
+  <script type="module">
+    const bundleHref = new URL("./assets/generated/ui-shell.js", window.location.href).toString();
+
+    async function ensureShellLoaded() {
+      if (window.__LetstalkCdcUiShellLoaded) return;
+      try {
+        await import(/* @vite-ignore */ bundleHref);
+        window.__LetstalkCdcUiShellLoaded = true;
+      } catch (error) {
+        console.warn("Comparator shell bundle failed to load", error);
+      }
+    }
+
+    if (window.cdcFeatureFlags?.has?.("comparator_v2")) {
+      void ensureShellLoaded();
+    }
+
+    window.addEventListener("cdc:feature-flags", event => {
+      const detail = Array.isArray(event.detail) ? event.detail : [];
+      if (detail.includes("comparator_v2")) {
+        void ensureShellLoaded();
+      }
+    });
+  </script>
   <script>
     (() => {
       const DEFAULT_STATUS_TEXT = "Add a column to begin";
@@ -94,11 +119,6 @@
         if (overlay) overlay.style.display = "";
       }
 
-      if (document.readyState !== "loading") {
-        initializeOverlay();
-      } else {
-        window.addEventListener("DOMContentLoaded", initializeOverlay, { once: true });
-      }
       window.seedBlankWorkspace = seedBlankWorkspace;
     })();
   </script>
