@@ -899,7 +899,7 @@ function renderMethodGuidance() {
 
   const fragment = document.createDocumentFragment();
   const lead = document.createElement("p");
-  lead.className = "method-guidance__lead";
+  lead.className = "section-lead";
   lead.textContent = "Use the comparator preview to watch each capture pattern respond to the same operations. Start the guided walkthrough to see how capture choices change envelopes.";
   fragment.appendChild(lead);
 
