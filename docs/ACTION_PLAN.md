@@ -8,7 +8,7 @@
 Focus this cycle on restoring automated E2E coverage, eliminating feature flag drift, and adding guardrails so the reverted `index.html` remains performant and in sync with generated assets.
 
 ---
-
+---
 ## ✅ Completed in This Pass
 - Refreshed status/reporting docs to reflect the `0.1.0` snapshot and current test signal.
 - Updated README “Current Status” to avoid overstating readiness.
