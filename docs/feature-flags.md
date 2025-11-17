@@ -15,3 +15,8 @@ This matrix tracks the major feature flags used in the CDC playground, summarisi
 | `ff_multitable` | Core duo | Exposes multi-table + transactional scenarios with apply-on-commit coordination. | **✅ Enabled** in `index.html` - transaction coverage + tutorials stay green. | Keep enabled for day-to-day demos; only disable locally when isolating non-transaction bugs. |
 | `ff_metrics` | Core duo | Surfaces the metrics dashboard with backlog, lag percentiles, and lane checks telemetry. | **✅ Enabled** in `index.html` - comparator smoke and tests passing. | Metrics dashboard functional; continue monitoring telemetry performance. |
 | `ff_walkthrough` | Core duo | Enables the guided tooltips and glossary walkthrough experience. | **⚠️ Not in index.html** - Copy + tour ordering need final review. | Add to index.html after content review and walkthrough flow validation; see [feature-flag-governance.md](./issues/feature-flag-governance.md). |
+
+## Runtime sources and guardrails
+- **Manifest:** `assets/feature-flag-manifest.json` is the single source of truth for flag purpose, rollout readiness, and whether each flag should ship in `index.html` by default.
+- **Load order:** `assets/feature-flags.js` seeds flags from (1) `APPWRITE_CFG.featureFlags`, (2) `window.CDC_FEATURE_FLAGS`, (3) `localStorage` (`cdc_feature_flags_v1`), and (4) query params (`flag` or `flags=,` lists). Once any source is provided it acts as an allowlist.
+- **Drift check:** `npm run lint:flags` asserts `index.html` defaults match the manifest and that no unknown flags are present. Run it locally before PRs; CI runs it via `ci:preflight`.

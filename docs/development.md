@@ -15,6 +15,7 @@ This playbook documents the day-to-day workflow we follow once you are set up lo
 ## Expectations Before Opening a Pull Request
 - **Tests**: run the quick suite locally. At minimum:
   ```bash
+  npm run lint:flags
   npm run lint:scenarios
   npm run test:unit
   npm run test:e2e
