@@ -1,5 +1,6 @@
 .DS_Store
 node_modules/
+test-results/
 ai/logs/*
 !ai/logs/.gitkeep
 ai/_state/*
