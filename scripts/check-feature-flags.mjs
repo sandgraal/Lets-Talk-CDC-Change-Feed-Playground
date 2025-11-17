@@ -71,11 +71,5 @@ const globalFlags = extractFlags(indexHtml, /window\.CDC_FEATURE_FLAGS[^[]*\[([\
 assertSameSet(enabledByDefault, appwriteFlags, "APPWRITE_CFG.featureFlags");
 assertSameSet(enabledByDefault, globalFlags, "window.CDC_FEATURE_FLAGS");
 
-for (const source of [appwriteFlags, globalFlags]) {
-  const unknown = source.filter(flag => !manifest.some(entry => entry.flag === flag));
-  if (unknown.length) {
-    throw new Error(`Flags present in index.html but not in manifest: ${unknown.join(", ")}`);
-  }
-}
 
 console.log("✓ Feature flags in index.html match manifest defaults.");
