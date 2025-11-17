@@ -898,6 +898,11 @@ function renderMethodGuidance() {
   }
 
   const fragment = document.createDocumentFragment();
+  const lead = document.createElement("p");
+  lead.className = "method-guidance__lead";
+  lead.textContent = "Use the comparator preview to watch each capture pattern respond to the same operations. Start the guided walkthrough to see how capture choices change envelopes.";
+  fragment.appendChild(lead);
+
   const heading = document.createElement("h3");
   heading.className = "method-guidance__heading";
   heading.textContent = "When to use which";
