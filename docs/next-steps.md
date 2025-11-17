@@ -43,7 +43,7 @@
 
 ### P1 - Important (Next Sprint)
 - [ ] Feature flag activation governance ([docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md))
-- [ ] Add transaction drift E2E test ([docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md))
+- [x] Add transaction drift E2E test ([docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md))
 - [ ] Enable `ff_walkthrough` after content review
 - [ ] Enable `ff_trigger_mode` after UI work completion ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
 

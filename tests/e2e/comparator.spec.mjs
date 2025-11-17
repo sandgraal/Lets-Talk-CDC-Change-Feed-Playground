@@ -1,22 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { pathToFileURL, fileURLToPath } from "url";
-import path from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const indexUrl = pathToFileURL(path.resolve(__dirname, "../../index.html")).href;
+import { loadComparator } from "./support/comparator.mjs";
 
 const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test.describe;
-
-async function loadComparator(page) {
-  await page.goto(indexUrl, { waitUntil: "load" });
-
-  await page.waitForFunction(() => {
-    return Boolean(window.__LetstalkCdcUiShellLoaded);
-  }, null, { timeout: 15000 });
-
-  await page.waitForSelector(".sim-shell__title", { timeout: 15000 });
-}
 
 suite("Comparator basics", () => {
   test.beforeEach(async ({ page }) => {

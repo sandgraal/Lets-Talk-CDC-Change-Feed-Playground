@@ -63,6 +63,17 @@ All CDC modes publish into a shared `EventBus` (`src/engine/eventBus.ts`). The b
 - Build artefacts for the playground: `npm run build`.
 - Refresh the nightly harness summary (requires a GitHub token with workflow scope): `GITHUB_TOKEN=... npm run harness:history`.
 
+## Comparator debug API
+The comparator shell exposes a lightweight debug helper in the browser console for deterministic testing/debugging:
+
+```ts
+window.cdcComparatorDebug.getLaneSnapshot("polling"); // deep clone of the current destination rows
+window.cdcComparatorDebug.getLaneHistory("trigger"); // recent row counts recorded per lane
+window.cdcComparatorDebug.resetHistory(); // clear history before a new scenario run
+```
+
+The lane history is capped to the most recent 32 transitions per method and powers the Playwright transaction-drift coverage. Use it when you need to assert on destination state without poking at React internals.
+
 ## Component stories
 We use [Ladle](https://ladle.dev/) to iterate on UI primitives:
 ```bash

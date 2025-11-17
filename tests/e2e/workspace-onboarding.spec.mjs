@@ -19,6 +19,7 @@ suite("Workspace onboarding", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.clear();
+      window.CDC_FEATURE_FLAGS = ["comparator_v2"];
     });
   });
 

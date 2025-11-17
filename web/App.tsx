@@ -64,14 +64,6 @@ type FeatureFlagApi = {
   all?: () => string[];
 };
 
-declare global {
-  interface Window {
-    cdcFeatureFlags?: FeatureFlagApi;
-    APPWRITE_CFG?: {
-      featureFlags?: string[];
-    };
-  }
-}
 import { MetricsStrip } from "./components/MetricsStrip";
 import { MetricsDashboard } from "./components/MetricsDashboard";
 import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
@@ -192,8 +184,25 @@ const DEFAULT_GENERATOR_RATE = 120;
 const GENERATOR_RATE_STEP = 10;
 const GENERATOR_BURST_COUNT = 40;
 const GENERATOR_BURST_SPACING_MS = 5;
+const LANE_HISTORY_LIMIT = 32;
 
 type MethodOption = typeof METHOD_ORDER[number];
+
+type ComparatorDebugApi = {
+  getLaneSnapshot(method: MethodOption): LaneDestinationSnapshot | null;
+  getLaneHistory(method: MethodOption): number[];
+  resetHistory(): void;
+};
+
+declare global {
+  interface Window {
+    cdcFeatureFlags?: FeatureFlagApi;
+    APPWRITE_CFG?: {
+      featureFlags?: string[];
+    };
+    cdcComparatorDebug?: ComparatorDebugApi;
+  }
+}
 
 type PollingConfig = {
   pollIntervalMs: number;
@@ -292,6 +301,21 @@ type LaneDestinationSnapshot = {
   rows: Array<{ id: string; displayId: string; table: string; values: Record<string, unknown> }>;
   schemaVersion: number;
   hasSchemaColumn: boolean;
+};
+
+const cloneLaneSnapshot = (snapshot?: LaneDestinationSnapshot | null): LaneDestinationSnapshot | null => {
+  if (!snapshot) return null;
+  return {
+    columns: [...snapshot.columns],
+    rows: snapshot.rows.map(row => ({
+      id: row.id,
+      displayId: row.displayId,
+      table: row.table,
+      values: { ...row.values },
+    })),
+    schemaVersion: snapshot.schemaVersion,
+    hasSchemaColumn: snapshot.hasSchemaColumn,
+  };
 };
 
 type LaneRuntimeSummary = {
@@ -1639,8 +1663,35 @@ export function App() {
     });
     return snapshots;
   }, [activeMethods, ensureLaneStorage, laneEvents]);
+  const laneSnapshotHistoryRef = useRef<Map<MethodOption, number[]>>(new Map());
   const isPlayingRef = useRef(isPlaying);
   const schemaCommitRef = useRef(0);
+
+  useEffect(() => {
+    const history = laneSnapshotHistoryRef.current;
+    const activeSet = new Set(activeMethods);
+    for (const method of Array.from(history.keys())) {
+      if (!activeSet.has(method)) {
+        history.delete(method);
+      }
+    }
+    activeMethods.forEach(method => {
+      if (!history.has(method)) {
+        history.set(method, []);
+      }
+      const snapshot = laneDestinations.get(method);
+      const nextCount = snapshot?.rows.length ?? 0;
+      const series = history.get(method);
+      if (!series) return;
+      const last = series[series.length - 1];
+      if (series.length === 0 || last !== nextCount) {
+        series.push(nextCount);
+        if (series.length > LANE_HISTORY_LIMIT) {
+          series.splice(0, series.length - LANE_HISTORY_LIMIT);
+        }
+      }
+    });
+  }, [activeMethods, laneDestinations]);
 
   useEffect(() => {
     if (eventLogMethod && !activeMethods.includes(eventLogMethod)) {
@@ -2095,6 +2146,10 @@ export function App() {
     laneStorageRef.current = {};
     activeMethods.forEach(method => {
       laneStorageRef.current[method] = new InMemoryTableStorage();
+    });
+    laneSnapshotHistoryRef.current = new Map();
+    activeMethods.forEach(method => {
+      laneSnapshotHistoryRef.current.set(method, []);
     });
     setClock(0);
     setIsPlaying(false);
@@ -2994,6 +3049,7 @@ export function App() {
       runner.reset(scenario.seed);
       setLaneEvents(emptyEventMap<CdcEvent>(activeMethods));
       setBusEvents(emptyEventMap<BusEvent>(activeMethods));
+      laneSnapshotHistoryRef.current.forEach(series => series.splice(0));
       for (const method of activeMethods) {
         laneStorageRef.current[method] = new InMemoryTableStorage();
         const runtime = laneRuntimeRef.current[method];
@@ -3157,6 +3213,26 @@ export function App() {
       }
     };
   }, [handlePause, handleReset, handleSeek, handleStart, handleStep]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const api: ComparatorDebugApi = {
+      getLaneSnapshot: method => cloneLaneSnapshot(laneDestinations.get(method)),
+      getLaneHistory: method => {
+        const history = laneSnapshotHistoryRef.current.get(method) ?? [];
+        return [...history];
+      },
+      resetHistory: () => {
+        laneSnapshotHistoryRef.current.forEach(series => series.splice(0));
+      },
+    };
+    window.cdcComparatorDebug = api;
+    return () => {
+      if (window.cdcComparatorDebug === api) {
+        delete window.cdcComparatorDebug;
+      }
+    };
+  }, [laneDestinations, activeMethods]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
