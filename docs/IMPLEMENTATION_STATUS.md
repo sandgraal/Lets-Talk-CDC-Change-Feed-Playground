@@ -1,6 +1,6 @@
 # Implementation Status Report
-**Review Date:** 2025-11-17  \
-**Reviewer:** GitHub Copilot Agent  \
+**Review Date:** 2025-11-17
+**Reviewer:** GitHub Copilot Agent
 **Repository:** sandgraal/Lets-Talk-CDC-Change-Feed-Playground
 
 ---
