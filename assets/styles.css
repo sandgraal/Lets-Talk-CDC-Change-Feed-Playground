@@ -2783,6 +2783,12 @@ body.megadesk-mode .hero-ambient .orb {
   color: #cbd5f5;
 }
 
+.method-guidance__lead {
+  margin: 0 0 12px;
+  color: #d7e3fa;
+  line-height: 1.5;
+}
+
 .method-guidance__heading {
   margin: 0 0 12px;
   text-transform: uppercase;
@@ -2985,4 +2991,17 @@ body.megadesk-mode .hero-ambient .orb {
 .toast--leaving {
   opacity: 0;
   transform: translateY(-12px);
+}
+.section-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.section-lead {
+  margin: 6px 0 0;
+  color: #bac8e6;
+  line-height: 1.5;
 }
