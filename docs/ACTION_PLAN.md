@@ -1,5 +1,5 @@
 # Action Plan – November 2025 Review
-**Created:** 2025-11-17  \
+**Created:** 2025-11-17  
 **Review Reference:** [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
 ---
