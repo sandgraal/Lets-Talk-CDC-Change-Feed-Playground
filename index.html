@@ -1,1 +1,128 @@
-<contents of index.html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CDC Playground</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+  <link rel="stylesheet" href="./assets/generated/ui-shell.css" />
+  <link rel="stylesheet" href="./assets/generated/ui-main.css" />
+</head>
+<body>
+  <header class="sim-shell__header">
+    <h1 class="sim-shell__title">CDC Change Data Capture Playground</h1>
+  </header>
+
+  <main class="layout">
+    <section id="schema" aria-label="Schema designer" class="panel">
+      <h2>Schema</h2>
+      <p id="schemaStatus">Add a column to begin</p>
+      <div id="schemaPills" class="pill-row" aria-live="polite"></div>
+    </section>
+
+    <section id="sim-shell-preview" aria-label="Simulator preview" class="panel">
+      <h2 class="sim-shell__title">CDC Method Comparator</h2>
+      <div id="simShellRoot"></div>
+    </section>
+  </main>
+
+  <div id="onboardingOverlay" role="dialog" aria-modal="true">
+    <div class="onboarding__content">
+      <h2>Welcome to the CDC Playground</h2>
+      <p>Start from scratch to model your own schema and follow the guided flow.</p>
+      <div class="onboarding__actions">
+        <button id="onboardingStart" type="button">Start from scratch</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.CDC_FEATURE_FLAGS = Array.isArray(window.CDC_FEATURE_FLAGS)
+      ? window.CDC_FEATURE_FLAGS.slice()
+      : [
+          "comparator_v2",
+          "ff_crud_fix",
+          "ff_event_log",
+          "ff_event_bus",
+          "ff_pause_resume",
+          "ff_query_slider",
+          "ff_schema_demo",
+          "ff_multitable",
+          "ff_metrics",
+        ];
+  </script>
+  <script src="./assets/feature-flags.js"></script>
+  <script src="./assets/ui-shell-loader.js"></script>
+  <script type="module">
+    const bundleHref = new URL("./assets/generated/ui-shell.js", window.location.href).toString();
+
+    async function ensureShellLoaded() {
+      if (window.__LetstalkCdcUiShellLoaded) return;
+      try {
+        await import(/* @vite-ignore */ bundleHref);
+        window.__LetstalkCdcUiShellLoaded = true;
+      } catch (error) {
+        console.warn("Comparator shell bundle failed to load", error);
+      }
+    }
+
+    if (window.cdcFeatureFlags?.has?.("comparator_v2")) {
+      void ensureShellLoaded();
+    }
+
+    window.addEventListener("cdc:feature-flags", event => {
+      const detail = Array.isArray(event.detail) ? event.detail : [];
+      if (detail.includes("comparator_v2")) {
+        void ensureShellLoaded();
+      }
+    });
+  </script>
+  <script>
+    (() => {
+      const overlay = document.getElementById("onboardingOverlay");
+      const status = document.getElementById("schemaStatus");
+      const pills = document.getElementById("schemaPills");
+      const start = document.getElementById("onboardingStart");
+
+      const defaultState = {
+        schema: [],
+        rows: [],
+        events: [],
+        schemaVersion: 1,
+        scenarioId: null,
+        remoteId: null,
+      };
+
+      function seedBlankWorkspace() {
+        try {
+          window.localStorage.setItem("cdc_playground", JSON.stringify(defaultState));
+          window.localStorage.setItem("cdc_playground_office_opt_in_v1", "false");
+        } catch {
+          /* ignore storage errors */
+        }
+        if (status) status.textContent = "Add a column to begin";
+        if (pills) pills.innerHTML = "";
+        if (overlay) overlay.style.display = "none";
+      }
+
+      start?.addEventListener("click", event => {
+        event.preventDefault();
+        seedBlankWorkspace();
+      });
+
+      window.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          if (status && !status.textContent) {
+            status.textContent = "Add a column to begin";
+          }
+          if (overlay) overlay.style.display = "";
+        },
+        { once: true }
+      );
+
+      window.seedBlankWorkspace = seedBlankWorkspace;
+    })();
+  </script>
+</body>
+</html>
