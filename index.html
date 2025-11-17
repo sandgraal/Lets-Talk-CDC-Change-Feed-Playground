@@ -85,17 +85,18 @@
         seedBlankWorkspace();
       });
 
-      window.addEventListener(
-        "DOMContentLoaded",
-        () => {
-          if (status && !status.textContent) {
-            status.textContent = "Add a column to begin";
-          }
-          if (overlay) overlay.style.display = "";
-        },
-        { once: true }
-      );
+      function initializeOverlay() {
+        if (status && !status.textContent) {
+          status.textContent = "Add a column to begin";
+        }
+        if (overlay) overlay.style.display = "";
+      }
 
+      if (document.readyState !== "loading") {
+        initializeOverlay();
+      } else {
+        window.addEventListener("DOMContentLoaded", initializeOverlay, { once: true });
+      }
       window.seedBlankWorkspace = seedBlankWorkspace;
     })();
   </script>
