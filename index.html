@@ -76,7 +76,7 @@
           /* ignore storage errors */
         }
         if (status) status.textContent = "Add a column to begin";
-        if (pills) pills.innerHTML = "";
+        if (pills) pills.replaceChildren();
         if (overlay) overlay.style.display = "none";
       }
 
