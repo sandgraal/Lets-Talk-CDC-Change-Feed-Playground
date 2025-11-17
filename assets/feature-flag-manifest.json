@@ -1,0 +1,68 @@
+[
+  {
+    "flag": "comparator_v2",
+    "summary": "Release the refreshed comparator UI with diff overlays and guided experiences.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_crud_fix",
+    "summary": "Harden CRUD flows with controlled inputs and surfaced errors.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_event_log",
+    "summary": "Expose the Event Log panel with filters, counters, and exports.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_event_bus",
+    "summary": "Show the Event Bus column with backlog and lag metrics.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_pause_resume",
+    "summary": "Enable pause/resume controls to observe backlog growth and draining.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_query_slider",
+    "summary": "Provide the polling interval slider and lossiness messaging.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_trigger_mode",
+    "summary": "Add the trigger-based CDC adapter with write-amplification modelling.",
+    "defaultInIndex": false,
+    "rollout": "staged"
+  },
+  {
+    "flag": "ff_schema_demo",
+    "summary": "Drive the schema change walkthrough with add/drop column flows.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_multitable",
+    "summary": "Expose multi-table + transactional scenarios with apply-on-commit coordination.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_metrics",
+    "summary": "Surface the metrics dashboard with backlog and lag percentiles.",
+    "defaultInIndex": true,
+    "rollout": "ready"
+  },
+  {
+    "flag": "ff_walkthrough",
+    "summary": "Enable guided tooltips and glossary walkthrough content.",
+    "defaultInIndex": false,
+    "rollout": "staged"
+  }
+]
