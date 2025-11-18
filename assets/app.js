@@ -670,6 +670,33 @@ const els = {
   inspectorReplay: document.getElementById("eventReplay"),
 };
 
+function ensureHeroCtas() {
+  if (typeof document === "undefined") return;
+  const actions = document.querySelector(".hero-pathways-actions");
+  if (!actions) return;
+
+  if (!document.getElementById("btnGuidedTour")) {
+    const guided = document.createElement("button");
+    guided.id = "btnGuidedTour";
+    guided.type = "button";
+    guided.className = "btn-primary";
+    guided.textContent = "Start guided walkthrough";
+    actions.appendChild(guided);
+  }
+
+  if (!document.getElementById("btnOnboarding")) {
+    const onboarding = document.createElement("button");
+    onboarding.id = "btnOnboarding";
+    onboarding.type = "button";
+    onboarding.className = "btn-ghost";
+    onboarding.textContent = "How the playground works";
+    actions.appendChild(onboarding);
+  }
+
+  els.guidedTourButton = document.getElementById("btnGuidedTour");
+  els.onboardingButton = document.getElementById("btnOnboarding");
+}
+
 function ensureOnboardingElements() {
   if (typeof document === "undefined") return;
   if (!els.onboardingOverlay) {
@@ -693,6 +720,7 @@ function ensureOnboardingElements() {
 }
 
 if (typeof document !== "undefined") {
+  ensureHeroCtas();
   document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
   document.getElementById("btnReset")?.addEventListener("click", () => {
     storage.remove(STORAGE_KEYS.state);
@@ -1014,23 +1042,6 @@ function createTemplateIcon(tags) {
   return wrap;
 }
 
-function createTemplateMetric(label, value) {
-  const metric = document.createElement("div");
-  metric.className = "template-metric";
-
-  const valueEl = document.createElement("span");
-  valueEl.className = "template-metric__value";
-  valueEl.textContent = value;
-
-  const labelEl = document.createElement("span");
-  labelEl.className = "template-metric__label";
-  labelEl.textContent = label;
-
-  metric.appendChild(valueEl);
-  metric.appendChild(labelEl);
-  return metric;
-}
-
 function toggleTemplateExpansion(templateId) {
   uiState.expandedTemplateId = uiState.expandedTemplateId === templateId ? null : templateId;
   renderTemplateGallery();
@@ -1112,17 +1123,8 @@ function renderTemplateGallery() {
     summary.className = "template-card__summary";
     summary.textContent = template.highlight || template.description;
 
-    const metrics = document.createElement("div");
-    metrics.className = "template-card__metrics";
-    const rowsMetric = createTemplateMetric("rows", `${template.rows?.length ?? 0}`);
-    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
-    const opsMetric = createTemplateMetric("ops", `${opsCount}`);
-    metrics.appendChild(rowsMetric);
-    metrics.appendChild(opsMetric);
-
     textWrap.appendChild(titleRow);
     textWrap.appendChild(summary);
-    textWrap.appendChild(metrics);
 
     leading.appendChild(textWrap);
     header.appendChild(leading);
