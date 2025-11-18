@@ -1147,6 +1147,7 @@ function renderTemplateGallery() {
 
     const body = document.createElement("div");
     body.className = "template-card__body" + (isExpanded ? "" : " is-collapsed");
+    body.hidden = !isExpanded;
     body.setAttribute("aria-hidden", String(!isExpanded));
 
     const desc = document.createElement("p");
