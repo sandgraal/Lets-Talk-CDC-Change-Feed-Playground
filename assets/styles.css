@@ -456,7 +456,11 @@ button.danger:hover {
 .hero {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "copy"
+    "templates"
+    "quickstart";
   gap: clamp(24px, 4vw, 40px);
   padding: clamp(28px, 5vw, 48px);
   border-radius: 24px;
@@ -467,12 +471,14 @@ button.danger:hover {
 }
 
 .hero-copy {
+  grid-area: copy;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .hero-templates {
+  grid-area: templates;
   position: relative;
   z-index: 1;
   display: flex;
@@ -838,6 +844,7 @@ button.danger:hover {
 }
 
 .hero-quickstart {
+  grid-area: quickstart;
   background: rgba(18, 32, 59, 0.72);
   border: 1px solid rgba(91, 123, 181, 0.38);
   border-radius: 20px;
@@ -2783,6 +2790,12 @@ body.megadesk-mode .hero-ambient .orb {
   color: #cbd5f5;
 }
 
+.method-guidance__lead {
+  margin: 0 0 12px;
+  color: #d7e3fa;
+  line-height: 1.5;
+}
+
 .method-guidance__heading {
   margin: 0 0 12px;
   text-transform: uppercase;
@@ -2807,6 +2820,15 @@ body.megadesk-mode .hero-ambient .orb {
   color: #cbd5f5;
   line-height: 1.4;
   font-size: 0.95rem;
+}
+
+@media (min-width: 1025px) {
+  .hero {
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    grid-template-areas:
+      "copy quickstart"
+      "templates quickstart";
+  }
 }
 
 
@@ -2985,4 +3007,17 @@ body.megadesk-mode .hero-ambient .orb {
 .toast--leaving {
   opacity: 0;
   transform: translateY(-12px);
+}
+.section-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.section-lead {
+  margin: 6px 0 0;
+  color: #bac8e6;
+  line-height: 1.5;
 }

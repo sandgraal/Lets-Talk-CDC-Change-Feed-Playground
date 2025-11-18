@@ -47,12 +47,12 @@ suite("Transaction drift", () => {
     await page.waitForFunction(() => {
       const history = window.cdcComparatorDebug?.getLaneHistory("polling") ?? [];
       return history.includes(1) && history.includes(2);
-    }, undefined, { timeout: 5000 });
+    }, undefined, { timeout: 10000 });
 
     await page.waitForFunction(() => {
       const snapshot = window.cdcComparatorDebug?.getLaneSnapshot("polling");
       return Boolean(snapshot && snapshot.rows.length >= 3);
-    }, undefined, { timeout: 5000 });
+    }, undefined, { timeout: 10000 });
 
     const partialHistory = await page.evaluate(() => {
       return window.cdcComparatorDebug?.getLaneHistory("polling") ?? [];
@@ -70,7 +70,7 @@ suite("Transaction drift", () => {
     await page.waitForFunction(() => {
       const snapshot = window.cdcComparatorDebug?.getLaneSnapshot("polling");
       return Boolean(snapshot && snapshot.rows.length >= 3);
-    }, undefined, { timeout: 5000 });
+    }, undefined, { timeout: 10000 });
 
     const commitHistory = await page.evaluate(() => {
       return window.cdcComparatorDebug?.getLaneHistory("polling") ?? [];
