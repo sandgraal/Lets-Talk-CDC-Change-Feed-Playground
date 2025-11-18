@@ -42,6 +42,24 @@ npm run test:e2e
 
 **CI note**: GitHub Actions workflows should run `npx playwright install --with-deps` before `npm run test:e2e` to ensure browsers are available.
 
+## Performance Measurement
+
+The playground maintains performance budgets for Core Web Vitals and transfer sizes. Before making changes that could affect performance:
+
+1. **Measure baseline** using Chrome DevTools Lighthouse:
+   - Open DevTools → Lighthouse tab
+   - Run Performance audit
+   - Note LCP, TTI, FCP, and transfer sizes
+
+2. **Check budgets** against targets in [`docs/performance-budgets.md`](./performance-budgets.md):
+   - LCP < 3.0s
+   - TTI < 5.0s
+   - Total initial load < 450 KB (gzipped)
+
+3. **Re-measure after changes** to ensure no regressions
+
+See [`docs/performance-budgets.md`](./performance-budgets.md) for detailed measurement methods and baseline metrics.
+
 ## Expectations Before Opening a Pull Request
 - **Tests**: run the quick suite locally. At minimum:
   ```bash
@@ -51,7 +69,12 @@ npm run test:e2e
   npm run test:e2e
   ```
   If you have Docker available, run the harness smoke as well (`npm run ci:harness`).
-- **Builds**: keep generated bundles in sync with source. Run `npm run check:bundles` before opening a PR to ensure `assets/generated/*` is newer than `src/`, `sim/`, and `web/`.
+- **Security**: if you've modified dependencies, run a security audit:
+  ```bash
+  npm run audit:prod  # Check production dependencies only
+  ```
+  CI will also run this check automatically, but catching issues locally saves time.
+- **Builds**: only regenerate generated bundles when the change requires it (see README “Deploy” sections).
 - **Docs**: update or create documentation for any new behaviour. Examples: README, `docs/harness-guide.md`, `docs/harness-history.md`.
 - **Changelog/Notes**: add or update release notes (`docs/enablement/release-notes.md`) when the change is user-facing.
 
