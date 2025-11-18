@@ -17,6 +17,7 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 | Schema evolution | Column backfills and schema drift | Add column, backfill toggle, trigger vs. log comparison |
 | Orders + items transactions | Multi-table atomicity and apply-on-commit | Apply-on-commit toggle + lag overlays |
 | Outbox relay | Contrasting change feed vs. application-managed outbox | Enable Polling + Log + Trigger, then enable snapshot drop / dedupe |
+| Retention & erasure | Privacy deletes, masking, and retention windows | Soft delete visibility + Drop snapshot + Dedupe on PK |
 
 ## Demo 1 – CRUD basics and delete capture
 
@@ -75,6 +76,20 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 - Outbox pattern protects business event schemas from breaking changes in the source tables.
 - Why per-event keys (`event_key`) and monotonic IDs (`EVT-221-*`) make dedupe + ordering straightforward downstream.
 - How to combine raw change feed (for data lake) with outbox events (for fan-out notifications) without double-processing.
+
+## Demo 5 – Retention and GDPR erasure
+
+1. Load **Retention & Erasure** from the gallery.
+2. Enable **Polling** and **Log**; toggle **soft deletes** on so tombstones stay visible.
+3. Start the run and open the **Event Log**, filtering to `customers` and `marketing_preferences` to see deletes and masking steps.
+4. Toggle **Drop snapshot rows** and **Dedupe on PK** to illustrate how downstream systems avoid replaying masked history.
+5. Pause when `C-300` is deleted to highlight the hard delete, then resume to watch `C-301` transition through `retained_for_legal` before being erased.
+6. Flip **Apply on commit** on/off to show how grouped deletes + audit rows stay atomic in the sink.
+
+**Talking points**
+- Tombstones vs. masking: why masking `email` before delete keeps privacy obligations even if polling lags.
+- How retention windows/holds mean log streams keep emitting events even when soft-deleted rows linger for compliance.
+- Why downstream dedupe + drop-snapshot controls matter when replaying erasure workflows from change feeds.
 
 ## Tips for live sessions
 

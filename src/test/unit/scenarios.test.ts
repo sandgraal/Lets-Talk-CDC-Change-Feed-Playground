@@ -35,6 +35,13 @@ const EXPECTED_SCENARIOS = [
     tags: ["outbox", "eventing", "ordering"],
   },
   {
+    id: "retention-erasure",
+    name: "Retention & Erasure",
+    description: "Walk through right-to-be-forgotten and legal hold flows.",
+    highlight: "Contrast tombstones, masking, and delayed deletes for privacy workflows.",
+    tags: ["gdpr", "retention", "privacy"],
+  },
+  {
     id: "iot-telemetry",
     name: "IoT Telemetry",
     description: "Showing rolling measurements with anomaly flags.",
