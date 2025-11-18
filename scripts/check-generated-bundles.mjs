@@ -15,27 +15,22 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bundleChecks = [
   {
     output: join(GENERATED_DIR, "sim-bundle.js"),
-    sources: ["src", "sim"],
     rebuild: "npm run build:sim",
   },
   {
     output: join(GENERATED_DIR, "ui-shell.js"),
-    sources: ["src", "web"],
     rebuild: "npm run build:web",
   },
   {
     output: join(GENERATED_DIR, "ui-shell.css"),
-    sources: ["src", "web"],
     rebuild: "npm run build:web",
   },
   {
     output: join(GENERATED_DIR, "ui-main.css"),
-    sources: ["src", "web"],
     rebuild: "npm run build:web",
   },
   {
     output: join(GENERATED_DIR, "event-log-widget.js"),
-    sources: ["src", "web"],
     rebuild: "npm run build:web",
   },
 ];
