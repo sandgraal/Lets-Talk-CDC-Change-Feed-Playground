@@ -3049,6 +3049,7 @@ export function App() {
       runner.reset(scenario.seed);
       setLaneEvents(emptyEventMap<CdcEvent>(activeMethods));
       setBusEvents(emptyEventMap<BusEvent>(activeMethods));
+      pendingTxnRef.current = {};
       laneSnapshotHistoryRef.current.forEach(series => series.splice(0));
       for (const method of activeMethods) {
         laneStorageRef.current[method] = new InMemoryTableStorage();
@@ -3059,6 +3060,7 @@ export function App() {
         updateLaneSnapshot(method, { lastOffset: -1 });
       }
       setClock(0);
+      consumerAllowanceRef.current = 0;
       schemaCommitRef.current = 0;
 
       if (!options?.keepLoop) {
