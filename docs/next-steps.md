@@ -44,8 +44,8 @@
 ### P1 - Important (Next Sprint)
 - [x] Feature flag activation governance - **COMPLETED** (comprehensive governance plan documented)
 - [x] Add transaction drift E2E test ([docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md))
-- [x] Enable `ff_walkthrough` after content review - **COMPLETED**
-- [ ] Enable `ff_trigger_mode` after UI work completion ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
+- [x] Enable `ff_walkthrough` after content review - **COMPLETED** (enabled in index.html)
+- [x] Enable `ff_trigger_mode` after UI work completion - **COMPLETED** (enabled in index.html)
 
 ### P2 - Future Work
 - [ ] Appwrite persistence + configuration ([docs/issues/appwrite-persistence.md](./issues/appwrite-persistence.md))

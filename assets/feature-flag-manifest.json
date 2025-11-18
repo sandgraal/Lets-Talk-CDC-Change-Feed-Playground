@@ -38,8 +38,8 @@
   {
     "flag": "ff_trigger_mode",
     "summary": "Add the trigger-based CDC adapter with write-amplification modelling.",
-    "defaultInIndex": false,
-    "rollout": "staged"
+    "defaultInIndex": true,
+    "rollout": "ready"
   },
   {
     "flag": "ff_schema_demo",
@@ -62,7 +62,7 @@
   {
     "flag": "ff_walkthrough",
     "summary": "Enable guided tooltips and glossary walkthrough content.",
-    "defaultInIndex": false,
-    "rollout": "staged"
+    "defaultInIndex": true,
+    "rollout": "ready"
   }
 ]

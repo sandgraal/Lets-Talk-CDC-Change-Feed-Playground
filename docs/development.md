@@ -12,6 +12,36 @@ This playbook documents the day-to-day workflow we follow once you are set up lo
 1. Pick an open GitHub issue (labels `good first issue`, `help wanted`, `hacktoberfest`, etc.) or open a new issue to discuss scope before coding.
 2. Reference the issue in your branch/PR using `Fixes #123` so it auto-closes when merged.
 
+## Running Tests Locally
+
+### Unit and Property Tests
+Unit tests and property-based simulator tests don't require any special setup:
+```bash
+npm run test:unit      # Vitest unit suite (88 tests)
+npm run test:sim       # Property-based CDC scenario tests
+```
+
+### End-to-End Tests (Playwright)
+E2E tests require Playwright browsers to be installed. **First-time setup:**
+```bash
+npx playwright install --with-deps
+```
+
+This installs Chromium, Firefox, and WebKit browsers along with system dependencies. On macOS, you may need to allow the installation in System Preferences if prompted.
+
+**Running E2E tests:**
+```bash
+npm run test:e2e
+```
+
+**Common issues:**
+- **"Executable doesn't exist"**: Run `npx playwright install --with-deps` again
+- **"Browser launch failed"**: Check that system dependencies are installed (Playwright will guide you)
+- **Tests timeout**: Increase timeout in `playwright.config.ts` if running on slower hardware
+- **Trace artifacts**: Failed tests generate traces in `test-results/`; use `npx playwright show-trace <trace.zip>` to debug
+
+**CI note**: GitHub Actions workflows should run `npx playwright install --with-deps` before `npm run test:e2e` to ensure browsers are available.
+
 ## Expectations Before Opening a Pull Request
 - **Tests**: run the quick suite locally. At minimum:
   ```bash

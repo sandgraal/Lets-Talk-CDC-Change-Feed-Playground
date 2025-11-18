@@ -17,25 +17,25 @@ Focus this cycle on restoring automated E2E coverage, eliminating feature flag d
 
 ## 🚀 Phase 1: Critical (This Week)
 1. **Unblock Playwright E2E**
-   - [ ] Add `npx playwright install --with-deps` (or setup action) to CI and document local command in `docs/development.md`.
+   - [x] Add `npx playwright install --with-deps` (or setup action) to CI and document local command in `docs/development.md` - **COMPLETED** (CI already has install step in preflight.yml; added comprehensive local setup docs)
    - [ ] Rerun `npm run test:e2e`; attach trace artifacts and capture failures if any persist beyond browser install.
    - [ ] Cache browser binaries to keep CI stable.
 
 2. **Align Feature Flag Defaults**
-   - [ ] Decide shipping stance for `ff_walkthrough` and `ff_trigger_mode`.
-   - [ ] Update `index.html`, `assets/feature-flags.js` consumers, and `docs/feature-flags.md` together based on the decision.
-   - [ ] Add a shared flag manifest (JSON/TS) to prevent future drift across docs, loaders, and tests.
+   - [x] Decide shipping stance for `ff_walkthrough` and `ff_trigger_mode` - **COMPLETED** (both enabled as ready)
+   - [x] Update `index.html`, `assets/feature-flags.js` consumers, and `docs/feature-flags.md` together based on the decision - **COMPLETED**
+   - [x] Add a shared flag manifest (JSON/TS) to prevent future drift across docs, loaders, and tests - **COMPLETED** (manifest exists and lint:flags validates alignment)
 
 3. **Bundle Freshness & Perf Guardrails**
-   - [ ] Add a check (script or CI step) that asserts generated bundles in `assets/generated/` are fresh relative to source before publishing.
+   - [x] Add a check (script or CI step) that asserts generated bundles in `assets/generated/` are fresh relative to source before publishing - **COMPLETED** (`check:bundles` script exists and is included in `ci:preflight`; uses git status to ensure bundles are committed)
    - [ ] Capture baseline load metrics for the reverted shell (LCP/TTI/transfer size) and document budgets in `docs/development.md`.
 
 ---
 
 ## ⏭️ Phase 2: Hardening (Next 1–2 Weeks)
 1. **Documentation Touch-ups**
-   - [ ] Add a short “rerun E2E locally” section (Playwright install + common failure modes) to the development playbook.
-   - [ ] Clarify in `docs/feature-flags.md` how query params, Appwrite config, and localStorage are merged.
+   - [x] Add a short "rerun E2E locally" section (Playwright install + common failure modes) to the development playbook - **COMPLETED** (added comprehensive E2E testing section to development.md)
+   - [x] Clarify in `docs/feature-flags.md` how query params, Appwrite config, and localStorage are merged - **COMPLETED** (added detailed merge behavior explanation with examples)
 
 2. **Security & Dependency Hygiene**
    - [ ] Add a lightweight `npm audit --production` job in CI; document the expected cadence for running it locally.
