@@ -80,7 +80,7 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 ## Demo 5 – Retention and GDPR erasure
 
 1. Load **Retention & Erasure** from the gallery.
-2. Enable **Polling** and **Log**; toggle **Soft deletes** on so tombstones stay visible.
+2. Enable **Polling** and **Log**; toggle **soft deletes** on so tombstones stay visible.
 3. Start the run and open the **Event Log**, filtering to `customers` and `marketing_preferences` to see deletes and masking steps.
 4. Toggle **Drop snapshot rows** and **Dedupe on PK** to illustrate how downstream systems avoid replaying masked history.
 5. Pause when `C-300` is deleted to highlight the hard delete, then resume to watch `C-301` transition through `retained_for_legal` before being erased.
