@@ -987,6 +987,8 @@ button.danger:hover {
   gap: 12px;
   position: relative;
   overflow: hidden;
+  align-self: stretch;
+  align-content: start;
 }
 
 .hero-quickstart::before {
@@ -1017,10 +1019,24 @@ button.danger:hover {
 
 .hero-quickstart-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.hero-quickstart-copy {
+  display: grid;
+  gap: 4px;
+  max-width: 36ch;
+}
+
+.hero-quickstart-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(203, 213, 225, 0.76);
+  font-weight: 700;
 }
 
 .hero-quickstart h3 {
@@ -1032,6 +1048,45 @@ button.danger:hover {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.hero-quickstart-actions {
+  display: grid;
+  gap: 8px;
+  align-items: flex-start;
+  justify-items: flex-start;
+  text-align: left;
+  max-width: 220px;
+}
+
+.hero-quickstart-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.32);
+  color: #bfdbfe;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.hero-quickstart-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.12);
+}
+
+.hero-quickstart-tip {
+  margin: 0;
+  color: rgba(203, 213, 225, 0.8);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .quickstart-grid {
