@@ -1387,9 +1387,9 @@ function deriveOpsFromEvents(events) {
 
 function hideOnboarding(markSeen = false) {
   ensureOnboardingElements();
+  document.body.classList.remove("is-onboarding");
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = true;
-  document.body.classList.remove("is-onboarding");
   if (markSeen) storage.set(STORAGE_KEYS.onboarding, "seen");
 }
 
