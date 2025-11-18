@@ -93,6 +93,40 @@ function checkGitStatus() {
   }
 }
 
+function getGitTreeHash(commitRef, paths) {
+  // Get a hash representing the state of source paths at a given commit
+  const hashInputs = [];
+  
+  for (const sourcePath of paths) {
+    const { stdout, status } = spawnSync(
+      "git",
+      ["ls-tree", "-r", commitRef, sourcePath],
+      { encoding: "utf8", cwd: repoRoot }
+    );
+
+    if (status === 0 && stdout.trim()) {
+      hashInputs.push(stdout.trim());
+    }
+  }
+
+  if (hashInputs.length === 0) {
+    return null;
+  }
+
+  // Create a hash of the combined ls-tree output (which includes file hashes)
+  const { stdout, status } = spawnSync(
+    "git",
+    ["hash-object", "--stdin"],
+    { 
+      encoding: "utf8", 
+      cwd: repoRoot,
+      input: hashInputs.sort().join('\n')
+    }
+  );
+
+  return status === 0 ? stdout.trim() : null;
+}
+
 function checkFreshness() {
   const stale = [];
   const toleranceMs = 500; // allow minor clock skew/rounding
@@ -123,12 +157,38 @@ function checkFreshness() {
       continue;
     }
 
+    // Check 1: mtime comparison (catches local edits)
     const latestSourceMtime = Math.max(...sourceMtims);
     if (latestSourceMtime - outputStat.mtimeMs > toleranceMs) {
       const deltaSeconds = Math.round((latestSourceMtime - outputStat.mtimeMs) / 1000);
       stale.push(
         `${output} is older than source by ${deltaSeconds}s. Run ${rebuild} to refresh assets/generated.`
       );
+      continue;
+    }
+
+    // Check 2: git content comparison (catches committed mismatches in clean checkouts)
+    // Get the commit where the output bundle was last modified
+    const { stdout: bundleCommit, status: bundleStatus } = spawnSync(
+      "git",
+      ["log", "-1", "--format=%H", "--", output],
+      { encoding: "utf8", cwd: repoRoot }
+    );
+
+    if (bundleStatus === 0 && bundleCommit.trim()) {
+      const lastBundleCommit = bundleCommit.trim();
+      
+      // Get the hash of source tree at that commit
+      const sourceHashAtBundleCommit = getGitTreeHash(lastBundleCommit, sources);
+      
+      // Get the hash of current source tree
+      const currentSourceHash = getGitTreeHash("HEAD", sources);
+      
+      if (sourceHashAtBundleCommit && currentSourceHash && sourceHashAtBundleCommit !== currentSourceHash) {
+        stale.push(
+          `${output} is stale: source files have changed since the bundle was last committed. Run ${rebuild} to refresh assets/generated.`
+        );
+      }
     }
   }
 
