@@ -81,5 +81,54 @@ npm run ladle
 ```
 Stories live under `web/stories/`—add new ones alongside components so copywriters and designers can experiment without running the full shell.
 
+## Troubleshooting
+
+### Comparator not loading
+**Symptom:** See "Preparing simulator preview…" or "Enable the comparator_v2 feature flag" message.
+
+**Solution:**
+1. Ensure bundles are built: `npm run build`
+2. Check that `assets/generated/ui-shell.js` exists
+3. Verify `comparator_v2` is in the feature flags array in `index.html`
+4. Open browser console for errors (check for 404s on bundle files)
+
+### E2E tests failing
+**Symptom:** Playwright tests fail with "browser not found" errors.
+
+**Solution:**
+```bash
+npx playwright install
+npx playwright install-deps  # Linux only
+```
+
+### Property tests failing
+**Symptom:** `npm run test:sim` reports missing bundle.
+
+**Solution:**
+```bash
+npm run build:sim  # Generate fresh simulator bundle
+npm run test:sim   # Rerun property tests
+```
+
+### TypeScript errors in IDE
+**Symptom:** Red squiggles in `src/` or `web/` directories.
+
+**Solution:**
+```bash
+npm install          # Ensure dependencies are installed
+npx tsc --noEmit     # Check for real type errors
+```
+
+### Bundle size concerns
+**Symptom:** Large bundle sizes or slow page loads.
+
+**Check current sizes:**
+```bash
+npm run build
+# Check output for gzip sizes:
+# - sim-bundle.js should be ~3KB gzipped
+# - ui-shell.js should be ~36KB gzipped
+```
+
 ## Harness quickstart
 See `docs/harness-guide.md` for Make targets that bring up Postgres, Debezium, and the verifier. Useful for CDC end-to-end debugging.
