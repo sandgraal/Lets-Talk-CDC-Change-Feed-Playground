@@ -2283,12 +2283,12 @@ export function App() {
       if (!next) {
         consumerAllowanceRef.current = 0;
       }
+      if (prev) {
+        track("comparator.consumer.rate_reset", { scenario: scenario.name });
+      }
       return next;
     });
-    if (consumerRateEnabled) {
-      track("comparator.consumer.rate_reset", { scenario: scenario.name });
-    }
-  }, [consumerRateEnabled, consumerRateLimit, scenario.name]);
+  }, [consumerRateLimit, scenario.name]);
 
   const handleConsumerRateChange = useCallback(
     (value: number) => {
