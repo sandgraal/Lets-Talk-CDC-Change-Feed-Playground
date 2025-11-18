@@ -45,6 +45,7 @@ To enable the CDC Method Comparator and all features:
 - `npm run build` - Build everything (sim + web bundles)
 - `npm run build:sim` - Build simulator engines only
 - `npm run build:web` - Build React comparator shell only
+- `npm run check:bundles` - Verify generated assets are present and fresher than sources
 
 ### Verification
 

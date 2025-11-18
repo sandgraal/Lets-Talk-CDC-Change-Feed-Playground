@@ -27,7 +27,7 @@ Focus this cycle on restoring automated E2E coverage, eliminating feature flag d
    - [x] Add a shared flag manifest (JSON/TS) to prevent future drift across docs, loaders, and tests - **COMPLETED** (manifest exists and lint:flags validates alignment)
 
 3. **Bundle Freshness & Perf Guardrails**
-   - [x] Add a check (script or CI step) that asserts generated bundles in `assets/generated/` are fresh relative to source before publishing - **COMPLETED** (`check:bundles` script exists and is included in `ci:preflight`; uses git status to ensure bundles are committed)
+   - [x] Add a check (script or CI step) that asserts generated bundles in `assets/generated/` are fresh relative to source before publishing - **COMPLETED** (`check:bundles` now fails when sim/web sources are newer than generated assets and is included in `ci:preflight`)
    - [ ] Capture baseline load metrics for the reverted shell (LCP/TTI/transfer size) and document budgets in `docs/development.md`.
 
 ---

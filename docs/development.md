@@ -51,7 +51,7 @@ npm run test:e2e
   npm run test:e2e
   ```
   If you have Docker available, run the harness smoke as well (`npm run ci:harness`).
-- **Builds**: only regenerate generated bundles when the change requires it (see README “Deploy” sections).
+- **Builds**: keep generated bundles in sync with source. Run `npm run check:bundles` before opening a PR to ensure `assets/generated/*` is newer than `src/`, `sim/`, and `web/`.
 - **Docs**: update or create documentation for any new behaviour. Examples: README, `docs/harness-guide.md`, `docs/harness-history.md`.
 - **Changelog/Notes**: add or update release notes (`docs/enablement/release-notes.md`) when the change is user-facing.
 
