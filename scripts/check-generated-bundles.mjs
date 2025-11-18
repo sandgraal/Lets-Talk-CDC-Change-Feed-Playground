@@ -1,22 +1,54 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 // Directories to scan for source files
 const SOURCE_DIRS = ["src", "web", "sim", "assets"];
 
-
 // Directory containing generated bundles
 const GENERATED_DIR = "assets/generated";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+const bundleChecks = [
+  {
+    output: join(GENERATED_DIR, "sim-bundle.js"),
+    sources: ["src", "sim"],
+    rebuild: "npm run build:sim",
+  },
+  {
+    output: join(GENERATED_DIR, "ui-shell.js"),
+    sources: ["src", "web"],
+    rebuild: "npm run build:web",
+  },
+  {
+    output: join(GENERATED_DIR, "ui-shell.css"),
+    sources: ["src", "web"],
+    rebuild: "npm run build:web",
+  },
+  {
+    output: join(GENERATED_DIR, "ui-main.css"),
+    sources: ["src", "web"],
+    rebuild: "npm run build:web",
+  },
+  {
+    output: join(GENERATED_DIR, "event-log-widget.js"),
+    sources: ["src", "web"],
+    rebuild: "npm run build:web",
+  },
+];
 
 /**
  * Check for uncommitted changes in generated assets
  */
 function checkUncommittedChanges() {
-  const { stdout, stderr, status, error } = spawnSync("git", [
-    "status",
-    "--porcelain",
-    "--",
-    "assets/generated"
-  ], { encoding: "utf8" });
+  const { stdout, stderr, status, error } = spawnSync(
+    "git",
+    ["status", "--porcelain", "--", GENERATED_DIR],
+    { encoding: "utf8", cwd: repoRoot }
+  );
 
   if (error) {
     console.error("Failed to run git status for generated assets:", error.message);
@@ -34,54 +66,52 @@ function checkUncommittedChanges() {
     .filter(Boolean);
 
   if (changed.length > 0) {
-    console.error("Generated bundles are out of sync with the repository. Run `npm run build:web` and commit assets/generated/*.");
+    console.error(
+      "Generated bundles are out of sync with the repository. Run `npm run build:web` and commit assets/generated/*."
+    );
     changed.forEach(line => console.error(` - ${line}`));
     process.exit(1);
   }
 }
 
-function getGitTreeHash(commitRef, paths) {
-  // Get a hash representing the state of source paths at a given commit
-  const hashInputs = [];
-  
-  for (const sourcePath of paths) {
-    const { stdout, status } = spawnSync(
-      "git",
-      ["ls-tree", "-r", commitRef, sourcePath],
-      { encoding: "utf8", cwd: repoRoot }
-    );
-
-    if (status === 0 && stdout.trim()) {
-      hashInputs.push(stdout.trim());
-    }
-  }
-
-  if (hashInputs.length === 0) {
-    return null;
-  }
-
-  // Create a hash of the combined ls-tree output (which includes file hashes)
-  const { stdout, status } = spawnSync(
+function getModifiedSourceFiles() {
+  const { stdout, status, stderr, error } = spawnSync(
     "git",
-    ["hash-object", "--stdin"],
-    { 
-      encoding: "utf8", 
-      cwd: repoRoot,
-      input: hashInputs.sort().join('\n')
-    }
+    ["status", "--porcelain"],
+    { encoding: "utf8", cwd: repoRoot }
   );
 
-  return status === 0 ? stdout.trim() : null;
+  if (error) {
+    console.error("Failed to run git status:", error.message);
+    process.exit(1);
+  }
+
+  if (status !== 0) {
+    console.error(stderr || "git status returned a non-zero exit code");
+    process.exit(status);
+  }
+
+  return stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(line => {
+      // Parse git status output: "XY filename" or "XY filename -> newname"
+      // X = status in index, Y = status in working tree
+      // Format is two status chars, space, then filename
+      const match = line.match(/^..\s+(.+?)(?:\s+->\s+.+)?$/);
+      return match ? match[1] : null;
+    })
+    .filter(file => file && !file.startsWith(`${GENERATED_DIR}/`));
 }
 
 function checkFreshness() {
   const stale = [];
-  const toleranceMs = 500; // allow minor clock skew/rounding
 
-  for (const { output, sources, rebuild } of bundleChecks) {
+  for (const { output, rebuild } of bundleChecks) {
+    const outputPath = resolve(repoRoot, output);
     let outputStat;
     try {
-      outputStat = statSync(output);
+      outputStat = statSync(outputPath);
     } catch (err) {
       if (err.code === 'ENOENT') {
         outputStat = null;
@@ -94,64 +124,13 @@ function checkFreshness() {
       stale.push(`${output} is missing. Rebuild with: ${rebuild}`);
       continue;
     }
-
-    const sourceMtims = sources
-      .map(sourcePath => getLatestMtime(sourcePath))
-      .filter(value => value !== undefined);
-
-    if (sourceMtims.length === 0) {
-      // No sources exist, skip freshness check for this bundle
-      continue;
-    }
-
-    // Check 1: mtime comparison (catches local edits)
-    const latestSourceMtime = Math.max(...sourceMtims);
-    if (latestSourceMtime - outputStat.mtimeMs > toleranceMs) {
-      const deltaSeconds = Math.round((latestSourceMtime - outputStat.mtimeMs) / 1000);
-      stale.push(
-        `${output} is older than source by ${deltaSeconds}s. Run ${rebuild} to refresh assets/generated.`
-      );
-      continue;
-    }
-
-    // Check 2: git content comparison (catches committed mismatches in clean checkouts)
-    // Get the commit where the output bundle was last modified
-    const { stdout: bundleCommit, status: bundleStatus } = spawnSync(
-      "git",
-      ["log", "-1", "--format=%H", "--", output],
-      { encoding: "utf8", cwd: repoRoot }
-    );
-
-    if (bundleStatus === 0 && bundleCommit.trim()) {
-      const lastBundleCommit = bundleCommit.trim();
-      
-      // Get the hash of source tree at that commit
-      const sourceHashAtBundleCommit = getGitTreeHash(lastBundleCommit, sources);
-      
-      // Get the hash of current source tree
-      const currentSourceHash = getGitTreeHash("HEAD", sources);
-      
-      if (sourceHashAtBundleCommit && currentSourceHash && sourceHashAtBundleCommit !== currentSourceHash) {
-        stale.push(
-          `${output} is stale: source files have changed since the bundle was last committed. Run ${rebuild} to refresh assets/generated.`
-        );
-      }
-    }
   }
 
-  const modifiedFiles = stdout
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map(line => {
-      // Parse git status output: "XY filename" or "XY filename -> newname"
-      // X = status in index, Y = status in working tree
-      // Format is two status chars, space, then filename
-      const match = line.match(/^..\s+(.+?)(?:\s+->\s+.+)?$/);
-      return match ? match[1] : null;
-    })
-    .filter(file => file && !file.startsWith("assets/generated/"));
-
-  return modifiedFiles;
+  if (stale.length > 0) {
+    console.error("Generated bundles appear stale relative to source files:");
+    stale.forEach(message => console.error(` - ${message}`));
+    process.exit(1);
+  }
 }
 
 /**
@@ -175,6 +154,7 @@ function checkSourceFreshness() {
 
 // Run checks
 checkUncommittedChanges();
+checkFreshness();
 checkSourceFreshness();
 
 process.exit(0);
