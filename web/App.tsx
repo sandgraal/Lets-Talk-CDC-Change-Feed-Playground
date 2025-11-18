@@ -1674,7 +1674,6 @@ export function App() {
         history.set(method, []);
       }
       const series = history.get(method);
-      if (!series) return;
 
       const rowCount = ensureLaneStorage(method)
         .snapshot()
