@@ -105,16 +105,16 @@ function checkFreshness() {
       continue;
     }
 
-    const latestSourceMtime = Math.max(
-      ...sources
-        .map(sourcePath => getLatestMtime(sourcePath))
-        .filter(value => value !== undefined)
-    );
+    const sourceMtims = sources
+      .map(sourcePath => getLatestMtime(sourcePath))
+      .filter(value => value !== undefined);
 
-    if (Number.isNaN(latestSourceMtime)) {
+    if (sourceMtims.length === 0) {
+      // No sources exist, skip freshness check for this bundle
       continue;
     }
 
+    const latestSourceMtime = Math.max(...sourceMtims);
     if (latestSourceMtime - outputStat.mtimeMs > toleranceMs) {
       const deltaSeconds = Math.round((latestSourceMtime - outputStat.mtimeMs) / 1000);
       stale.push(
