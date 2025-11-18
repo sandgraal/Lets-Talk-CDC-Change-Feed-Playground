@@ -1031,6 +1031,10 @@ function createTemplateMetric(label, value) {
   return metric;
 }
 
+function getTemplateOpsCount(template) {
+  return template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+}
+
 function toggleTemplateExpansion(templateId) {
   uiState.expandedTemplateId = uiState.expandedTemplateId === templateId ? null : templateId;
   renderTemplateGallery();
@@ -1115,7 +1119,7 @@ function renderTemplateGallery() {
     const metrics = document.createElement("div");
     metrics.className = "template-card__metrics";
     const rowsMetric = createTemplateMetric("rows", `${template.rows?.length ?? 0}`);
-    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+    const opsCount = getTemplateOpsCount(template);
     const opsMetric = createTemplateMetric("ops", `${opsCount}`);
     metrics.appendChild(rowsMetric);
     metrics.appendChild(opsMetric);
