@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const ROOT = process.cwd();
