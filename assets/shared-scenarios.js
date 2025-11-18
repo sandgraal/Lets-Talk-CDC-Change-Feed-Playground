@@ -135,15 +135,7 @@ const defaultScenarios = [
       { name: "total", type: "number", pk: false },
       { name: "last_event_id", type: "string", pk: false },
     ],
-    rows: [
-      {
-        id: "ORD-221", // baseline row to show change feed behaviour
-        customer_id: "C-14",
-        status: "packed",
-        total: 275,
-        last_event_id: "EVT-220",
-      },
-    ],
+    rows: [],
     events: [],
     ops: [
       {
