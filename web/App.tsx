@@ -2279,24 +2279,31 @@ export function App() {
     setConsumerRateEnabled(prev => {
       const next = !prev;
       track("comparator.consumer.rate_toggle", { scenario: scenario.name, enabled: next });
+      consumerThrottleRef.current = next ? consumerRateLimit : null;
+      if (!next) {
+        consumerAllowanceRef.current = 0;
+      }
       return next;
     });
     if (consumerRateEnabled) {
       track("comparator.consumer.rate_reset", { scenario: scenario.name });
     }
-  }, [consumerRateEnabled, scenario.name]);
+  }, [consumerRateEnabled, consumerRateLimit, scenario.name]);
 
   const handleConsumerRateChange = useCallback(
     (value: number) => {
       const clamped = sanitizeConsumerRate(value, consumerRateLimit);
       if (clamped === consumerRateLimit) return;
       setConsumerRateLimit(clamped);
+      if (consumerRateEnabled) {
+        consumerThrottleRef.current = clamped;
+      }
       track("comparator.consumer.rate_adjust", {
         scenario: scenario.name,
         rate: clamped,
       });
     },
-    [consumerRateLimit, scenario.name],
+    [consumerRateEnabled, consumerRateLimit, scenario.name],
   );
 
   const handleToggleGenerator = useCallback(() => {
