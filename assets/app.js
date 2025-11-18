@@ -778,6 +778,9 @@ function ensureOnboardingElements() {
 if (typeof document !== "undefined") {
   ensureHeroCtas();
   document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
+  document.getElementById("btnOnboarding")?.addEventListener("click", () => {
+    showOnboarding();
+  });
   document.getElementById("btnReset")?.addEventListener("click", () => {
     storage.remove(STORAGE_KEYS.state);
     storage.remove(STORAGE_KEYS.lastTemplate);
