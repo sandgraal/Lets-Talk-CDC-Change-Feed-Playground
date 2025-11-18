@@ -3,16 +3,6 @@ import { spawnSync } from "node:child_process";
 // Directories to scan for source files
 const SOURCE_DIRS = ["src", "web", "sim", "assets"];
 
-// Directories to skip when scanning
-const IGNORED_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "generated", // Skip assets/generated
-  "test-results",
-  "reports",
-  ".next",
-]);
 
 // Directory containing generated bundles
 const GENERATED_DIR = "assets/generated";
