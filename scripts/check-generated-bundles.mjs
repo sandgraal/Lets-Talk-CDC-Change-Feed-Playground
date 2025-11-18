@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-const ROOT = process.cwd();
-
 // Directories to scan for source files
 const SOURCE_DIRS = ["src", "web", "sim", "assets"];
 
