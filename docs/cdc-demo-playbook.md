@@ -16,6 +16,7 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 | CRUD basics | Showing delete visibility and polling lag | Polling interval + soft-delete visibility |
 | Schema evolution | Column backfills and schema drift | Add column, backfill toggle, trigger vs. log comparison |
 | Orders + items transactions | Multi-table atomicity and apply-on-commit | Apply-on-commit toggle + lag overlays |
+| Outbox relay | Contrasting change feed vs. application-managed outbox | Enable Polling + Log + Trigger, then enable snapshot drop / dedupe |
 
 ## Demo 1 – CRUD basics and delete capture
 
@@ -60,6 +61,20 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 - Multi-entity writes and why ordering guarantees matter for referential integrity.
 - How log vs. trigger capture handle transaction grouping and why apply-on-commit is safer for downstream joins.
 - Interpreting lag overlays to spot the precise point where ordering breaks.
+
+## Demo 4 – Outbox relay vs. raw change feed
+
+1. Load **Outbox Relay**.
+2. Enable all three methods (**Polling**, **Trigger**, **Log**) to mirror typical hybrid deployments (table-level change feed plus application-managed outbox rows).
+3. Start the run and pin the **Event Log** filter to `outbox_events` to watch the business events the app emits.
+4. Toggle **Drop snapshot rows** and **Dedupe on PK** in the Event Log toolbar to show how downstream services can avoid replaying the same outbox event even if the change feed replays historical rows.
+5. Flip **Trigger** off mid-run to illustrate what happens when the app stops writing to the outbox while base table updates continue through the log stream.
+6. Pause and use the **Lane diff overlay** to show that base table changes still arrive via log/polling, while outbox rows can be used to drive idempotent notifications keyed by `event_key`.
+
+**Talking points**
+- Outbox pattern protects business event schemas from breaking changes in the source tables.
+- Why per-event keys (`event_key`) and monotonic IDs (`EVT-221-*`) make dedupe + ordering straightforward downstream.
+- How to combine raw change feed (for data lake) with outbox events (for fan-out notifications) without double-processing.
 
 ## Tips for live sessions
 
