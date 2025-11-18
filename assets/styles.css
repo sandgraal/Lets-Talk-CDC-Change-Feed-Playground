@@ -701,6 +701,10 @@ button.danger:hover {
   transform: rotate(180deg);
 }
 
+.template-card__body.is-collapsed {
+  display: none;
+}
+
 .template-card__body {
   display: grid;
   gap: 10px;
