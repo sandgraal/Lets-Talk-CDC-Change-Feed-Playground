@@ -6,6 +6,19 @@ import path from "node:path";
 const repoRoot = path.resolve(process.cwd());
 const ignoredDirs = new Set([".git", "node_modules", "dist", "assets", "reports", "test-results"]);
 
+/**
+ * Tolerance for timestamp comparison in milliseconds.
+ * 
+ * This allows for minor timing discrepancies that can occur due to:
+ * - Filesystem timestamp precision limitations (some filesystems only track seconds or have lower resolution)
+ * - Clock skew between different systems or processes
+ * - Network time synchronization delays
+ * - Build tool timing variations
+ * 
+ * A 500ms tolerance is sufficient to handle these edge cases without masking genuine staleness issues.
+ */
+const TIMESTAMP_TOLERANCE_MS = 500;
+
 const bundleChecks = [
   {
     output: "assets/generated/sim-bundle.js",
@@ -95,7 +108,6 @@ function checkGitStatus() {
 
 function checkFreshness() {
   const stale = [];
-  const toleranceMs = 500; // allow minor clock skew/rounding
 
   for (const { output, sources, rebuild } of bundleChecks) {
     let outputStat;
@@ -124,7 +136,7 @@ function checkFreshness() {
     }
 
     const latestSourceMtime = Math.max(...sourceMtims);
-    if (latestSourceMtime - outputStat.mtimeMs > toleranceMs) {
+    if (latestSourceMtime - outputStat.mtimeMs > TIMESTAMP_TOLERANCE_MS) {
       const deltaSeconds = Math.round((latestSourceMtime - outputStat.mtimeMs) / 1000);
       stale.push(
         `${output} is older than source by ${deltaSeconds}s. Run ${rebuild} to refresh assets/generated.`
