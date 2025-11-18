@@ -40,25 +40,103 @@ function checkUncommittedChanges() {
   }
 }
 
-/**
- * Get list of modified source files (excluding generated assets)
- */
-function getModifiedSourceFiles() {
-  // Get all modified, added, or untracked files
-  const { stdout, stderr, status, error } = spawnSync("git", [
-    "status",
-    "--porcelain",
-    "--untracked-files=all"
-  ], { encoding: "utf8" });
+function getGitTreeHash(commitRef, paths) {
+  // Get a hash representing the state of source paths at a given commit
+  const hashInputs = [];
+  
+  for (const sourcePath of paths) {
+    const { stdout, status } = spawnSync(
+      "git",
+      ["ls-tree", "-r", commitRef, sourcePath],
+      { encoding: "utf8", cwd: repoRoot }
+    );
 
-  if (error) {
-    console.error("Failed to run git status:", error.message);
-    process.exit(1);
+    if (status === 0 && stdout.trim()) {
+      hashInputs.push(stdout.trim());
+    }
   }
 
-  if (status !== 0) {
-    console.error(stderr || "git status returned a non-zero exit code");
-    process.exit(status);
+  if (hashInputs.length === 0) {
+    return null;
+  }
+
+  // Create a hash of the combined ls-tree output (which includes file hashes)
+  const { stdout, status } = spawnSync(
+    "git",
+    ["hash-object", "--stdin"],
+    { 
+      encoding: "utf8", 
+      cwd: repoRoot,
+      input: hashInputs.sort().join('\n')
+    }
+  );
+
+  return status === 0 ? stdout.trim() : null;
+}
+
+function checkFreshness() {
+  const stale = [];
+  const toleranceMs = 500; // allow minor clock skew/rounding
+
+  for (const { output, sources, rebuild } of bundleChecks) {
+    let outputStat;
+    try {
+      outputStat = statSync(output);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        outputStat = null;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!outputStat) {
+      stale.push(`${output} is missing. Rebuild with: ${rebuild}`);
+      continue;
+    }
+
+    const sourceMtims = sources
+      .map(sourcePath => getLatestMtime(sourcePath))
+      .filter(value => value !== undefined);
+
+    if (sourceMtims.length === 0) {
+      // No sources exist, skip freshness check for this bundle
+      continue;
+    }
+
+    // Check 1: mtime comparison (catches local edits)
+    const latestSourceMtime = Math.max(...sourceMtims);
+    if (latestSourceMtime - outputStat.mtimeMs > toleranceMs) {
+      const deltaSeconds = Math.round((latestSourceMtime - outputStat.mtimeMs) / 1000);
+      stale.push(
+        `${output} is older than source by ${deltaSeconds}s. Run ${rebuild} to refresh assets/generated.`
+      );
+      continue;
+    }
+
+    // Check 2: git content comparison (catches committed mismatches in clean checkouts)
+    // Get the commit where the output bundle was last modified
+    const { stdout: bundleCommit, status: bundleStatus } = spawnSync(
+      "git",
+      ["log", "-1", "--format=%H", "--", output],
+      { encoding: "utf8", cwd: repoRoot }
+    );
+
+    if (bundleStatus === 0 && bundleCommit.trim()) {
+      const lastBundleCommit = bundleCommit.trim();
+      
+      // Get the hash of source tree at that commit
+      const sourceHashAtBundleCommit = getGitTreeHash(lastBundleCommit, sources);
+      
+      // Get the hash of current source tree
+      const currentSourceHash = getGitTreeHash("HEAD", sources);
+      
+      if (sourceHashAtBundleCommit && currentSourceHash && sourceHashAtBundleCommit !== currentSourceHash) {
+        stale.push(
+          `${output} is stale: source files have changed since the bundle was last committed. Run ${rebuild} to refresh assets/generated.`
+        );
+      }
+    }
   }
 
   const modifiedFiles = stdout
