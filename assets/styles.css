@@ -931,6 +931,8 @@ button.danger:hover {
   }
 
   .template-card:hover {
+    border-color: rgba(37, 99, 235, 0.5);
+    transform: translateY(-3px);
     box-shadow: 0 16px 44px rgba(15, 23, 42, 0.18);
   }
 
