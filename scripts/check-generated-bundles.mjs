@@ -1,73 +1,22 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import path from "node:path";
+// Directories to scan for source files
+const SOURCE_DIRS = ["src", "web", "sim", "assets"];
 
-const repoRoot = path.resolve(process.cwd());
-const ignoredDirs = new Set([".git", "node_modules", "dist", "assets", "reports", "test-results"]);
 
-const bundleChecks = [
-  {
-    output: "assets/generated/sim-bundle.js",
-    sources: ["sim", "src"],
-    rebuild: "npm run build:sim"
-  },
-  {
-    output: "assets/generated/ui-shell.js",
-    sources: ["web", "src"],
-    rebuild: "npm run build:web"
-  },
-  {
-    output: "assets/generated/ui-shell.css",
-    sources: ["web", "src"],
-    rebuild: "npm run build:web"
-  }
-];
+// Directory containing generated bundles
+const GENERATED_DIR = "assets/generated";
 
-function getLatestMtime(targetPath) {
-  const fullPath = path.resolve(repoRoot, targetPath);
-  if (!existsSync(fullPath)) {
-    return undefined;
-  }
-
-  const stats = statSync(fullPath);
-  if (!stats.isDirectory()) {
-    return stats.mtimeMs;
-  }
-
-  let latest = stats.mtimeMs;
-  const stack = [fullPath];
-
-  while (stack.length) {
-    const current = stack.pop();
-    const entries = readdirSync(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (entry.name.startsWith(".")) continue;
-      if (ignoredDirs.has(entry.name)) continue;
-
-      const childPath = path.join(current, entry.name);
-      const childStats = statSync(childPath);
-
-      if (childStats.isDirectory()) {
-        stack.push(childPath);
-      }
-
-      if (childStats.mtimeMs > latest) {
-        latest = childStats.mtimeMs;
-      }
-    }
-  }
-
-  return latest;
-}
-
-function checkGitStatus() {
-  const { stdout, stderr, status, error } = spawnSync(
-    "git",
-    ["status", "--porcelain", "--", "assets/generated"],
-    { encoding: "utf8" }
-  );
+/**
+ * Check for uncommitted changes in generated assets
+ */
+function checkUncommittedChanges() {
+  const { stdout, stderr, status, error } = spawnSync("git", [
+    "status",
+    "--porcelain",
+    "--",
+    "assets/generated"
+  ], { encoding: "utf8" });
 
   if (error) {
     console.error("Failed to run git status for generated assets:", error.message);
@@ -85,9 +34,7 @@ function checkGitStatus() {
     .filter(Boolean);
 
   if (changed.length > 0) {
-    console.error(
-      "Generated bundles are out of sync with the repository. Run `npm run build` and commit assets/generated/* before shipping."
-    );
+    console.error("Generated bundles are out of sync with the repository. Run `npm run build:web` and commit assets/generated/*.");
     changed.forEach(line => console.error(` - ${line}`));
     process.exit(1);
   }
@@ -192,13 +139,42 @@ function checkFreshness() {
     }
   }
 
-  if (stale.length > 0) {
-    console.error("Generated bundles are stale relative to source:");
-    stale.forEach(message => console.error(` - ${message}`));
+  const modifiedFiles = stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(line => {
+      // Parse git status output: "XY filename" or "XY filename -> newname"
+      // X = status in index, Y = status in working tree
+      // Format is two status chars, space, then filename
+      const match = line.match(/^..\s+(.+?)(?:\s+->\s+.+)?$/);
+      return match ? match[1] : null;
+    })
+    .filter(file => file && !file.startsWith("assets/generated/"));
+
+  return modifiedFiles;
+}
+
+/**
+ * Check if any source files in key directories have been modified
+ */
+function checkSourceFreshness() {
+  const modifiedFiles = getModifiedSourceFiles();
+  
+  // Filter to only source files in directories we care about
+  const modifiedSources = modifiedFiles.filter(file => {
+    return SOURCE_DIRS.some(dir => file.startsWith(dir + "/") || file === dir);
+  });
+
+  if (modifiedSources.length > 0) {
+    console.error("Source files have been modified but generated bundles may be stale.");
+    console.error("Run `npm run build` and commit assets/generated/* if these changes affect the bundles:");
+    modifiedSources.forEach(file => console.error(`  - ${file}`));
     process.exit(1);
   }
 }
 
-checkGitStatus();
-checkFreshness();
+// Run checks
+checkUncommittedChanges();
+checkSourceFreshness();
+
 process.exit(0);
