@@ -122,7 +122,7 @@ We welcome improvements to the simulator, documentation, and learning resources.
 - Run `npm run build:web` to refresh the Vite bundle under `assets/generated/`.
 - Commit the updated bundle together with `index.html` and push to the default branch.
 - In the repository settings, set GitHub Pages to deploy from the root of the `main` branch.
-- The playground will publish to `https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/`, and share links use that origin via `window.APPWRITE_CFG.shareBaseUrl`.
+- The playground will publish to `https://github.io/Lets-Talk-CDC-Change-Feed-Playground/`, and share links use that origin via `window.APPWRITE_CFG.shareBaseUrl`.
 
 ## Deploy to Appwrite Sites
 
