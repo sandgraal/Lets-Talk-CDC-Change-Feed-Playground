@@ -42,7 +42,7 @@
 - [x] Complete `comparator_v2` staged rollout readiness - **COMPLETED** (flag enabled, tests passing, documentation updated)
 
 ### P1 - Important (Next Sprint)
-- [ ] Feature flag activation governance ([docs/issues/feature-flag-governance.md](./issues/feature-flag-governance.md))
+- [x] Feature flag activation governance - **COMPLETED** (comprehensive governance plan documented)
 - [x] Add transaction drift E2E test ([docs/issues/transaction-drift-e2e.md](./issues/transaction-drift-e2e.md))
 - [x] Enable `ff_walkthrough` after content review - **COMPLETED**
 - [ ] Enable `ff_trigger_mode` after UI work completion ([docs/issues/trigger-write-amplification.md](./issues/trigger-write-amplification.md))
