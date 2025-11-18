@@ -28,6 +28,13 @@ const EXPECTED_SCENARIOS = [
     tags: ["payments", "risk", "latency"],
   },
   {
+    id: "outbox-relay",
+    name: "Outbox Relay",
+    description: "Contrasting log capture with an application-managed outbox.",
+    highlight: "Showcases ordering + dedupe safety when emitting business events from an outbox.",
+    tags: ["outbox", "eventing", "ordering"],
+  },
+  {
     id: "iot-telemetry",
     name: "IoT Telemetry",
     description: "Showing rolling measurements with anomaly flags.",
