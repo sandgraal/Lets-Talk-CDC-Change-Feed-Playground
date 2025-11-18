@@ -57,7 +57,7 @@ Health is **8.5/10** (improved from 8.0). The zero-dependency playground remains
 - Enabled: `comparator_v2`, `ff_crud_fix`, `ff_event_log`, `ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_schema_demo`, `ff_multitable`, `ff_metrics`.
 - Missing/disabled: `ff_walkthrough`, `ff_trigger_mode` (still referenced in docs but not provisioned).
 
-**Status Update (2025-01-XX)**
+**Status Update (2025-01-15)**
 - ✅ `ff_walkthrough` and `ff_trigger_mode` are now enabled by default in `index.html`
 - ✅ Feature flag manifest (`assets/feature-flag-manifest.json`) serves as single source of truth
 - ✅ `npm run lint:flags` validates alignment between manifest and `index.html`
