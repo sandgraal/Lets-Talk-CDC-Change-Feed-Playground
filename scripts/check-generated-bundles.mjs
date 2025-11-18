@@ -122,7 +122,7 @@ function checkFreshness() {
   }
 
   if (stale.length > 0) {
-    console.error("Generated bundles appear stale relative to source files:");
+    console.error("Generated bundles are missing:");
     stale.forEach(message => console.error(` - ${message}`));
     process.exit(1);
   }
