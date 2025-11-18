@@ -922,6 +922,90 @@ button.danger:hover {
   color: rgba(226, 232, 240, 0.85);
 }
 
+/* Light theme overrides for template cards */
+@media (prefers-color-scheme: light) {
+  .template-card {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+  }
+
+  .template-card:hover {
+    box-shadow: 0 16px 44px rgba(15, 23, 42, 0.18);
+  }
+
+  .template-card.is-active {
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35), 0 16px 44px rgba(15, 23, 42, 0.18);
+  }
+
+  .template-icon {
+    background: linear-gradient(150deg, rgba(37, 99, 235, 0.12), rgba(34, 197, 94, 0.08));
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #1d4ed8;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+
+  .template-card__status {
+    background: rgba(37, 99, 235, 0.12);
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
+  }
+
+  .template-metric {
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+  }
+
+  .template-metric__value {
+    color: #0f172a;
+  }
+
+  .template-metric__label {
+    color: #64748b;
+  }
+
+  .template-card__chevron {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(248, 250, 252, 0.9);
+  }
+
+  .template-card__body {
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .template-card .template-highlight {
+    color: #1e3a8a;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+  }
+
+  .template-chip {
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(248, 250, 252, 0.9);
+  }
+
+  .template-chip[aria-pressed="true"] {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
+  }
+
+  .template-tag {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(248, 250, 252, 0.85);
+  }
+
+  .template-tag[aria-pressed="true"] {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
+  }
+
+  .template-tag--clear {
+    color: #64748b;
+  }
+}
+
 .preview-modal {
   position: fixed;
   inset: 0;
