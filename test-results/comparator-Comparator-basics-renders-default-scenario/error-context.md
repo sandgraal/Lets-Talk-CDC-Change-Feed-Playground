@@ -1,0 +1,669 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: Lets Talk CDC
+      - generic [ref=e5]: Change Feed Playground
+    - generic [ref=e6]:
+      - link "Hacktoberfest 2025 Submission" [ref=e7] [cursor=pointer]:
+        - /url: https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground
+        - generic [ref=e8] [cursor=pointer]: ★
+        - text: Hacktoberfest 2025 Submission
+      - button "Export Scenario" [ref=e9] [cursor=pointer]
+      - generic [ref=e11] [cursor=pointer]: Import Scenario
+      - generic [ref=e12]:
+        - button "Copy Share Link" [disabled] [ref=e13] [cursor=pointer]
+        - button "Reset" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Plan · Practice · Share
+        - heading "Prototype change data capture without leaving the browser." [level=1] [ref=e19]
+        - paragraph [ref=e20]: Create a lightweight schema, act on rows, and watch the resulting change feed update in real time.
+      - generic "Explore real-world scenarios" [ref=e21]:
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - heading "Explore real-world scenarios" [level=3] [ref=e24]
+            - paragraph [ref=e25]: Load curated CDC blueprints to jumpstart your experiments.
+          - searchbox "Filter scenarios" [ref=e27]
+          - button "How the playground works" [ref=e28] [cursor=pointer]
+        - generic [ref=e29]:
+          - article [ref=e30]:
+            - heading "CRUD Basic" [level=4] [ref=e31]
+            - paragraph [ref=e32]: Teaching delete visibility basics.
+            - paragraph [ref=e33]: 1 rows · 3 ops
+            - paragraph [ref=e34]: Minimal ops for first-time comparator demos.
+            - generic [ref=e35]:
+              - button "#crud" [ref=e36] [cursor=pointer]
+              - button "#basics" [ref=e37] [cursor=pointer]
+            - generic [ref=e38]:
+              - button "Use template" [ref=e39] [cursor=pointer]
+              - button "Preview" [ref=e40] [cursor=pointer]
+              - button "Download JSON" [ref=e41] [cursor=pointer]
+          - article [ref=e42]:
+            - heading "Omnichannel Orders" [level=4] [ref=e43]
+            - paragraph [ref=e44]: Walking through status transitions and fulfilment edge cases.
+            - paragraph [ref=e45]: 1 rows · 5 ops
+            - paragraph [ref=e46]: Mix of inserts/updates with delete coverage; great for lag comparisons.
+            - generic [ref=e47]:
+              - button "#orders" [ref=e48] [cursor=pointer]
+              - button "#lag" [ref=e49] [cursor=pointer]
+              - button "#fulfilment" [ref=e50] [cursor=pointer]
+            - generic [ref=e51]:
+              - button "Use template" [ref=e52] [cursor=pointer]
+              - button "Preview" [ref=e53] [cursor=pointer]
+              - button "Download JSON" [ref=e54] [cursor=pointer]
+          - article [ref=e55]:
+            - heading "Real-time Payments" [level=4] [ref=e56]
+            - paragraph [ref=e57]: Demonstrating idempotent updates or risk review flows.
+            - paragraph [ref=e58]: 1 rows · 6 ops
+            - paragraph [ref=e59]: Trigger overhead tuning + delete capture expectations.
+            - generic [ref=e60]:
+              - button "#payments" [ref=e61] [cursor=pointer]
+              - button "#risk" [ref=e62] [cursor=pointer]
+              - button "#latency" [ref=e63] [cursor=pointer]
+            - generic [ref=e64]:
+              - button "Use template" [ref=e65] [cursor=pointer]
+              - button "Preview" [ref=e66] [cursor=pointer]
+              - button "Download JSON" [ref=e67] [cursor=pointer]
+          - article [ref=e68]:
+            - heading "IoT Telemetry" [level=4] [ref=e69]
+            - paragraph [ref=e70]: Showing rolling measurements with anomaly flags.
+            - paragraph [ref=e71]: 1 rows · 4 ops
+            - paragraph [ref=e72]: Highlights soft-delete vs. log consistency and clock controls.
+            - generic [ref=e73]:
+              - button "#iot" [ref=e74] [cursor=pointer]
+              - button "#telemetry" [ref=e75] [cursor=pointer]
+              - button "#anomaly" [ref=e76] [cursor=pointer]
+            - generic [ref=e77]:
+              - button "Use template" [ref=e78] [cursor=pointer]
+              - button "Preview" [ref=e79] [cursor=pointer]
+              - button "Download JSON" [ref=e80] [cursor=pointer]
+          - article [ref=e81]:
+            - heading "Schema Evolution" [level=4] [ref=e82]
+            - paragraph [ref=e83]: Demonstrating column additions while capturing changes.
+            - paragraph [ref=e84]: 1 rows · 4 ops
+            - paragraph [ref=e85]: Compare immediate log/trigger propagation with polling lag.
+            - generic [ref=e86]:
+              - button "#schema" [ref=e87] [cursor=pointer]
+              - button "#backfill" [ref=e88] [cursor=pointer]
+            - generic [ref=e89]:
+              - button "Use template" [ref=e90] [cursor=pointer]
+              - button "Preview" [ref=e91] [cursor=pointer]
+              - button "Download JSON" [ref=e92] [cursor=pointer]
+          - article [ref=e93]:
+            - heading "Orders + Items Transactions" [level=4] [ref=e94]
+            - paragraph [ref=e95]: Teaching multi-table commit semantics.
+            - paragraph [ref=e96]: 1 rows · 4 ops
+            - paragraph [ref=e97]: Toggle apply-on-commit to keep orders/items destinations consistent.
+            - generic [ref=e98]:
+              - button "#transactions" [ref=e99] [cursor=pointer]
+              - button "#orders" [ref=e100] [cursor=pointer]
+            - generic [ref=e101]:
+              - button "Use template" [ref=e102] [cursor=pointer]
+              - button "Preview" [ref=e103] [cursor=pointer]
+              - button "Download JSON" [ref=e104] [cursor=pointer]
+          - article [ref=e105]:
+            - heading "Burst Updates" [level=4] [ref=e106]
+            - paragraph [ref=e107]: Stressing lag/ordering behaviour under rapid updates.
+            - paragraph [ref=e108]: 1 rows · 5 ops
+            - paragraph [ref=e109]: Highlights polling gaps and diff overlays.
+            - generic [ref=e110]:
+              - button "#lag" [ref=e111] [cursor=pointer]
+              - button "#polling" [ref=e112] [cursor=pointer]
+            - generic [ref=e113]:
+              - button "Use template" [ref=e114] [cursor=pointer]
+              - button "Preview" [ref=e115] [cursor=pointer]
+              - button "Download JSON" [ref=e116] [cursor=pointer]
+      - region "Quick start" [ref=e117]:
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - heading "Quick start" [level=3] [ref=e120]
+            - paragraph [ref=e121]: Take the guided path to your first change feed in under a minute.
+          - button "Start guided walkthrough" [ref=e122] [cursor=pointer]
+        - generic [ref=e123]:
+          - article [ref=e124]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: Step 1
+              - generic [ref=e127]: Done
+            - heading "Model your schema" [level=4] [ref=e128]
+            - paragraph [ref=e129]: Define columns and mark at least one primary key.
+            - button "Start modeling" [ref=e130] [cursor=pointer]
+          - article [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: Step 2
+              - generic [ref=e134]: In progress
+            - heading "Populate rows" [level=4] [ref=e135]
+            - paragraph [ref=e136]: Seed realistic data or insert rows manually.
+            - button "Seed sample rows" [ref=e137] [cursor=pointer]
+          - article [ref=e138]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: Step 3
+              - generic [ref=e141]: Pending
+            - heading "Stream events" [level=4] [ref=e142]
+            - paragraph [ref=e143]: Trigger operations and watch the change feed update live.
+            - button "Emit my first event" [disabled] [ref=e144]
+    - generic [ref=e145]:
+      - complementary "Learning path" [ref=e146]:
+        - heading "Learning path" [level=2] [ref=e147]
+        - paragraph [ref=e148]: Work through each step to understand how change data capture scenarios are assembled.
+        - list [ref=e149]:
+          - listitem [ref=e150]:
+            - button "1 Model your schema Define columns plus primary keys. Done" [ref=e151] [cursor=pointer]:
+              - generic [ref=e152] [cursor=pointer]: "1"
+              - generic [ref=e153] [cursor=pointer]:
+                - generic [ref=e154] [cursor=pointer]: Model your schema
+                - generic [ref=e155] [cursor=pointer]: Define columns plus primary keys.
+              - generic [ref=e156] [cursor=pointer]: Done
+          - listitem [ref=e157]:
+            - button "2 Populate rows Seed or insert data to operate on. Pending" [ref=e158] [cursor=pointer]:
+              - generic [ref=e159] [cursor=pointer]: "2"
+              - generic [ref=e160] [cursor=pointer]:
+                - generic [ref=e161] [cursor=pointer]: Populate rows
+                - generic [ref=e162] [cursor=pointer]: Seed or insert data to operate on.
+              - generic [ref=e163] [cursor=pointer]: Pending
+          - listitem [ref=e164]:
+            - button "3 Inspect events Trigger operations and review the log. Pending" [ref=e165] [cursor=pointer]:
+              - generic [ref=e166] [cursor=pointer]: "3"
+              - generic [ref=e167] [cursor=pointer]:
+                - generic [ref=e168] [cursor=pointer]: Inspect events
+                - generic [ref=e169] [cursor=pointer]: Trigger operations and review the log.
+              - generic [ref=e170] [cursor=pointer]: Pending
+        - generic [ref=e171]: Seed sample data or insert rows so you have something to mutate.
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: Step 1
+            - generic [ref=e176]:
+              - heading "Model your schema" [level=2] [ref=e177]
+              - paragraph [ref=e178]: Add columns, choose types, and mark primary keys so downstream operations know how to locate rows.
+          - generic [ref=e179]:
+            - textbox "column name (e.g., id)" [ref=e180]
+            - combobox [ref=e181]:
+              - option "string" [selected]
+              - option "number"
+              - option "boolean"
+            - generic [ref=e182]:
+              - checkbox "PK" [ref=e183]
+              - text: PK
+            - button "Add Column" [ref=e184] [cursor=pointer]
+          - paragraph [ref=e185]: 6 columns defined. Click a pill to remove. · schema v1
+          - generic [ref=e186]:
+            - generic "Click to remove column" [ref=e187]:
+              - text: id
+              - generic [ref=e188]: (number)
+              - generic [ref=e189]: PK
+            - generic "Click to remove column" [ref=e190]:
+              - text: customer_name
+              - generic [ref=e191]: (string)
+            - generic "Click to remove column" [ref=e192]:
+              - text: price_per_unit
+              - generic [ref=e193]: (number)
+            - generic "Click to remove column" [ref=e194]:
+              - text: order_total
+              - generic [ref=e195]: (number)
+            - generic "Click to remove column" [ref=e196]:
+              - text: sales_rep
+              - generic [ref=e197]: (string)
+            - generic "Click to remove column" [ref=e198]:
+              - text: region
+              - generic [ref=e199]: (string)
+          - generic [ref=e201]:
+            - generic [ref=e202]: Operate
+            - generic [ref=e203]:
+              - heading "Edit row values" [level=3] [ref=e204]
+              - paragraph [ref=e205]: Provide values for your columns, then choose an operation to emit events.
+          - generic [ref=e206]:
+            - textbox "id" [ref=e208]
+            - textbox "customer_name" [ref=e210]
+            - textbox "price_per_unit" [ref=e212]
+            - textbox "order_total" [ref=e214]
+            - textbox "sales_rep" [ref=e216]
+            - textbox "region" [ref=e218]
+          - generic [ref=e219]:
+            - button "Autofill sample row" [ref=e220] [cursor=pointer]
+            - button "Insert" [ref=e221] [cursor=pointer]
+            - button "Update by PK" [ref=e222] [cursor=pointer]
+            - button "Delete by PK" [ref=e223] [cursor=pointer]
+          - generic "Schema walkthrough" [ref=e224]:
+            - heading "Schema walkthrough" [level=4] [ref=e225]
+            - paragraph [ref=e226]: Add and drop a column to see how capture methods react during the stream.
+            - generic [ref=e227]:
+              - button "Add priority_flag column" [ref=e228] [cursor=pointer]
+              - button "Drop priority_flag column" [disabled] [ref=e229] [cursor=pointer]
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - generic [ref=e232]: Step 2
+            - generic [ref=e233]:
+              - heading "Populate the table" [level=2] [ref=e234]
+              - paragraph [ref=e235]: Review current rows, seed realistic data, or clear the table to reset.
+          - region "Current rows" [ref=e237]:
+            - table [ref=e238]:
+              - rowgroup [ref=e239]:
+                - row "id * customer_name price_per_unit order_total sales_rep region" [ref=e240]:
+                  - cell "id *" [ref=e241]
+                  - cell "customer_name" [ref=e242]
+                  - cell "price_per_unit" [ref=e243]
+                  - cell "order_total" [ref=e244]
+                  - cell "sales_rep" [ref=e245]
+                  - cell "region" [ref=e246]
+              - rowgroup
+          - generic [ref=e247]:
+            - button "Seed sample rows" [ref=e248] [cursor=pointer]
+            - button "Clear rows" [ref=e249] [cursor=pointer]
+        - generic [ref=e250]:
+          - generic [ref=e251]:
+            - generic [ref=e252]: Step 3
+            - generic [ref=e253]:
+              - heading "Inspect change events" [level=2] [ref=e254]
+              - paragraph [ref=e255]: Filter operations, include before-images, and export NDJSON to share scenarios.
+          - generic [ref=e256]:
+            - button "Emit Snapshot" [ref=e257] [cursor=pointer]
+            - button "Clear events" [ref=e258] [cursor=pointer]
+            - generic [ref=e259]:
+              - checkbox "Debezium-style envelope" [checked] [ref=e260]
+              - text: Debezium-style envelope
+            - generic [ref=e261]:
+              - checkbox "include before on updates/deletes" [checked] [ref=e262]
+              - text: include
+              - code [ref=e263]: before
+              - text: on updates/deletes
+          - generic [ref=e264]:
+            - generic [ref=e265]:
+              - checkbox "Inserts" [checked] [ref=e266]
+              - text: Inserts
+            - generic [ref=e267]:
+              - checkbox "Updates" [checked] [ref=e268]
+              - text: Updates
+            - generic [ref=e269]:
+              - checkbox "Deletes" [checked] [ref=e270]
+              - text: Deletes
+            - generic [ref=e271]:
+              - checkbox "Snapshots" [checked] [ref=e272]
+              - text: Snapshots
+            - generic [ref=e273]:
+              - checkbox "Schema changes" [checked] [ref=e274]
+              - text: Schema changes
+          - generic [ref=e275]:
+            - button "Copy NDJSON" [ref=e276] [cursor=pointer]
+            - button "Download NDJSON" [ref=e277] [cursor=pointer]
+          - generic [ref=e279]: // no events yet (check filters)
+          - region "Event inspector" [ref=e280]:
+            - generic [ref=e281]:
+              - generic [ref=e282]:
+                - heading "Event inspector" [level=3] [ref=e283]
+                - paragraph [ref=e284]: Peek at before/after payloads, diff fields, and replay to the table.
+              - group "Event navigation" [ref=e285]:
+                - button "Previous" [disabled] [ref=e286] [cursor=pointer]
+                - button "Next" [disabled] [ref=e287] [cursor=pointer]
+                - button "Replay to table" [disabled] [ref=e288] [cursor=pointer]
+            - generic [ref=e289]:
+              - listbox "Filtered change events" [ref=e290]
+              - paragraph [ref=e292]: No events match the current filters.
+    - region "CDC Method Preview (beta)" [ref=e293]:
+      - heading "CDC Method Preview (beta)" [level=2] [ref=e294]
+      - region "Simulator preview" [ref=e296]:
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - heading "CDC Method Comparator" [level=2] [ref=e299]
+            - paragraph [ref=e300]: Debezium tails the MySQL binlog and pushes commits to Kafka for downstream consumers.
+            - list "Selected vendor pipeline" [ref=e301]:
+              - listitem [ref=e302]: Source · MySQL primary
+              - generic [ref=e303]: →
+              - listitem [ref=e304]: Capture · MySQL binlog (Debezium)
+              - generic [ref=e305]: →
+              - listitem [ref=e306]: Transport · Kafka topic
+              - generic [ref=e307]: →
+              - listitem [ref=e308]: Sink · Warehouse / downstream sink
+            - paragraph [ref=e309]:
+              - text: MySQL · Debezium · Kafka ·
+              - link "Reference" [ref=e310] [cursor=pointer]:
+                - /url: https://debezium.io/documentation/reference/stable/connectors/mysql.html
+          - group "Filter scenarios" [ref=e311]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: Search scenarios
+              - searchbox "Search scenarios" [ref=e314]
+            - group "Scenario tags" [ref=e315]:
+              - button "#anomaly" [ref=e316] [cursor=pointer]
+              - button "#backfill" [ref=e317] [cursor=pointer]
+              - button "#basics" [ref=e318] [cursor=pointer]
+              - button "#crud" [ref=e319] [cursor=pointer]
+              - button "#fulfilment" [ref=e320] [cursor=pointer]
+              - button "#iot" [ref=e321] [cursor=pointer]
+              - button "#lag" [ref=e322] [cursor=pointer]
+              - button "#latency" [ref=e323] [cursor=pointer]
+              - button "#orders" [ref=e324] [cursor=pointer]
+              - button "#payments" [ref=e325] [cursor=pointer]
+              - button "#polling" [ref=e326] [cursor=pointer]
+              - button "#risk" [ref=e327] [cursor=pointer]
+              - button "#schema" [ref=e328] [cursor=pointer]
+              - button "#telemetry" [ref=e329] [cursor=pointer]
+              - button "#transactions" [ref=e330] [cursor=pointer]
+          - group "Scenario controls" [ref=e331]:
+            - combobox "Vendor preset" [ref=e332]:
+              - option "MySQL · Debezium · Kafka" [selected]
+              - option "Postgres · Logical decoding · Kafka"
+              - option "SQL Server · CDC tables · ETL"
+              - option "Oracle · GoldenGate"
+              - option "MongoDB · Change Streams"
+            - combobox "Scenario" [ref=e333]:
+              - option "Workspace (live)"
+              - option "CRUD Basic" [selected]
+              - option "Omnichannel Orders"
+              - option "Real-time Payments"
+              - option "IoT Telemetry"
+              - option "Schema Evolution"
+              - option "Orders + Items Transactions"
+              - option "Burst Updates"
+            - generic [ref=e334]:
+              - button "Load in workspace" [ref=e335] [cursor=pointer]
+              - button "Download JSON" [ref=e336] [cursor=pointer]
+              - button "Preview" [ref=e337] [cursor=pointer]
+            - group "Methods to display" [ref=e338]:
+              - button "Polling (scheduled SQL)" [pressed] [ref=e339]
+              - button "Debezium binlog tail" [pressed] [ref=e340]
+        - paragraph [ref=e341]:
+          - strong [ref=e342]: "CRUD Basic:"
+          - text: Teaching delete visibility basics.
+        - paragraph [ref=e343]: Minimal ops for first-time comparator demos.
+        - generic "Scenario tags" [ref=e344]:
+          - generic [ref=e345]: "#crud"
+          - generic [ref=e346]: "#basics"
+        - paragraph [ref=e347]: 1 rows · 3 ops
+        - group "Event filters" [ref=e348]:
+          - generic [ref=e349]:
+            - generic [ref=e350]: Search events
+            - searchbox "Search events" [ref=e351]
+          - group "Change operations" [ref=e352]:
+            - button "C" [ref=e353] [cursor=pointer]
+            - button "U" [ref=e354] [cursor=pointer]
+            - button "D" [ref=e355] [cursor=pointer]
+            - button "S" [ref=e356] [cursor=pointer]
+          - button "Hide timeline" [ref=e357] [cursor=pointer]
+        - region "Event log" [ref=e358]:
+          - generic [ref=e359]:
+            - generic [ref=e360]:
+              - heading "Event Log" [level=3] [ref=e361]
+              - paragraph [ref=e362]:
+                - generic [ref=e363]: Produced 0
+                - text: ·
+                - generic [ref=e364]: Consumed 0
+                - text: ·
+                - generic [ref=e365]: Backlog 0
+                - text: ·
+                - generic [ref=e366]: Snapshot rows 0
+            - generic [ref=e367]:
+              - generic [ref=e368]: 0 events
+              - button "Download NDJSON" [disabled] [ref=e369]
+              - button "Clear" [disabled] [ref=e370]
+          - group "Event log filters" [ref=e371]:
+            - generic [ref=e372]:
+              - generic [ref=e373]: Method
+              - combobox "Method" [ref=e374]:
+                - option "All methods" [selected]
+                - option "Polling (scheduled SQL)"
+                - option "Debezium binlog tail"
+            - generic [ref=e375]:
+              - generic [ref=e376]: Operation
+              - combobox "Operation" [disabled] [ref=e377]:
+                - option "All ops" [selected]
+            - generic [ref=e378]:
+              - generic [ref=e379]: Table
+              - combobox "Table" [disabled] [ref=e380]:
+                - option "All tables" [selected]
+            - generic [ref=e381]:
+              - generic [ref=e382]: Txn
+              - combobox "Txn" [disabled] [ref=e383]:
+                - option "All txns" [selected]
+          - paragraph [ref=e384]: No events yet.
+        - region "Harness nightly history" [ref=e385]:
+          - group [ref=e386]
+        - group "Playback controls" [ref=e388]:
+          - button "Start" [ref=e389] [cursor=pointer]
+          - button "Pause" [disabled] [ref=e390] [cursor=pointer]
+          - button "Step +100ms" [ref=e391] [cursor=pointer]
+          - button "Reset" [ref=e392] [cursor=pointer]
+          - button "Pause apply (0 queued)" [ref=e393]
+          - generic [ref=e394]:
+            - checkbox "Apply on commit" [ref=e395]
+            - generic [ref=e396]: Apply on commit
+          - group "Apply rate limit" [ref=e397]:
+            - button "Throttle apply" [ref=e398] [cursor=pointer]
+            - generic [ref=e399]:
+              - generic [ref=e400]: Unlimited
+              - slider "Unlimited" [disabled] [ref=e401]: "120"
+          - group "Event generator" [ref=e402]:
+            - button "Start generator" [ref=e403] [cursor=pointer]
+            - generic [ref=e404]:
+              - generic [ref=e405]: Set 120 events/s
+              - slider "Set 120 events/s" [disabled] [ref=e406]: "120"
+            - button "Burst +40" [ref=e407] [cursor=pointer]
+        - generic "Method tuning controls" [ref=e408]:
+          - group "Polling (scheduled SQL)" [ref=e409]:
+            - generic [ref=e410]: Polling (scheduled SQL)
+            - paragraph [ref=e411]: Adjust poll cadence and whether soft deletes are surfaced.
+            - generic [ref=e412]:
+              - generic [ref=e413]: Poll interval (0.5s)
+              - slider "Poll interval (0.5s)" [ref=e414]: "500"
+            - paragraph [ref=e415]: ⏱️ Polling every 0.5s
+            - generic [ref=e416]:
+              - checkbox "Include soft delete marker column" [ref=e417]
+              - generic [ref=e418]: Include soft delete marker column
+          - group "Debezium binlog tail" [ref=e419]:
+            - generic [ref=e420]: Debezium binlog tail
+            - paragraph [ref=e421]: Control how frequently the WAL/Binlog fetcher polls for new records.
+            - generic [ref=e422]:
+              - generic [ref=e423]: Fetch interval (ms)
+              - spinbutton "Fetch interval (ms)" [ref=e424]: "50"
+        - generic [ref=e425]:
+          - list [ref=e426]:
+            - listitem [ref=e427]:
+              - strong [ref=e428]: "Lag spread:"
+              - text: Polling (scheduled SQL) is leading at 0ms (no spread)
+            - listitem [ref=e429]:
+              - strong [ref=e430]: "Delete capture:"
+              - text: Polling (scheduled SQL) is lowest at 0% · best is Debezium binlog tail (0%)
+            - listitem [ref=e431]:
+              - strong [ref=e432]: "Snapshot rows:"
+              - text: Polling (scheduled SQL) 0, Debezium binlog tail 0
+            - listitem [ref=e433]:
+              - strong [ref=e434]: "Ordering:"
+              - text: All methods preserved ordering
+          - button "Copy summary" [ref=e435] [cursor=pointer]
+        - region "Lane checks" [ref=e436]:
+          - generic [ref=e437]:
+            - heading "Lane checks" [level=3] [ref=e438]
+            - paragraph [ref=e439]: Quick glance at diff findings and lag hotspots across active capture methods.
+          - list [ref=e440]:
+            - listitem [ref=e441]:
+              - generic [ref=e442]: Polling (scheduled SQL)
+              - generic [ref=e444]: 3 missing
+              - button "Inspect" [ref=e445] [cursor=pointer]
+            - listitem [ref=e446]:
+              - generic [ref=e447]: Debezium binlog tail
+              - generic [ref=e449]: 3 missing
+              - button "Inspect" [ref=e450] [cursor=pointer]
+        - region "Runtime metrics" [ref=e451]:
+          - generic [ref=e453]:
+            - heading "Runtime metrics" [level=3] [ref=e454]
+            - paragraph [ref=e455]: Produced 0 · Consumed 0 · Backlog 0
+          - generic [ref=e456]:
+            - article [ref=e457]:
+              - heading "Polling (scheduled SQL)" [level=4] [ref=e459]
+              - generic [ref=e460]:
+                - generic [ref=e461]:
+                  - term [ref=e462]: Produced
+                  - definition [ref=e463]: "0"
+                - generic [ref=e464]:
+                  - term [ref=e465]: Consumed
+                  - definition [ref=e466]: "0"
+                - generic [ref=e467]:
+                  - term [ref=e468]: Backlog
+                  - definition [ref=e469]: "0"
+                - generic [ref=e470]:
+                  - term [ref=e471]: Lag p50
+                  - definition [ref=e472]: 0ms
+                - generic [ref=e473]:
+                  - term [ref=e474]: Lag p95
+                  - definition [ref=e475]: 0ms
+                - generic [ref=e476]:
+                  - term [ref=e477]: Snapshot rows
+                  - definition [ref=e478]: "0"
+                - generic [ref=e479]:
+                  - term [ref=e480]: Change mix
+                  - definition [ref=e481]: C 0 · U 0 · D 0
+                - generic [ref=e482]:
+                  - term [ref=e483]: Missed deletes
+                  - definition [ref=e484]: "0"
+            - article [ref=e485]:
+              - heading "Debezium binlog tail" [level=4] [ref=e487]
+              - generic [ref=e488]:
+                - generic [ref=e489]:
+                  - term [ref=e490]: Produced
+                  - definition [ref=e491]: "0"
+                - generic [ref=e492]:
+                  - term [ref=e493]: Consumed
+                  - definition [ref=e494]: "0"
+                - generic [ref=e495]:
+                  - term [ref=e496]: Backlog
+                  - definition [ref=e497]: "0"
+                - generic [ref=e498]:
+                  - term [ref=e499]: Lag p50
+                  - definition [ref=e500]: 0ms
+                - generic [ref=e501]:
+                  - term [ref=e502]: Lag p95
+                  - definition [ref=e503]: 0ms
+                - generic [ref=e504]:
+                  - term [ref=e505]: Snapshot rows
+                  - definition [ref=e506]: "0"
+                - generic [ref=e507]:
+                  - term [ref=e508]: Change mix
+                  - definition [ref=e509]: C 0 · U 0 · D 0
+                - generic [ref=e510]:
+                  - term [ref=e511]: Missed deletes
+                  - definition [ref=e512]: "0"
+        - generic [ref=e513]:
+          - article [ref=e514]:
+            - generic [ref=e515]:
+              - generic [ref=e516]:
+                - heading "Polling (scheduled SQL)" [level=3] [ref=e517]
+                - paragraph [ref=e518]: Batch jobs diff the MySQL table on an interval to detect divergence.
+              - generic [ref=e519]: 0 events
+            - status [ref=e521]:
+              - generic [ref=e522]: "Lag: 0ms"
+              - text: ·
+              - generic [ref=e523]: "TPS: 0.0"
+              - text: ·
+              - generic [ref=e524]: "Deletes: 0%"
+              - text: ·
+              - generic [ref=e525]: "Ordering: OK"
+              - text: ·
+              - generic [ref=e526]: "Consistency: Drift"
+              - text: ·
+              - generic [ref=e527]: "Ops C/U/D: 0/0/0"
+            - note [ref=e528]:
+              - generic [ref=e530]: 3 missing
+              - group [ref=e531]
+            - region "Polling (scheduled SQL) event bus" [ref=e533]:
+              - generic [ref=e534]:
+                - heading "Event Bus" [level=4] [ref=e535]
+                - generic [ref=e536]: cdc.polling
+              - paragraph [ref=e537]:
+                - generic [ref=e538]:
+                  - text: Backlog
+                  - strong [ref=e539]: "0"
+                - text: ·
+                - generic [ref=e540]: Last offset -1
+              - paragraph [ref=e541]: Produced 0 · Consumed 0
+              - paragraph [ref=e542]: Snapshot rows 0
+              - paragraph [ref=e543]: Lag p50 0ms · p95 0ms
+              - paragraph [ref=e544]: "Missed deletes: 0"
+            - region "Polling (scheduled SQL) destination snapshot" [ref=e545]:
+              - generic [ref=e546]:
+                - generic [ref=e547]:
+                  - heading "Destination snapshot" [level=4] [ref=e548]
+                  - generic [ref=e549]: schema v1
+                - button "Download JSON" [disabled] [ref=e551] [cursor=pointer]
+              - paragraph [ref=e552]: No rows applied yet.
+            - generic [ref=e553]:
+              - generic [ref=e554]:
+                - term [ref=e555]: Poll interval
+                - definition [ref=e556]: 500 ms
+              - generic [ref=e557]:
+                - term [ref=e558]: Soft deletes
+                - definition [ref=e559]: ignored
+            - paragraph [ref=e561]: Misses hard deletes and rapid updates without custom tracking tables. (0% of deletes captured in this scenario)
+            - region "When to use Polling (scheduled SQL)" [ref=e562]:
+              - heading "When to use" [level=4] [ref=e563]
+              - paragraph [ref=e564]: Fallback when binlog access is blocked. Accepts lag and data loss for small tables only.
+            - list [ref=e565]:
+              - listitem [ref=e566]: No events yet.
+          - article [ref=e567]:
+            - generic [ref=e568]:
+              - generic [ref=e569]:
+                - heading "Debezium binlog tail" [level=3] [ref=e570]
+                - paragraph [ref=e571]: Debezium streams row-based binlog events into Kafka with schema evolution support.
+              - generic [ref=e572]: 0 events
+            - status [ref=e574]:
+              - generic [ref=e575]: "Lag: 0ms"
+              - text: ·
+              - generic [ref=e576]: "TPS: 0.0"
+              - text: ·
+              - generic [ref=e577]: "Deletes: 0%"
+              - text: ·
+              - generic [ref=e578]: "Ordering: OK"
+              - text: ·
+              - generic [ref=e579]: "Consistency: OK"
+              - text: ·
+              - generic [ref=e580]: "Ops C/U/D: 0/0/0"
+            - note [ref=e581]:
+              - generic [ref=e583]: 3 missing
+              - group [ref=e584]
+            - region "Debezium binlog tail event bus" [ref=e586]:
+              - generic [ref=e587]:
+                - heading "Event Bus" [level=4] [ref=e588]
+                - generic [ref=e589]: cdc.log
+              - paragraph [ref=e590]:
+                - generic [ref=e591]:
+                  - text: Backlog
+                  - strong [ref=e592]: "0"
+                - text: ·
+                - generic [ref=e593]: Last offset -1
+              - paragraph [ref=e594]: Produced 0 · Consumed 0
+              - paragraph [ref=e595]: Snapshot rows 0
+              - paragraph [ref=e596]: Lag p50 0ms · p95 0ms
+            - region "Debezium binlog tail destination snapshot" [ref=e597]:
+              - generic [ref=e598]:
+                - generic [ref=e599]:
+                  - heading "Destination snapshot" [level=4] [ref=e600]
+                  - generic [ref=e601]: schema v1
+                - button "Download JSON" [disabled] [ref=e603] [cursor=pointer]
+              - paragraph [ref=e604]: No rows applied yet.
+            - generic [ref=e606]:
+              - term [ref=e607]: Fetch interval
+              - definition [ref=e608]: 50 ms
+            - paragraph [ref=e610]: "Preferred default: low-impact, ordered, near real-time change capture."
+            - region "When to use Debezium binlog tail" [ref=e611]:
+              - heading "When to use" [level=4] [ref=e612]
+              - paragraph [ref=e613]: Standard choice for production MySQL workloads when Kafka + Debezium are available.
+            - list [ref=e614]:
+              - listitem [ref=e615]: No events yet.
+        - generic [ref=e616]: "Scenario clock: 0ms · 0 total events emitted"
+      - generic [ref=e617]:
+        - heading "When to use which" [level=3] [ref=e618]
+        - generic [ref=e619]:
+          - term [ref=e620]: Polling (Query)
+          - definition [ref=e621]: Simple, but lossy. Periodic scans read current state only. Hard deletes and intermediate updates between polls are not observable. Good for small, non-critical syncs where some lag and loss is acceptable.
+          - term [ref=e622]: Trigger (Audit)
+          - definition [ref=e623]: Complete, but intrusive. Triggers capture every change into an audit table, but add write latency and operational overhead on the source. Use when log access isn’t available.
+          - term [ref=e624]: Log (WAL)
+          - definition [ref=e625]: Default choice. Reads the database’s transaction log post-commit. Lowest source impact, complete and ordered changes, near-real-time. Requires connector setup and ops discipline.
+  - contentinfo [ref=e626]:
+    - generic [ref=e627]:
+      - text: Built for Appwrite Hacktoberfest · Deployed on
+      - strong [ref=e628]: Sites
+  - region "Simulator preview" [ref=e629]:
+    - heading "CDC Method Comparator" [level=2] [ref=e630]
+```

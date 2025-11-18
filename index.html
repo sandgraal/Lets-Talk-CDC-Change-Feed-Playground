@@ -1,459 +1,664 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="shortcut icon" href="./CDC_logo.png" type="image/x-icon" />
+    <title>Lets Talk CDC – Change Feed Playground</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="shortcut icon" href="./CDC_logo.png" type="image/x-icon">
-  <title>Lets Talk CDC – Change Feed Playground</title>
-  <link rel="stylesheet" href="assets/styles.css" />
-</head>
-
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-pill">Lets Talk CDC</span>
-      <span class="brand-title">Change Feed Playground</span>
-    </div>
-    <div class="topbar-actions">
-      <a class="badge badge-hacktoberfest" href="https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground"
-        target="_blank" rel="noopener noreferrer">
-        <span class="badge-hacktoberfest__glow" aria-hidden="true"></span>
-        <span class="badge-hacktoberfest__spark" aria-hidden="true">★</span>
-        Hacktoberfest 2025 Submission
-      </a>
-      <button id="btnExport" type="button">Export Scenario</button>
-      <label class="file">
-        <input type="file" id="importFile" accept="application/json" />
-        <span>Import Scenario</span>
-      </label>
-      <div class="topbar-buttons">
-        <button id="btnShareLink" type="button" disabled>Copy Share Link</button>
-        <button id="btnReset" class="danger" type="button">Reset</button>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-pill">Lets Talk CDC</span>
+        <span class="brand-title">Change Feed Playground</span>
       </div>
-    </div>
-  </header>
-
-  <main class="layout">
-    <section class="hero" id="overview">
-      <div class="hero-ambient" aria-hidden="true">
-        <span class="orb orb-one"></span>
-        <span class="orb orb-two"></span>
-        <span class="orb orb-three"></span>
-      </div>
-      <div class="hero-copy">
-        <span class="eyebrow">Plan · Practice · Share</span>
-        <h1>Prototype change data capture without leaving the browser.</h1>
-        <p class="hero-lead">Create a lightweight schema, act on rows, and watch the resulting change feed update in
-          real time.</p>
-      </div>
-      <div class="hero-templates" aria-labelledby="templateTitle">
-        <header class="hero-templates-header">
-          <div>
-            <h3 id="templateTitle">Explore real-world scenarios</h3>
-            <p class="hero-templates-sub">Load curated CDC blueprints to jumpstart your experiments.</p>
-          </div>
-          <div class="template-filter">
-            <input type="search" id="scenarioFilter" placeholder="Filter scenarios" aria-label="Filter scenarios" />
-          </div>
-          <button type="button" id="btnOnboarding" class="btn-ghost">How the playground works</button>
-        </header>
-        <div class="template-grid" id="templateGallery"></div>
-      </div>
-      <section class="hero-quickstart" aria-labelledby="quickstartTitle">
-        <header class="hero-quickstart-header">
-          <div>
-            <h3 id="quickstartTitle">Quick start</h3>
-            <p class="hero-quickstart-sub">Take the guided path to your first change feed in under a minute.</p>
-          </div>
-          <button id="btnGuidedTour" type="button" class="btn-primary">Start guided walkthrough</button>
-        </header>
-        <div class="quickstart-grid">
-          <article id="qsSchema" class="quickstart-card" data-step="schema">
-            <div class="quickstart-card-head">
-              <span class="quickstart-step">Step 1</span>
-              <span class="quickstart-status" aria-live="polite">Pending</span>
-            </div>
-            <h4>Model your schema</h4>
-            <p>Define columns and mark at least one primary key.</p>
-            <button id="btnQuickSchema" type="button" class="btn-ghost">Start modeling</button>
-          </article>
-          <article id="qsRows" class="quickstart-card" data-step="rows">
-            <div class="quickstart-card-head">
-              <span class="quickstart-step">Step 2</span>
-              <span class="quickstart-status" aria-live="polite">Pending</span>
-            </div>
-            <h4>Populate rows</h4>
-            <p>Seed realistic data or insert rows manually.</p>
-            <button id="btnQuickRows" type="button" class="btn-ghost">Seed sample rows</button>
-          </article>
-          <article id="qsEvents" class="quickstart-card" data-step="events">
-            <div class="quickstart-card-head">
-              <span class="quickstart-step">Step 3</span>
-              <span class="quickstart-status" aria-live="polite">Pending</span>
-            </div>
-            <h4>Stream events</h4>
-            <p>Trigger operations and watch the change feed update live.</p>
-            <button id="btnQuickEvents" type="button" class="btn-ghost">Emit my first event</button>
-          </article>
+      <div class="topbar-actions">
+        <a
+          class="badge badge-hacktoberfest"
+          href="https://github.com/sandgraal/Lets-Talk-CDC-Change-Feed-Playground"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span class="badge-hacktoberfest__glow" aria-hidden="true"></span>
+          <span class="badge-hacktoberfest__spark" aria-hidden="true">★</span>
+          Hacktoberfest 2025 Submission
+        </a>
+        <button id="btnExport" type="button">Export Scenario</button>
+        <label class="file">
+          <input type="file" id="importFile" accept="application/json" />
+          <span>Import Scenario</span>
+        </label>
+        <div class="topbar-buttons">
+          <button id="btnShareLink" type="button" disabled>
+            Copy Share Link
+          </button>
+          <button id="btnReset" class="danger" type="button">Reset</button>
         </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="hero" id="overview">
+        <div class="hero-ambient" aria-hidden="true">
+          <span class="orb orb-one"></span>
+          <span class="orb orb-two"></span>
+          <span class="orb orb-three"></span>
+        </div>
+        <div class="hero-copy">
+          <span class="eyebrow">Plan · Practice · Share</span>
+          <h1>Prototype change data capture without leaving the browser.</h1>
+          <p class="hero-lead">
+            Create a lightweight schema, act on rows, and watch the resulting
+            change feed update in real time.
+          </p>
+        </div>
+        <div class="hero-templates" aria-labelledby="templateTitle">
+          <header class="hero-templates-header">
+            <div>
+              <h3 id="templateTitle">Explore real-world scenarios</h3>
+              <p class="hero-templates-sub">
+                Load curated CDC blueprints to jumpstart your experiments.
+              </p>
+            </div>
+            <div class="template-filter">
+              <input
+                type="search"
+                id="scenarioFilter"
+                placeholder="Filter scenarios"
+                aria-label="Filter scenarios"
+              />
+            </div>
+            <button type="button" id="btnOnboarding" class="btn-ghost">
+              How the playground works
+            </button>
+          </header>
+          <div class="template-grid" id="templateGallery"></div>
+        </div>
+        <section class="hero-quickstart" aria-labelledby="quickstartTitle">
+          <header class="hero-quickstart-header">
+            <div>
+              <h3 id="quickstartTitle">Quick start</h3>
+              <p class="hero-quickstart-sub">
+                Take the guided path to your first change feed in under a
+                minute.
+              </p>
+            </div>
+            <button id="btnGuidedTour" type="button" class="btn-primary">
+              Start guided walkthrough
+            </button>
+          </header>
+          <div class="quickstart-grid">
+            <article id="qsSchema" class="quickstart-card" data-step="schema">
+              <div class="quickstart-card-head">
+                <span class="quickstart-step">Step 1</span>
+                <span class="quickstart-status" aria-live="polite"
+                  >Pending</span
+                >
+              </div>
+              <h4>Model your schema</h4>
+              <p>Define columns and mark at least one primary key.</p>
+              <button id="btnQuickSchema" type="button" class="btn-ghost">
+                Start modeling
+              </button>
+            </article>
+            <article id="qsRows" class="quickstart-card" data-step="rows">
+              <div class="quickstart-card-head">
+                <span class="quickstart-step">Step 2</span>
+                <span class="quickstart-status" aria-live="polite"
+                  >Pending</span
+                >
+              </div>
+              <h4>Populate rows</h4>
+              <p>Seed realistic data or insert rows manually.</p>
+              <button id="btnQuickRows" type="button" class="btn-ghost">
+                Seed sample rows
+              </button>
+            </article>
+            <article id="qsEvents" class="quickstart-card" data-step="events">
+              <div class="quickstart-card-head">
+                <span class="quickstart-step">Step 3</span>
+                <span class="quickstart-status" aria-live="polite"
+                  >Pending</span
+                >
+              </div>
+              <h4>Stream events</h4>
+              <p>Trigger operations and watch the change feed update live.</p>
+              <button id="btnQuickEvents" type="button" class="btn-ghost">
+                Emit my first event
+              </button>
+            </article>
+          </div>
+        </section>
       </section>
-    </section>
 
-    <section class="workspace" id="playground">
-      <aside class="sidebar" aria-labelledby="learningTitle">
-        <h2 id="learningTitle">Learning path</h2>
-        <p class="sidebar-intro">Work through each step to understand how change data capture scenarios are assembled.
-        </p>
-        <ol class="learning-steps" id="learningSteps">
-          <li>
-            <button type="button" class="learning-step" data-step="schema" data-target="#schema">
-              <span class="step-index">1</span>
-              <span class="step-body">
-                <span class="step-title">Model your schema</span>
-                <span class="step-detail">Define columns plus primary keys.</span>
-              </span>
-              <span class="step-status" aria-live="polite">Pending</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="learning-step" data-step="rows" data-target="#table-state">
-              <span class="step-index">2</span>
-              <span class="step-body">
-                <span class="step-title">Populate rows</span>
-                <span class="step-detail">Seed or insert data to operate on.</span>
-              </span>
-              <span class="step-status" aria-live="polite">Pending</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="learning-step" data-step="events" data-target="#change-feed">
-              <span class="step-index">3</span>
-              <span class="step-body">
-                <span class="step-title">Inspect events</span>
-                <span class="step-detail">Trigger operations and review the log.</span>
-              </span>
-              <span class="step-status" aria-live="polite">Pending</span>
-            </button>
-          </li>
-        </ol>
-        <div class="learning-tip" id="learningTip">Add at least one column to begin building your scenario.</div>
-      </aside>
+      <section class="workspace" id="playground">
+        <aside class="sidebar" aria-labelledby="learningTitle">
+          <h2 id="learningTitle">Learning path</h2>
+          <p class="sidebar-intro">
+            Work through each step to understand how change data capture
+            scenarios are assembled.
+          </p>
+          <ol class="learning-steps" id="learningSteps">
+            <li>
+              <button
+                type="button"
+                class="learning-step"
+                data-step="schema"
+                data-target="#schema"
+              >
+                <span class="step-index">1</span>
+                <span class="step-body">
+                  <span class="step-title">Model your schema</span>
+                  <span class="step-detail"
+                    >Define columns plus primary keys.</span
+                  >
+                </span>
+                <span class="step-status" aria-live="polite">Pending</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="learning-step"
+                data-step="rows"
+                data-target="#table-state"
+              >
+                <span class="step-index">2</span>
+                <span class="step-body">
+                  <span class="step-title">Populate rows</span>
+                  <span class="step-detail"
+                    >Seed or insert data to operate on.</span
+                  >
+                </span>
+                <span class="step-status" aria-live="polite">Pending</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="learning-step"
+                data-step="events"
+                data-target="#change-feed"
+              >
+                <span class="step-index">3</span>
+                <span class="step-body">
+                  <span class="step-title">Inspect events</span>
+                  <span class="step-detail"
+                    >Trigger operations and review the log.</span
+                  >
+                </span>
+                <span class="step-status" aria-live="polite">Pending</span>
+              </button>
+            </li>
+          </ol>
+          <div class="learning-tip" id="learningTip">
+            Add at least one column to begin building your scenario.
+          </div>
+        </aside>
 
-      <div class="workspace-panels">
-        <!-- Schema + Row editor -->
-        <section class="card step-card" data-step="schema" id="schema">
-          <header class="step-card-header">
-            <span class="step-badge">Step 1</span>
-            <div>
-              <h2>Model your schema</h2>
-              <p class="card-intro">Add columns, choose types, and mark primary keys so downstream operations know how
-                to locate rows.</p>
-            </div>
-          </header>
-          <div class="schema">
-            <input id="colName" placeholder="column name (e.g., id)" />
-            <select id="colType">
-              <option value="string">string</option>
-              <option value="number">number</option>
-              <option value="boolean">boolean</option>
-            </select>
-            <label class="checkbox"><input type="checkbox" id="colPK" /> PK</label>
-            <button id="addCol" type="button">Add Column</button>
-          </div>
-
-          <p class="schema-status" id="schemaStatus" aria-live="polite"></p>
-
-          <div class="pill-row" id="schemaPills"></div>
-
-          <div class="step-card-divider"></div>
-
-          <header class="step-card-header">
-            <span class="step-badge step-badge-sub">Operate</span>
-            <div>
-              <h3>Edit row values</h3>
-              <p class="card-intro">Provide values for your columns, then choose an operation to emit events.</p>
-            </div>
-          </header>
-          <div class="row-editor" id="rowEditor"></div>
-          <div class="ops">
-            <button id="btnAutofillRow" type="button">Autofill sample row</button>
-            <button id="opInsert" type="button">Insert</button>
-            <button id="opUpdate" type="button">Update by PK</button>
-            <button id="opDelete" type="button">Delete by PK</button>
-          </div>
-          <div class="schema-demo-actions" aria-label="Schema walkthrough">
-            <h4>Schema walkthrough</h4>
-            <p>Add and drop a column to see how capture methods react during the stream.</p>
-            <div class="schema-demo-buttons">
-              <button id="btnSchemaAdd" type="button">Add priority_flag column</button>
-              <button id="btnSchemaDrop" type="button">Drop priority_flag column</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Table state -->
-        <section class="card step-card" data-step="rows" id="table-state">
-          <header class="step-card-header">
-            <span class="step-badge">Step 2</span>
-            <div>
-              <h2>Populate the table</h2>
-              <p class="card-intro">Review current rows, seed realistic data, or clear the table to reset.</p>
-            </div>
-          </header>
-          <div class="table-shell">
-            <div class="table-scroll" role="region" aria-label="Current rows" tabindex="0">
-              <table id="tbl" class="data-table">
-                <thead></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="table-actions">
-            <button id="seedRows" type="button">Seed sample rows</button>
-            <button id="clearRows" type="button">Clear rows</button>
-          </div>
-        </section>
-
-        <!-- Change feed -->
-        <section class="card step-card" data-step="events" id="change-feed">
-          <header class="step-card-header">
-            <span class="step-badge">Step 3</span>
-            <div>
-              <h2>Inspect change events</h2>
-              <p class="card-intro">Filter operations, include before-images, and export NDJSON to share scenarios.</p>
-            </div>
-          </header>
-          <div class="stream-actions">
-            <button id="emitSnapshot" type="button">Emit Snapshot</button>
-            <button id="clearEvents" type="button">Clear events</button>
-            <label class="checkbox"><input type="checkbox" id="debzWrap" checked /> Debezium-style envelope</label>
-            <label class="checkbox"><input type="checkbox" id="includeBefore" checked /> include <code>before</code> on
-              updates/deletes</label>
-          </div>
-          <div class="filter-actions">
-            <label class="checkbox"><input type="checkbox" id="filterC" checked /> Inserts</label>
-            <label class="checkbox"><input type="checkbox" id="filterU" checked /> Updates</label>
-            <label class="checkbox"><input type="checkbox" id="filterD" checked /> Deletes</label>
-            <label class="checkbox"><input type="checkbox" id="filterR" checked /> Snapshots</label>
-            <label class="checkbox"><input type="checkbox" id="filterS" checked /> Schema changes</label>
-          </div>
-          <div class="export-actions">
-            <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
-            <button id="btnDownloadNdjson" type="button">Download NDJSON</button>
-          </div>
-          <div id="comparatorFeedback" class="comparator-feedback" hidden aria-live="polite"></div>
-          <pre id="eventLog" class="log"></pre>
-          <section class="inspector" id="eventInspector" aria-labelledby="inspectorTitle">
-            <div class="inspector-header">
+        <div class="workspace-panels">
+          <!-- Schema + Row editor -->
+          <section class="card step-card" data-step="schema" id="schema">
+            <header class="step-card-header">
+              <span class="step-badge">Step 1</span>
               <div>
-                <h3 id="inspectorTitle">Event inspector</h3>
-                <p class="inspector-lead">Peek at before/after payloads, diff fields, and replay to the table.</p>
+                <h2>Model your schema</h2>
+                <p class="card-intro">
+                  Add columns, choose types, and mark primary keys so downstream
+                  operations know how to locate rows.
+                </p>
               </div>
-              <div class="inspector-controls" role="group" aria-label="Event navigation">
-                <button type="button" id="eventPrev" class="btn-ghost">Previous</button>
-                <button type="button" id="eventNext" class="btn-ghost">Next</button>
-                <button type="button" id="eventReplay">Replay to table</button>
-              </div>
+            </header>
+            <div class="schema">
+              <input id="colName" placeholder="column name (e.g., id)" />
+              <select id="colType">
+                <option value="string">string</option>
+                <option value="number">number</option>
+                <option value="boolean">boolean</option>
+              </select>
+              <label class="checkbox"
+                ><input type="checkbox" id="colPK" /> PK</label
+              >
+              <button id="addCol" type="button">Add Column</button>
             </div>
-            <div class="inspector-body">
-              <ul class="inspector-list" id="eventList" role="listbox" aria-label="Filtered change events"></ul>
-              <div class="inspector-detail" id="eventDetail" aria-live="polite"></div>
+
+            <p class="schema-status" id="schemaStatus" aria-live="polite"></p>
+
+            <div class="pill-row" id="schemaPills"></div>
+
+            <div class="step-card-divider"></div>
+
+            <header class="step-card-header">
+              <span class="step-badge step-badge-sub">Operate</span>
+              <div>
+                <h3>Edit row values</h3>
+                <p class="card-intro">
+                  Provide values for your columns, then choose an operation to
+                  emit events.
+                </p>
+              </div>
+            </header>
+            <div class="row-editor" id="rowEditor"></div>
+            <div class="ops">
+              <button id="btnAutofillRow" type="button">
+                Autofill sample row
+              </button>
+              <button id="opInsert" type="button">Insert</button>
+              <button id="opUpdate" type="button">Update by PK</button>
+              <button id="opDelete" type="button">Delete by PK</button>
+            </div>
+            <div class="schema-demo-actions" aria-label="Schema walkthrough">
+              <h4>Schema walkthrough</h4>
+              <p>
+                Add and drop a column to see how capture methods react during
+                the stream.
+              </p>
+              <div class="schema-demo-buttons">
+                <button id="btnSchemaAdd" type="button">
+                  Add priority_flag column
+                </button>
+                <button id="btnSchemaDrop" type="button">
+                  Drop priority_flag column
+                </button>
+              </div>
             </div>
           </section>
-        </section>
-      </div>
-    </section>
 
-    <section class="workspace-panel" id="sim-shell-preview" aria-labelledby="simShellTitle">
-      <h2 id="simShellTitle" class="section-title">CDC Method Preview (beta)</h2>
-      <div id="simShellRoot">
-        <p>Preparing simulator preview…</p>
-      </div>
-      <div id="methodGuidance" class="method-guidance" aria-live="polite"></div>
-    </section>
-  </main>
+          <!-- Table state -->
+          <section class="card step-card" data-step="rows" id="table-state">
+            <header class="step-card-header">
+              <span class="step-badge">Step 2</span>
+              <div>
+                <h2>Populate the table</h2>
+                <p class="card-intro">
+                  Review current rows, seed realistic data, or clear the table
+                  to reset.
+                </p>
+              </div>
+            </header>
+            <div class="table-shell">
+              <div
+                class="table-scroll"
+                role="region"
+                aria-label="Current rows"
+                tabindex="0"
+              >
+                <table id="tbl" class="data-table">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="table-actions">
+              <button id="seedRows" type="button">Seed sample rows</button>
+              <button id="clearRows" type="button">Clear rows</button>
+            </div>
+          </section>
 
-  <footer class="footer">
-    <span>Built for Appwrite Hacktoberfest · Deployed on <strong>Sites</strong></span>
-  </footer>
+          <!-- Change feed -->
+          <section class="card step-card" data-step="events" id="change-feed">
+            <header class="step-card-header">
+              <span class="step-badge">Step 3</span>
+              <div>
+                <h2>Inspect change events</h2>
+                <p class="card-intro">
+                  Filter operations, include before-images, and export NDJSON to
+                  share scenarios.
+                </p>
+              </div>
+            </header>
+            <div class="stream-actions">
+              <button id="emitSnapshot" type="button">Emit Snapshot</button>
+              <button id="clearEvents" type="button">Clear events</button>
+              <label class="checkbox"
+                ><input type="checkbox" id="debzWrap" checked /> Debezium-style
+                envelope</label
+              >
+              <label class="checkbox"
+                ><input type="checkbox" id="includeBefore" checked /> include
+                <code>before</code> on updates/deletes</label
+              >
+            </div>
+            <div class="filter-actions">
+              <label class="checkbox"
+                ><input type="checkbox" id="filterC" checked /> Inserts</label
+              >
+              <label class="checkbox"
+                ><input type="checkbox" id="filterU" checked /> Updates</label
+              >
+              <label class="checkbox"
+                ><input type="checkbox" id="filterD" checked /> Deletes</label
+              >
+              <label class="checkbox"
+                ><input type="checkbox" id="filterR" checked /> Snapshots</label
+              >
+              <label class="checkbox"
+                ><input type="checkbox" id="filterS" checked /> Schema
+                changes</label
+              >
+            </div>
+            <div class="export-actions">
+              <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
+              <button id="btnDownloadNdjson" type="button">
+                Download NDJSON
+              </button>
+            </div>
+            <div
+              id="comparatorFeedback"
+              class="comparator-feedback"
+              hidden
+              aria-live="polite"
+            ></div>
+            <pre id="eventLog" class="log"></pre>
+            <section
+              class="inspector"
+              id="eventInspector"
+              aria-labelledby="inspectorTitle"
+            >
+              <div class="inspector-header">
+                <div>
+                  <h3 id="inspectorTitle">Event inspector</h3>
+                  <p class="inspector-lead">
+                    Peek at before/after payloads, diff fields, and replay to
+                    the table.
+                  </p>
+                </div>
+                <div
+                  class="inspector-controls"
+                  role="group"
+                  aria-label="Event navigation"
+                >
+                  <button type="button" id="eventPrev" class="btn-ghost">
+                    Previous
+                  </button>
+                  <button type="button" id="eventNext" class="btn-ghost">
+                    Next
+                  </button>
+                  <button type="button" id="eventReplay">
+                    Replay to table
+                  </button>
+                </div>
+              </div>
+              <div class="inspector-body">
+                <ul
+                  class="inspector-list"
+                  id="eventList"
+                  role="listbox"
+                  aria-label="Filtered change events"
+                ></ul>
+                <div
+                  class="inspector-detail"
+                  id="eventDetail"
+                  aria-live="polite"
+                ></div>
+              </div>
+            </section>
+          </section>
+        </div>
+      </section>
 
-  <div id="onboardingOverlay" class="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle"
-    hidden>
-    <div class="onboarding-dialog" tabindex="-1">
-      <button type="button" class="onboarding-close" id="onboardingClose" aria-label="Close onboarding">x</button>
-      <h2 id="onboardingTitle">Welcome to the CDC Change Feed Playground</h2>
-      <p class="onboarding-lead">Prototype change stream scenarios from your browser and share them with collaborators.
-      </p>
-      <ol class="onboarding-steps">
-        <li><strong>Model</strong> your table: define columns and choose primary keys.</li>
-        <li><strong>Populate</strong> rows: seed realistic data or insert your own samples.</li>
-        <li><strong>Stream</strong> events: fire operations, inspect the envelopes, and export NDJSON.</li>
-      </ol>
-      <div class="onboarding-actions">
-        <button type="button" id="onboardingStart" class="btn-primary">Load the orders template</button>
-        <div class="onboarding-start">
-          <button type="button" id="onboardingDismiss" class="btn-ghost">Start from scratch</button>
-          <label class="checkbox onboarding-secret" for="onboardingEasterEgg">
-            <input type="checkbox" id="onboardingEasterEgg" autocomplete="off" />
-            <span>Include the Scranton schema (shh)</span>
-          </label>
+      <section
+        class="workspace-panel"
+        id="sim-shell-preview"
+        aria-labelledby="simShellTitle"
+      >
+        <h2 id="simShellTitle" class="section-title">
+          CDC Method Preview (beta)
+        </h2>
+        <div id="simShellRoot">
+          <p>Preparing simulator preview…</p>
+        </div>
+        <div
+          id="methodGuidance"
+          class="method-guidance"
+          aria-live="polite"
+        ></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span
+        >Built for Appwrite Hacktoberfest · Deployed on
+        <strong>Sites</strong></span
+      >
+    </footer>
+
+    <div
+      id="onboardingOverlay"
+      class="onboarding"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboardingTitle"
+      hidden
+    >
+      <div class="onboarding-dialog" tabindex="-1">
+        <button
+          type="button"
+          class="onboarding-close"
+          id="onboardingClose"
+          aria-label="Close onboarding"
+        >
+          x
+        </button>
+        <h2 id="onboardingTitle">Welcome to the CDC Change Feed Playground</h2>
+        <p class="onboarding-lead">
+          Prototype change stream scenarios from your browser and share them
+          with collaborators.
+        </p>
+        <ol class="onboarding-steps">
+          <li>
+            <strong>Model</strong> your table: define columns and choose primary
+            keys.
+          </li>
+          <li>
+            <strong>Populate</strong> rows: seed realistic data or insert your
+            own samples.
+          </li>
+          <li>
+            <strong>Stream</strong> events: fire operations, inspect the
+            envelopes, and export NDJSON.
+          </li>
+        </ol>
+        <div class="onboarding-actions">
+          <button type="button" id="onboardingStart" class="btn-primary">
+            Load the orders template
+          </button>
+          <div class="onboarding-start">
+            <button type="button" id="onboardingDismiss" class="btn-ghost">
+              Start from scratch
+            </button>
+            <label class="checkbox onboarding-secret" for="onboardingEasterEgg">
+              <input
+                type="checkbox"
+                id="onboardingEasterEgg"
+                autocomplete="off"
+              />
+              <span>Include the Scranton schema (shh)</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div id="scenarioPreviewModal" class="preview-modal" role="dialog" aria-modal="true"
-    aria-labelledby="scenarioPreviewTitle" hidden>
-    <div class="preview-modal__dialog">
-      <button type="button" class="preview-modal__close" id="scenarioPreviewClose"
-        aria-label="Close scenario preview">×</button>
-      <h3 id="scenarioPreviewTitle"></h3>
-      <p id="scenarioPreviewDescription" class="preview-modal__description"></p>
-      <div id="scenarioPreviewTags" class="preview-modal__tags" aria-label="Scenario tags"></div>
-      <section>
-        <h4>Seed rows</h4>
-        <table class="preview-table" id="scenarioPreviewRows"></table>
-      </section>
-      <section>
-        <h4>Change operations</h4>
-        <ol class="preview-ops" id="scenarioPreviewOps"></ol>
-      </section>
-      <div class="preview-modal__actions">
-        <button type="button" id="scenarioPreviewLoad" class="btn-primary">Load in workspace</button>
-        <button type="button" id="scenarioPreviewDownload" class="btn-ghost">Download JSON</button>
+    <div
+      id="scenarioPreviewModal"
+      class="preview-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="scenarioPreviewTitle"
+      hidden
+    >
+      <div class="preview-modal__dialog">
+        <button
+          type="button"
+          class="preview-modal__close"
+          id="scenarioPreviewClose"
+          aria-label="Close scenario preview"
+        >
+          ×
+        </button>
+        <h3 id="scenarioPreviewTitle"></h3>
+        <p
+          id="scenarioPreviewDescription"
+          class="preview-modal__description"
+        ></p>
+        <div
+          id="scenarioPreviewTags"
+          class="preview-modal__tags"
+          aria-label="Scenario tags"
+        ></div>
+        <section>
+          <h4>Seed rows</h4>
+          <table class="preview-table" id="scenarioPreviewRows"></table>
+        </section>
+        <section>
+          <h4>Change operations</h4>
+          <ol class="preview-ops" id="scenarioPreviewOps"></ol>
+        </section>
+        <div class="preview-modal__actions">
+          <button type="button" id="scenarioPreviewLoad" class="btn-primary">
+            Load in workspace
+          </button>
+          <button type="button" id="scenarioPreviewDownload" class="btn-ghost">
+            Download JSON
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Appwrite SDK + config -->
-  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-  <script>
-    window.APPWRITE_CFG = {
-      endpoint: "https://cloud.appwrite.io/v1",
-      projectId: "68e009780030a983a57d",
-      databaseId: "68e028d90039fa4588f5",
-      collectionId: "events",
-      scenarioCollectionId: "scenarios",
-      shareBaseUrl: "https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/",
-      channel: (db, col) => `databases.${db}.collections.${col}.documents`,
-      assetHeaders: {
-        "X-Appwrite-Project": "68e009780030a983a57d",
-      },
-      featureFlags: [
-        "comparator_v2",
-        "ff_event_bus",
-        "ff_pause_resume",
-        "ff_query_slider",
-        "ff_crud_fix",
-        "ff_event_log",
-        "ff_metrics",
-        "ff_schema_demo",
-        "ff_multitable"
-      ]
-    };
-  </script>
-   <section id="sim-shell-preview" aria-label="Simulator preview" class="panel">
-      <h2 class="sim-shell__title">CDC Method Comparator</h2>
-      <div id="simShellRoot"></div>
-    </section>
-  <script>
-    window.CDC_FEATURE_FLAGS = Array.isArray(window.CDC_FEATURE_FLAGS)
-      ? window.CDC_FEATURE_FLAGS.slice()
-      : [
+    <!-- Appwrite SDK + config -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+    <script>
+      window.APPWRITE_CFG = {
+        endpoint: "https://cloud.appwrite.io/v1",
+        projectId: "68e009780030a983a57d",
+        databaseId: "68e028d90039fa4588f5",
+        collectionId: "events",
+        scenarioCollectionId: "scenarios",
+        shareBaseUrl:
+          "https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/",
+        channel: (db, col) => `databases.${db}.collections.${col}.documents`,
+        assetHeaders: {
+          "X-Appwrite-Project": "68e009780030a983a57d",
+        },
+        featureFlags: [
           "comparator_v2",
-          "ff_crud_fix",
-          "ff_event_log",
           "ff_event_bus",
           "ff_pause_resume",
           "ff_query_slider",
+          "ff_crud_fix",
+          "ff_event_log",
+          "ff_metrics",
           "ff_schema_demo",
           "ff_multitable",
-          "ff_metrics",
-        ];
-  </script>
-  <script src="./assets/feature-flags.js"></script>
-  <script src="./assets/ui-shell-loader.js"></script>
-  <script type="module">
-    const bundleHref = new URL("./assets/generated/ui-shell.js", window.location.href).toString();
+          "ff_walkthrough",
+        ],
+      };
+    </script>
+    <script>
+      window.CDC_FEATURE_FLAGS = Array.isArray(window.CDC_FEATURE_FLAGS)
+        ? window.CDC_FEATURE_FLAGS.slice()
+        : [
+            "comparator_v2",
+            "ff_crud_fix",
+            "ff_event_log",
+            "ff_event_bus",
+            "ff_pause_resume",
+            "ff_query_slider",
+            "ff_schema_demo",
+            "ff_multitable",
+            "ff_metrics",
+            "ff_walkthrough",
+          ];
+    </script>
+    <script src="./assets/feature-flags.js"></script>
+    <script src="./assets/ui-shell-loader.js"></script>
+    <script type="module">
+      const bundleHref = new URL(
+        "./assets/generated/ui-shell.js",
+        window.location.href
+      ).toString();
 
-    async function ensureShellLoaded() {
-      if (window.__LetstalkCdcUiShellLoaded) return;
-      try {
-        await import(/* @vite-ignore */ bundleHref);
-        window.__LetstalkCdcUiShellLoaded = true;
-      } catch (error) {
-        console.warn("Comparator shell bundle failed to load", error);
+      async function ensureShellLoaded() {
+        if (window.__LetstalkCdcUiShellLoaded) return;
+        try {
+          await import(/* @vite-ignore */ bundleHref);
+          window.__LetstalkCdcUiShellLoaded = true;
+        } catch (error) {
+          console.warn("Comparator shell bundle failed to load", error);
+        }
       }
-    }
 
-    if (window.cdcFeatureFlags?.has?.("comparator_v2")) {
-      void ensureShellLoaded();
-    }
-
-    window.addEventListener("cdc:feature-flags", event => {
-      const detail = Array.isArray(event.detail) ? event.detail : [];
-      if (detail.includes("comparator_v2")) {
+      if (window.cdcFeatureFlags?.has?.("comparator_v2")) {
         void ensureShellLoaded();
       }
-    });
-  </script>
-  <script>
-    (() => {
-      const DEFAULT_STATUS_TEXT = "Add a column to begin";
 
-      const overlay = document.getElementById("onboardingOverlay");
-      const status = document.getElementById("schemaStatus");
-      const pills = document.getElementById("schemaPills");
-      const start = document.getElementById("onboardingStart");
-
-      const defaultState = {
-        schema: [],
-        rows: [],
-        events: [],
-        schemaVersion: 1,
-        scenarioId: null,
-        remoteId: null,
-      };
-
-      function seedBlankWorkspace() {
-        try {
-          window.localStorage.setItem("cdc_playground", JSON.stringify(defaultState));
-          window.localStorage.setItem("cdc_playground_office_opt_in_v1", "false");
-        } catch {
-          /* ignore storage errors */
+      window.addEventListener("cdc:feature-flags", (event) => {
+        const detail = Array.isArray(event.detail) ? event.detail : [];
+        if (detail.includes("comparator_v2")) {
+          void ensureShellLoaded();
         }
-        if (status) status.textContent = DEFAULT_STATUS_TEXT;
-        if (pills) pills.replaceChildren();
-        if (overlay) overlay.style.display = "none";
-      }
-
-      start?.addEventListener("click", event => {
-        event.preventDefault();
-        seedBlankWorkspace();
       });
+    </script>
+    <script>
+      (() => {
+        const DEFAULT_STATUS_TEXT = "Add a column to begin";
 
-      function initializeOverlay() {
-        if (status && !status.textContent) {
-          status.textContent = DEFAULT_STATUS_TEXT;
+        const overlay = document.getElementById("onboardingOverlay");
+        const status = document.getElementById("schemaStatus");
+        const pills = document.getElementById("schemaPills");
+        const start = document.getElementById("onboardingStart");
+
+        const defaultState = {
+          schema: [],
+          rows: [],
+          events: [],
+          schemaVersion: 1,
+          scenarioId: null,
+          remoteId: null,
+        };
+
+        function seedBlankWorkspace() {
+          try {
+            window.localStorage.setItem(
+              "cdc_playground",
+              JSON.stringify(defaultState)
+            );
+            window.localStorage.setItem(
+              "cdc_playground_office_opt_in_v1",
+              "false"
+            );
+          } catch {
+            /* ignore storage errors */
+          }
+          if (status) status.textContent = DEFAULT_STATUS_TEXT;
+          if (pills) pills.replaceChildren();
+          if (overlay) overlay.style.display = "none";
         }
-        if (overlay) overlay.style.display = "";
-      }
 
-      window.seedBlankWorkspace = seedBlankWorkspace;
-    })();
-  </script>
-  <script type="module" src="assets/method-copy.js"></script>
-  <script type="module" src="assets/shared-scenarios.js"></script>
-  <script src="assets/sim-loader.js"></script>
-  <script src="assets/event-log-loader.js"></script>
-  <script src="assets/telemetry.js"></script>
-  <script type="module" src="assets/app.js"></script>
-  <script src="assets/feature-flags.js"></script>
-  <script src="assets/tooltips.js"></script>
-  <script src="assets/ui-shell-loader.js"></script>
-</body>
+        start?.addEventListener("click", (event) => {
+          event.preventDefault();
+          seedBlankWorkspace();
+        });
 
+        function initializeOverlay() {
+          if (status && !status.textContent) {
+            status.textContent = DEFAULT_STATUS_TEXT;
+          }
+          if (overlay) overlay.style.display = "";
+        }
+
+        window.seedBlankWorkspace = seedBlankWorkspace;
+      })();
+    </script>
+    <script type="module" src="assets/method-copy.js"></script>
+    <script type="module" src="assets/shared-scenarios.js"></script>
+    <script src="assets/sim-loader.js"></script>
+    <script src="assets/event-log-loader.js"></script>
+    <script src="assets/telemetry.js"></script>
+    <script type="module" src="assets/app.js"></script>
+    <script src="assets/tooltips.js"></script>
+  </body>
 </html>
-
- 
