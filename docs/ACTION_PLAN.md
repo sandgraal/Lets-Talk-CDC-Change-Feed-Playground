@@ -19,7 +19,7 @@ Focus this cycle on restoring automated E2E coverage, eliminating feature flag d
 1. **Unblock Playwright E2E**
    - [x] Add `npx playwright install --with-deps` (or setup action) to CI and document local command in `docs/development.md` - **COMPLETED** (CI already has install step in preflight.yml; added comprehensive local setup docs)
    - [ ] Rerun `npm run test:e2e`; attach trace artifacts and capture failures if any persist beyond browser install.
-   - [ ] Cache browser binaries to keep CI stable.
+   - [x] Cache browser binaries to keep CI stable - **COMPLETED** (added Playwright browser caching to preflight.yml using actions/cache@v4)
 
 2. **Align Feature Flag Defaults**
    - [x] Decide shipping stance for `ff_walkthrough` and `ff_trigger_mode` - **COMPLETED** (both enabled as ready)
@@ -28,7 +28,7 @@ Focus this cycle on restoring automated E2E coverage, eliminating feature flag d
 
 3. **Bundle Freshness & Perf Guardrails**
    - [x] Add a check (script or CI step) that asserts generated bundles in `assets/generated/` are fresh relative to source before publishing - **COMPLETED** (`check:bundles` script exists and is included in `ci:preflight`; uses git status to ensure bundles are committed)
-   - [ ] Capture baseline load metrics for the reverted shell (LCP/TTI/transfer size) and document budgets in `docs/development.md`.
+   - [x] Capture baseline load metrics for the reverted shell (LCP/TTI/transfer size) and document budgets in `docs/development.md` - **COMPLETED** (created `docs/performance-budgets.md` with comprehensive budgets, measurement methods, and baseline metrics; added performance section to development.md)
 
 ---
 
@@ -38,8 +38,8 @@ Focus this cycle on restoring automated E2E coverage, eliminating feature flag d
    - [x] Clarify in `docs/feature-flags.md` how query params, Appwrite config, and localStorage are merged - **COMPLETED** (added detailed merge behavior explanation with examples)
 
 2. **Security & Dependency Hygiene**
-   - [ ] Add a lightweight `npm audit --production` job in CI; document the expected cadence for running it locally.
-   - [ ] Evaluate whether Playwright/browser caching affects container image size; document mitigations if needed.
+   - [x] Add a lightweight `npm audit --production` job in CI; document the expected cadence for running it locally - **COMPLETED** (added to preflight.yml, added `audit:prod` script, updated SECURITY.md and development.md)
+   - [x] Evaluate whether Playwright/browser caching affects container image size; document mitigations if needed - **COMPLETED** (added Playwright browser caching to preflight.yml using actions/cache; browsers cached by package-lock.json hash, reducing CI time without affecting image size since cache is ephemeral)
 
 3. **Harness & Transaction Drift Verification**
    - [ ] Once E2E is unblocked, rerun harness/nightly checks and confirm transaction drift scenarios stay green.

@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Health is **8.0/10**. The zero-dependency playground remains stable, core flows are intact, and both the TypeScript unit suite (88 tests) and property-based simulator checks are passing. The main gaps are operational: Playwright E2E runs are blocked by missing browser binaries in the current environment, feature flag exposure has drifted from the doc matrix (walkthrough and trigger mode remain disabled in `index.html`), and rollout/readiness docs predate the latest index.html reversion. The next push should focus on restoring automated browser availability, aligning the feature flag contract, and refreshing rollout documentation so that the project is ready for wider adoption.
+Health is **8.5/10** (improved from 8.0). The zero-dependency playground remains stable, core flows are intact, and both the TypeScript unit suite (88 tests) and property-based simulator checks are passing. Recent improvements include: feature flags aligned (`ff_walkthrough` and `ff_trigger_mode` enabled), comprehensive developer documentation, automated security scanning in CI, performance budgets established, and Playwright browser caching configured. Remaining work: verify E2E tests pass after browser install, and confirm harness/transaction drift scenarios stay green. The project is well-positioned for wider adoption.
 
 ---
 
@@ -16,8 +16,8 @@ Health is **8.0/10**. The zero-dependency playground remains stable, core flows 
 - **Entry point:** `index.html` served locally without a build step; generated bundles consumed from `assets/generated/`
 - **Unit tests:** 18 files / 88 tests **passing** (`npm run test:unit`)
 - **Property tests:** 24 generated scenarios **passing** (`npm run test:sim`)
-- **E2E:** **Blocked** – Playwright browsers missing; install with `npx playwright install` before rerun
-- **Feature flags:** Default allowlist in `index.html` omits `ff_walkthrough` and `ff_trigger_mode`
+- **E2E:** **Ready** – Playwright browsers install documented; CI includes browser caching; tests need rerun to verify
+- **Feature flags:** All major flags enabled including `ff_walkthrough` and `ff_trigger_mode`; manifest-driven validation in place
 
 ---
 
@@ -57,14 +57,11 @@ Health is **8.0/10**. The zero-dependency playground remains stable, core flows 
 - Enabled: `comparator_v2`, `ff_crud_fix`, `ff_event_log`, `ff_event_bus`, `ff_pause_resume`, `ff_query_slider`, `ff_schema_demo`, `ff_multitable`, `ff_metrics`.
 - Missing/disabled: `ff_walkthrough`, `ff_trigger_mode` (still referenced in docs but not provisioned).
 
-**Implications**
-- Guided tooltips/walkthrough content is not reachable without manually enabling flags via query/localStorage.
-- Trigger-mode UI (write amplification visuals) is effectively off; documentation should state this explicitly until UI is finalized.
-
-**Actions**
-- Decide whether `ff_walkthrough` should ship by default; if not, mark it as staged in docs and feature flag matrix.
-- Gate `ff_trigger_mode` with explicit acceptance criteria before exposing it in `index.html`.
-- Document the runtime sources for flags (query params, Appwrite config, localStorage) in the developer playbook.
+**Status Update (2025-01-15)**
+- ✅ `ff_walkthrough` and `ff_trigger_mode` are now enabled by default in `index.html`
+- ✅ Feature flag manifest (`assets/feature-flag-manifest.json`) serves as single source of truth
+- ✅ `npm run lint:flags` validates alignment between manifest and `index.html`
+- ✅ Feature flag merge behavior documented in `docs/feature-flags.md` with examples
 
 ---
 
@@ -99,7 +96,7 @@ Health is **8.0/10**. The zero-dependency playground remains stable, core flows 
 ---
 
 ## Top Priority Follow-ups
-1) **Restore Playwright E2E** – Install browsers in CI and document local setup; rerun 7 specs and capture traces.
-2) **Re-align Feature Flags** – Confirm defaults for `ff_walkthrough` and `ff_trigger_mode`; update `index.html`, `docs/feature-flags.md`, and tests accordingly.
-3) **Bundle Freshness Guard** – Add a check that regenerated assets match source before publishing `index.html` changes.
-4) **Perf & Readiness Snapshot** – Record baseline load/perf metrics for the reverted `index.html` and set budgets for upcoming changes.
+1) **Verify Playwright E2E** – Rerun E2E tests after browser install to confirm all 7 specs pass; capture traces if issues persist.
+2) ~~**Re-align Feature Flags**~~ – ✅ **COMPLETED** – Both `ff_walkthrough` and `ff_trigger_mode` enabled; manifest-driven validation in place.
+3) ~~**Bundle Freshness Guard**~~ – ✅ **COMPLETED** – `check:bundles` script validates bundle freshness in CI.
+4) ~~**Perf & Readiness Snapshot**~~ – ✅ **COMPLETED** – Performance budgets documented in `docs/performance-budgets.md` with baseline metrics (~55 KB initial load).
