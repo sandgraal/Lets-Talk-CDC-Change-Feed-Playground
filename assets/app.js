@@ -600,7 +600,7 @@ const TEMPLATE_ICON_LIBRARY = Object.freeze({
     viewBox: "0 0 24 24",
     paths: [
       "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
-      "m9 9-3.75 6-3-3.75L6 15",
+      "M9 12L11.25 15L15 9",
     ],
   },
 });
