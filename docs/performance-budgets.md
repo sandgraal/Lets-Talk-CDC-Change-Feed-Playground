@@ -33,7 +33,7 @@ This document defines performance budgets for the CDC Change Feed Playground and
 
 ## Baseline Measurements (v0.1.0)
 
-**Measurement Date:** 2025-01-XX  
+**Measurement Date:** 2025-01-15  
 **Environment:** Chrome [latest stable], macOS, Fast 3G throttling  
 **Test Page:** `index.html` (fresh load, no localStorage)
 
