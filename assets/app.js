@@ -561,6 +561,50 @@ const SCENARIO_TEMPLATES = Object.freeze(
     .filter(template => template.id && template.ops.length > 0)
 );
 
+const TEMPLATE_ICON_LIBRARY = Object.freeze({
+  payments: {
+    viewBox: "0 0 24 24",
+    paths: [
+      "M2.25 6A2.25 2.25 0 0 1 4.5 3.75h15A2.25 2.25 0 0 1 21.75 6v12A2.25 2.25 0 0 1 19.5 20.25h-15A2.25 2.25 0 0 1 2.25 18V6Z",
+      "M2.25 9h19.5v2.25H2.25V9Z",
+      "M6 15.75h4.5M6 13.5h2.25",
+    ],
+  },
+  orders: {
+    viewBox: "0 0 24 24",
+    paths: [
+      "M4.5 7.5 12 3l7.5 4.5v9L12 21l-7.5-4.5v-9Z",
+      "M12 12v9",
+      "m4.5 6 7.5-4.5",
+      "M12 12 4.5 7.5",
+    ],
+  },
+  telemetry: {
+    viewBox: "0 0 24 24",
+    paths: [
+      "M4.5 18.75 9 12l3 4.5 3.75-6 3 4.5",
+      "M4.5 18.75H19.5",
+      "M6.75 8.25a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+    ],
+  },
+  schema: {
+    viewBox: "0 0 24 24",
+    paths: [
+      "M4.5 6A1.5 1.5 0 0 1 6 4.5h12A1.5 1.5 0 0 1 19.5 6v12A1.5 1.5 0 0 1 18 19.5H6A1.5 1.5 0 0 1 4.5 18V6Z",
+      "M9 4.5v15",
+      "M15 4.5v15",
+      "M4.5 12h15",
+    ],
+  },
+  default: {
+    viewBox: "0 0 24 24",
+    paths: [
+      "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
+      "m9 9-3.75 6-3-3.75L6 15",
+    ],
+  },
+});
+
 const state = {
   schema: [],     // [{name, type, pk}]
   rows: [],       // [{col: value}]
@@ -674,6 +718,7 @@ const uiState = {
       return null;
     }
   })(),
+  expandedTemplateId: null,
   editorDraft: {},
   editorTouched: {},
   pendingOperation: null,
@@ -932,6 +977,65 @@ function getTemplateById(id) {
   return SCENARIO_TEMPLATES.find(t => t.id === id) || null;
 }
 
+function pickTemplateIconKey(tags) {
+  const normalized = Array.isArray(tags)
+    ? tags.map(tag => (typeof tag === "string" ? tag.toLowerCase() : ""))
+    : [];
+  if (normalized.some(tag => ["payments", "risk", "latency"].includes(tag))) return "payments";
+  if (normalized.some(tag => ["orders", "fulfilment", "commerce"].includes(tag))) return "orders";
+  if (normalized.some(tag => ["iot", "telemetry", "anomaly"].includes(tag))) return "telemetry";
+  if (normalized.some(tag => ["schema", "backfill", "migration"].includes(tag))) return "schema";
+  return "default";
+}
+
+function createTemplateIcon(tags) {
+  const wrap = document.createElement("span");
+  wrap.className = "template-icon";
+
+  const iconKey = pickTemplateIconKey(tags);
+  const iconDef = TEMPLATE_ICON_LIBRARY[iconKey] || TEMPLATE_ICON_LIBRARY.default;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", iconDef.viewBox);
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+
+  (iconDef.paths || []).forEach(d => {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+  });
+
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+function createTemplateMetric(label, value) {
+  const metric = document.createElement("div");
+  metric.className = "template-metric";
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "template-metric__value";
+  valueEl.textContent = value;
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "template-metric__label";
+  labelEl.textContent = label;
+
+  metric.appendChild(valueEl);
+  metric.appendChild(labelEl);
+  return metric;
+}
+
+function toggleTemplateExpansion(templateId) {
+  uiState.expandedTemplateId = uiState.expandedTemplateId === templateId ? null : templateId;
+  renderTemplateGallery();
+}
+
 function renderTemplateGallery() {
   if (!els.templateGallery) return;
   els.templateGallery.innerHTML = "";
@@ -972,18 +1076,90 @@ function renderTemplateGallery() {
   templates.forEach(template => {
     const card = document.createElement("article");
     card.className = "template-card";
-    if (state.scenarioId === template.id) card.classList.add("is-active");
+    const isActive = state.scenarioId === template.id;
+    const isExpanded = uiState.expandedTemplateId === template.id || isActive;
 
+    if (isActive) card.classList.add("is-active");
+    if (isExpanded) card.classList.add("is-expanded");
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "template-card__header";
+    header.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    header.onclick = () => toggleTemplateExpansion(template.id);
+
+    const leading = document.createElement("div");
+    leading.className = "template-card__leading";
+    leading.appendChild(createTemplateIcon(template.tags));
+
+    const textWrap = document.createElement("div");
+    textWrap.className = "template-card__text";
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "template-card__title-row";
     const title = document.createElement("h4");
     title.textContent = template.name;
+    titleRow.appendChild(title);
+
+    if (isActive) {
+      const activeBadge = document.createElement("span");
+      activeBadge.className = "template-card__status";
+      activeBadge.textContent = "Active";
+      titleRow.appendChild(activeBadge);
+    }
+
+    const summary = document.createElement("p");
+    summary.className = "template-card__summary";
+    summary.textContent = template.highlight || template.description;
+
+    const metrics = document.createElement("div");
+    metrics.className = "template-card__metrics";
+    const rowsMetric = createTemplateMetric("rows", `${template.rows?.length ?? 0}`);
+    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
+    const opsMetric = createTemplateMetric("ops", `${opsCount}`);
+    metrics.appendChild(rowsMetric);
+    metrics.appendChild(opsMetric);
+
+    textWrap.appendChild(titleRow);
+    textWrap.appendChild(summary);
+    textWrap.appendChild(metrics);
+
+    leading.appendChild(textWrap);
+    header.appendChild(leading);
+
+    const chevron = document.createElement("span");
+    chevron.className = "template-card__chevron";
+    chevron.setAttribute("aria-hidden", "true");
+
+    const chevronIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    chevronIcon.setAttribute("viewBox", "0 0 24 24");
+    const chevronPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    chevronPath.setAttribute("d", "M8.25 10.5 12 14.25 15.75 10.5");
+    chevronPath.setAttribute("fill", "none");
+    chevronPath.setAttribute("stroke", "currentColor");
+    chevronPath.setAttribute("stroke-width", "1.5");
+    chevronPath.setAttribute("stroke-linecap", "round");
+    chevronPath.setAttribute("stroke-linejoin", "round");
+    chevronIcon.appendChild(chevronPath);
+    chevron.appendChild(chevronIcon);
+
+    header.appendChild(chevron);
+
+    const body = document.createElement("div");
+    body.className = "template-card__body";
+    body.hidden = !isExpanded;
 
     const desc = document.createElement("p");
+    desc.className = "template-card__description";
     desc.textContent = template.description;
+    body.appendChild(desc);
 
-    const meta = document.createElement("p");
-    meta.className = "template-meta";
-    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
-    meta.textContent = `${template.rows?.length ?? 0} rows · ${opsCount} ops`;
+    if (template.highlight) {
+      const highlight = document.createElement("p");
+      highlight.className = "template-highlight";
+      highlight.textContent = template.highlight;
+      body.appendChild(highlight);
+    }
 
     const tagRow = document.createElement("div");
     tagRow.className = "template-chip-row";
@@ -997,6 +1173,9 @@ function renderTemplateGallery() {
       chip.onclick = () => toggleScenarioTag(tag);
       tagRow.appendChild(chip);
     });
+    if (tagRow.childElementCount) {
+      body.appendChild(tagRow);
+    }
 
     const button = document.createElement("button");
     button.type = "button";
@@ -1022,24 +1201,15 @@ function renderTemplateGallery() {
     downloadBtn.textContent = "Download JSON";
     downloadBtn.onclick = () => downloadScenarioTemplate(template);
 
-    card.appendChild(title);
-    card.appendChild(desc);
-    card.appendChild(meta);
-    if (template.highlight) {
-      const highlight = document.createElement("p");
-      highlight.className = "template-highlight";
-      highlight.textContent = template.highlight;
-      card.appendChild(highlight);
-    }
-    if (tagRow.childElementCount) {
-      card.appendChild(tagRow);
-    }
     const actions = document.createElement("div");
-    actions.className = "template-actions";
+    actions.className = "template-card__actions";
     actions.appendChild(button);
     actions.appendChild(previewBtn);
     actions.appendChild(downloadBtn);
-    card.appendChild(actions);
+    body.appendChild(actions);
+
+    card.appendChild(header);
+    card.appendChild(body);
     els.templateGallery.appendChild(card);
   });
 }
