@@ -558,7 +558,9 @@ button.danger:hover {
   pointer-events: none;
 }
 
-.hero-pathways-card>* {
+.hero-pathways-card > p,
+.hero-pathways-card > ul,
+.hero-pathways-card > .hero-pathways-note {
   position: relative;
   z-index: 1;
 }
