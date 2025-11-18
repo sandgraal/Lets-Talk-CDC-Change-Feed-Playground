@@ -668,6 +668,33 @@ const els = {
   inspectorReplay: document.getElementById("eventReplay"),
 };
 
+function ensureHeroCtas() {
+  if (typeof document === "undefined") return;
+  const actions = document.querySelector(".hero-pathways-actions");
+  if (!actions) return;
+
+  if (!document.getElementById("btnGuidedTour")) {
+    const guided = document.createElement("button");
+    guided.id = "btnGuidedTour";
+    guided.type = "button";
+    guided.className = "btn-primary";
+    guided.textContent = "Start guided walkthrough";
+    actions.appendChild(guided);
+  }
+
+  if (!document.getElementById("btnOnboarding")) {
+    const onboarding = document.createElement("button");
+    onboarding.id = "btnOnboarding";
+    onboarding.type = "button";
+    onboarding.className = "btn-ghost";
+    onboarding.textContent = "How the playground works";
+    actions.appendChild(onboarding);
+  }
+
+  els.guidedTourButton = document.getElementById("btnGuidedTour");
+  els.onboardingButton = document.getElementById("btnOnboarding");
+}
+
 function ensureOnboardingElements() {
   if (typeof document === "undefined") return;
   if (!els.onboardingOverlay) {
@@ -688,6 +715,8 @@ function ensureOnboardingElements() {
 }
 
 if (typeof document !== "undefined") {
+  ensureHeroCtas();
+  document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
   document.getElementById("btnReset")?.addEventListener("click", () => {
     storage.remove(STORAGE_KEYS.state);
     storage.remove(STORAGE_KEYS.lastTemplate);
