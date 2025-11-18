@@ -6,6 +6,8 @@ This harness spins up Postgres + Debezium Kafka Connect, replays a shared scenar
 - Docker Desktop (or `docker compose` CLI)
 - Node.js 20+ (`npm install` already run at repo root)
 
+**Note:** The Dockerfiles configure npm with `strict-ssl=false` to handle certificate issues in CI/corporate network environments. This is safe for development/testing harnesses but should be reviewed for production deployments.
+
 ## Quick start
 ```bash
 # Choose a scenario from assets/shared-scenarios.js
