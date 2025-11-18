@@ -642,12 +642,10 @@ const els = {
   autofillRow: document.getElementById("btnAutofillRow"),
   templateGallery: document.getElementById("templateGallery"),
   onboardingOverlay: document.getElementById("onboardingOverlay"),
-  onboardingButton: document.getElementById("btnOnboarding"),
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
   onboardingEasterEgg: document.getElementById("onboardingEasterEgg"),
-  guidedTourButton: document.getElementById("btnGuidedTour"),
   methodGuidance: document.getElementById("methodGuidance"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
@@ -675,9 +673,6 @@ function ensureOnboardingElements() {
   if (!els.onboardingOverlay) {
     els.onboardingOverlay = document.getElementById("onboardingOverlay");
   }
-  if (!els.onboardingButton) {
-    els.onboardingButton = document.getElementById("btnOnboarding");
-  }
   if (!els.onboardingClose) {
     els.onboardingClose = document.getElementById("onboardingClose");
   }
@@ -693,7 +688,6 @@ function ensureOnboardingElements() {
 }
 
 if (typeof document !== "undefined") {
-  document.getElementById("btnGuidedTour")?.addEventListener("click", () => startGuidedTour());
   document.getElementById("btnReset")?.addEventListener("click", () => {
     storage.remove(STORAGE_KEYS.state);
     storage.remove(STORAGE_KEYS.lastTemplate);
@@ -4578,9 +4572,6 @@ function bindUiHandlers() {
     document.addEventListener("keydown", handleMegadeskShortcut);
   }
 
-  if (els.onboardingButton) {
-    els.onboardingButton.onclick = () => showOnboarding();
-  }
   if (els.onboardingClose) {
     els.onboardingClose.onclick = () => hideOnboarding(true);
   }
