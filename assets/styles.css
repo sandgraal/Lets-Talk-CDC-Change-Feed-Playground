@@ -186,6 +186,7 @@ a:hover {
   color: var(--ink);
   box-shadow: 0 10px 26px rgba(37, 99, 235, 0.18);
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 180ms ease, background-color 180ms ease;
+  cursor: pointer;
 }
 
 .theme-toggle svg {
