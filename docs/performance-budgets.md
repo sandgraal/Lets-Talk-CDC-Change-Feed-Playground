@@ -95,10 +95,10 @@ This document defines performance budgets for the CDC Change Feed Playground and
 For automated performance monitoring, use the [web-vitals](https://github.com/GoogleChrome/web-vitals) library:
 
 ```javascript
-import { getLCP, getTTI, getFCP } from 'web-vitals';
+import { getLCP, getINP, getFCP } from 'web-vitals';
 
 getLCP(console.log);
-getTTI(console.log);
+getINP(console.log);
 getFCP(console.log);
 ```
 
