@@ -286,6 +286,34 @@ const defaultScenarios = [
       { name: "deletion_requested", type: "bool", pk: false },
       { name: "deleted_ts", type: "number", pk: false },
     ],
+    tables: [
+      {
+        name: "marketing_preferences",
+        schema: [
+          { name: "id", type: "string", pk: true },
+          { name: "customer_id", type: "string", pk: false },
+          { name: "channel", type: "string", pk: false },
+          { name: "status", type: "string", pk: false },
+        ],
+      },
+      {
+        name: "deletion_requests",
+        schema: [
+          { name: "id", type: "string", pk: true },
+          { name: "customer_id", type: "string", pk: false },
+          { name: "reason", type: "string", pk: false },
+        ],
+      },
+      {
+        name: "retention_audits",
+        schema: [
+          { name: "id", type: "string", pk: true },
+          { name: "customer_id", type: "string", pk: false },
+          { name: "action", type: "string", pk: false },
+          { name: "actor", type: "string", pk: false },
+        ],
+      },
+    ],
     rows: [
       {
         id: "C-300",

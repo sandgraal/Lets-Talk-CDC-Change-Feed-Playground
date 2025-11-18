@@ -26,6 +26,11 @@ export type SharedScenarioColumn = {
   pk: boolean;
 };
 
+export type SharedScenarioTableDefinition = {
+  name: string;
+  schema: SharedScenarioColumn[];
+};
+
 export type SharedScenarioRow = Record<string, unknown>;
 
 export type SharedScenarioEvent = Record<string, unknown>;
@@ -41,6 +46,7 @@ export type SharedScenario = {
   schemaVersion?: number;
   table?: string;
   schema?: SharedScenarioColumn[];
+  tables?: SharedScenarioTableDefinition[];
   rows?: SharedScenarioRow[];
   events?: SharedScenarioEvent[];
   ops?: SourceOp[];
