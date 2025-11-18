@@ -1667,6 +1667,29 @@ export function App() {
   const isPlayingRef = useRef(isPlaying);
   const schemaCommitRef = useRef(0);
 
+  const recordLaneHistory = useCallback(
+    (method: MethodOption) => {
+      const history = laneSnapshotHistoryRef.current;
+      if (!history.has(method)) {
+        history.set(method, []);
+      }
+      const series = history.get(method);
+
+      const rowCount = ensureLaneStorage(method)
+        .snapshot()
+        .reduce((total, table) => total + table.rows.length, 0);
+
+      const last = series[series.length - 1];
+      if (series.length === 0 || last !== rowCount) {
+        series.push(rowCount);
+        if (series.length > LANE_HISTORY_LIMIT) {
+          series.splice(0, series.length - LANE_HISTORY_LIMIT);
+        }
+      }
+    },
+    [ensureLaneStorage],
+  );
+
   useEffect(() => {
     const history = laneSnapshotHistoryRef.current;
     const activeSet = new Set(activeMethods);
@@ -2089,12 +2112,26 @@ export function App() {
       }
 
       const storage = ensureLaneStorage(method);
-      storage.applyEvents(consumed);
-      runtime.metrics.onConsumed(consumed);
-      const converted = consumed.map(event => {
-        const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
-        return eventToCdcEvent(method, event, seq);
-      });
+      const converted: CdcEvent[] = [];
+
+      if (!applyOnCommit) {
+        consumed.forEach(event => {
+          storage.applyEvents([event]);
+          runtime.metrics.onConsumed([event]);
+          recordLaneHistory(method);
+          const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
+          converted.push(eventToCdcEvent(method, event, seq));
+        });
+      } else {
+        storage.applyEvents(consumed);
+        runtime.metrics.onConsumed(consumed);
+        recordLaneHistory(method);
+        consumed.forEach(event => {
+          const seq = (event as unknown as { __seq?: number }).__seq ?? 0;
+          converted.push(eventToCdcEvent(method, event, seq));
+        });
+      }
+
       updateLaneSnapshot(method);
       additions[method] = converted;
     }
@@ -2113,7 +2150,7 @@ export function App() {
       }
       return next;
     });
-  }, [activeMethods, applyOnCommit, ensureLaneStorage, isConsumerPaused, updateLaneSnapshot]);
+  }, [activeMethods, applyOnCommit, ensureLaneStorage, isConsumerPaused, recordLaneHistory, updateLaneSnapshot]);
 
   const startLoop = useCallback(() => {
     stopLoop();
