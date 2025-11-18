@@ -98,7 +98,16 @@ function checkFreshness() {
   const toleranceMs = 500; // allow minor clock skew/rounding
 
   for (const { output, sources, rebuild } of bundleChecks) {
-    const outputStat = existsSync(output) ? statSync(output) : null;
+    let outputStat;
+    try {
+      outputStat = statSync(output);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        outputStat = null;
+      } else {
+        throw err;
+      }
+    }
 
     if (!outputStat) {
       stale.push(`${output} is missing. Rebuild with: ${rebuild}`);
