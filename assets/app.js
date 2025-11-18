@@ -1008,23 +1008,6 @@ function createTemplateIcon(tags) {
   return wrap;
 }
 
-function createTemplateMetric(label, value) {
-  const metric = document.createElement("div");
-  metric.className = "template-metric";
-
-  const valueEl = document.createElement("span");
-  valueEl.className = "template-metric__value";
-  valueEl.textContent = value;
-
-  const labelEl = document.createElement("span");
-  labelEl.className = "template-metric__label";
-  labelEl.textContent = label;
-
-  metric.appendChild(valueEl);
-  metric.appendChild(labelEl);
-  return metric;
-}
-
 function toggleTemplateExpansion(templateId) {
   uiState.expandedTemplateId = uiState.expandedTemplateId === templateId ? null : templateId;
   renderTemplateGallery();
@@ -1106,17 +1089,8 @@ function renderTemplateGallery() {
     summary.className = "template-card__summary";
     summary.textContent = template.highlight || template.description;
 
-    const metrics = document.createElement("div");
-    metrics.className = "template-card__metrics";
-    const rowsMetric = createTemplateMetric("rows", `${template.rows?.length ?? 0}`);
-    const opsCount = template.ops ? template.ops.length : (template.events ? template.events.length : 0);
-    const opsMetric = createTemplateMetric("ops", `${opsCount}`);
-    metrics.appendChild(rowsMetric);
-    metrics.appendChild(opsMetric);
-
     textWrap.appendChild(titleRow);
     textWrap.appendChild(summary);
-    textWrap.appendChild(metrics);
 
     leading.appendChild(textWrap);
     header.appendChild(leading);
