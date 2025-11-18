@@ -2883,14 +2883,6 @@ body.megadesk-mode .hero-ambient .orb {
   font-size: 0.95rem;
 }
 
-@media (min-width: 1025px) {
-  .hero {
-    grid-template-columns: minmax(320px, 1fr) minmax(420px, 1fr);
-    grid-template-areas: "copy templates";
-  }
-}
-
-
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;
