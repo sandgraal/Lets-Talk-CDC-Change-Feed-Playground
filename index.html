@@ -54,7 +54,42 @@
             change feed update in real time.
           </p>
         </div>
-        <div class="hero-templates" aria-labelledby="templateTitle">
+        <div class="hero-templates" aria-labelledby="pathwaysTitle">
+          <div class="hero-pathways">
+            <div class="hero-pathways-copy">
+              <span class="hero-pathways-eyebrow">Choose your path</span>
+              <h3 id="pathwaysTitle">Guided walkthrough or real-world scenarios</h3>
+              <p class="hero-pathways-sub">
+                Start with the guided walkthrough to experience the full flow, or
+                jump straight into curated CDC blueprints.
+              </p>
+              <div class="hero-pathways-actions">
+                <button id="btnGuidedTour" type="button" class="btn-primary">
+                  Start guided walkthrough
+                </button>
+                <button type="button" id="btnOnboarding" class="btn-ghost">
+                  How the playground works
+                </button>
+              </div>
+              <p class="hero-pathways-tip">
+                Want presets instead? Pick any scenario below to load schema,
+                rows, and starting operations instantly.
+              </p>
+            </div>
+            <div class="hero-pathways-card" aria-label="Guided walkthrough highlights">
+              <span class="hero-pathways-chip">Guided walkthrough</span>
+              <p class="hero-pathways-card-lead">We’ll help you:</p>
+              <ul class="hero-pathways-list">
+                <li>Model a table with clear primary keys.</li>
+                <li>Seed realistic rows to operate on.</li>
+                <li>
+                  Trigger inserts, updates, and deletes to watch the change feed
+                  react in real time.
+                </li>
+              </ul>
+              <div class="hero-pathways-note">Takes about a minute end-to-end.</div>
+            </div>
+          </div>
           <header class="hero-templates-header">
             <div>
               <h3 id="templateTitle">Explore real-world scenarios</h3>
@@ -70,74 +105,9 @@
                 aria-label="Filter scenarios"
               />
             </div>
-            <button type="button" id="btnOnboarding" class="btn-ghost">
-              How the playground works
-            </button>
           </header>
           <div class="template-grid" id="templateGallery"></div>
         </div>
-        <section class="hero-quickstart" aria-labelledby="quickstartTitle">
-          <header class="hero-quickstart-header">
-            <div class="hero-quickstart-copy">
-              <span class="hero-quickstart-eyebrow">Choose your path</span>
-              <h3 id="quickstartTitle">Quick start</h3>
-              <p class="hero-quickstart-sub">
-                Pick a real-world scenario from the gallery or follow the
-                guided walkthrough to see the whole flow in under a minute.
-              </p>
-            </div>
-            <div class="hero-quickstart-actions">
-              <span class="hero-quickstart-pill">Guided walkthrough</span>
-              <button id="btnGuidedTour" type="button" class="btn-primary">
-                Start guided walkthrough
-              </button>
-              <p class="hero-quickstart-tip">
-                Want presets instead? Choose any real-world scenario card above.
-              </p>
-            </div>
-          </header>
-          <div class="quickstart-grid">
-            <article id="qsSchema" class="quickstart-card" data-step="schema">
-              <div class="quickstart-card-head">
-                <span class="quickstart-step">Step 1</span>
-                <span class="quickstart-status" aria-live="polite"
-                  >Pending</span
-                >
-              </div>
-              <h4>Model your schema</h4>
-              <p>Define columns and mark at least one primary key.</p>
-              <button id="btnQuickSchema" type="button" class="btn-ghost">
-                Start modeling
-              </button>
-            </article>
-            <article id="qsRows" class="quickstart-card" data-step="rows">
-              <div class="quickstart-card-head">
-                <span class="quickstart-step">Step 2</span>
-                <span class="quickstart-status" aria-live="polite"
-                  >Pending</span
-                >
-              </div>
-              <h4>Populate rows</h4>
-              <p>Seed realistic data or insert rows manually.</p>
-              <button id="btnQuickRows" type="button" class="btn-ghost">
-                Seed sample rows
-              </button>
-            </article>
-            <article id="qsEvents" class="quickstart-card" data-step="events">
-              <div class="quickstart-card-head">
-                <span class="quickstart-step">Step 3</span>
-                <span class="quickstart-status" aria-live="polite"
-                  >Pending</span
-                >
-              </div>
-              <h4>Stream events</h4>
-              <p>Trigger operations and watch the change feed update live.</p>
-              <button id="btnQuickEvents" type="button" class="btn-ghost">
-                Emit my first event
-              </button>
-            </article>
-          </div>
-        </section>
       </section>
 
       <section class="workspace" id="playground">
