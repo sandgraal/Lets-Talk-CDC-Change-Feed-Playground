@@ -12,7 +12,7 @@
 If you discover a security vulnerability in this project, please report it responsibly:
 
 1. **Do not** open a public GitHub issue
-2. Email security concerns to the repository maintainers (see repository contacts)
+2. Report privately via [GitHub Security Advisories](https://github.com/[org]/[repo]/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
