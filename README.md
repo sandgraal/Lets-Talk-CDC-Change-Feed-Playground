@@ -113,6 +113,7 @@ Latest assessment:
 - 📊 [Implementation Review Summary](docs/REVIEW_SUMMARY.md) – Quick overview of strengths, gaps, and risks
 - 📋 [Implementation Status Report](docs/IMPLEMENTATION_STATUS.md) – Deep dive across architecture, tests, and feature flags
 - 🎯 [Action Plan](docs/ACTION_PLAN.md) – Prioritized follow-ups to reach world-class readiness
+- 🎬 [CDC Demo Playbook](docs/cdc-demo-playbook.md) – Ready-to-run scripts for showcasing change feed behaviors
 
 ## Contributing
 
