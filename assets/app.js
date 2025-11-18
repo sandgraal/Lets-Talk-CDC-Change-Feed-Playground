@@ -53,6 +53,9 @@ const STORAGE_KEYS = Object.freeze({
   officeOptIn: "cdc_playground_office_opt_in_v1",
 });
 
+const THEME_PREF_KEY = "cdc_theme_preference_v1";
+const DEFAULT_THEME = "dark";
+
 function createSafeStorage() {
   const memory = new Map();
   const fallback = {
@@ -147,6 +150,60 @@ function createSafeStorage() {
 
 const storage = createSafeStorage();
 
+function applyThemePreference(theme) {
+  if (typeof document === "undefined") return DEFAULT_THEME;
+
+  const normalized = theme === "light" ? "light" : DEFAULT_THEME;
+  const body = document.body || document.querySelector("body");
+  if (!body) return normalized;
+  body.dataset.theme = normalized;
+
+  const toggle = document.getElementById("themeToggle");
+  if (toggle) {
+    toggle.dataset.mode = normalized;
+    toggle.setAttribute("aria-pressed", normalized === "light" ? "true" : "false");
+    toggle.setAttribute(
+      "aria-label",
+      normalized === "light" ? "Switch to dark theme" : "Switch to light theme",
+    );
+  }
+
+  return normalized;
+}
+
+function readStoredThemePreference() {
+  try {
+    const stored = storage.get(THEME_PREF_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    /* ignore */
+  }
+
+  return DEFAULT_THEME;
+}
+
+function initThemeToggle() {
+  if (typeof document === "undefined") return DEFAULT_THEME;
+
+  let appliedTheme = applyThemePreference(readStoredThemePreference());
+  const toggle = document.getElementById("themeToggle");
+
+  if (!toggle) return appliedTheme;
+
+  toggle.addEventListener("click", () => {
+    appliedTheme = appliedTheme === "light" ? "dark" : "light";
+    appliedTheme = applyThemePreference(appliedTheme);
+
+    try {
+      storage.set(THEME_PREF_KEY, appliedTheme);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  return appliedTheme;
+}
+
 if (typeof window !== "undefined") {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -154,6 +211,10 @@ if (typeof window !== "undefined") {
       storage.remove(STORAGE_KEYS.onboarding);
     }
   } catch { /* ignore */ }
+}
+
+if (typeof document !== "undefined") {
+  initThemeToggle();
 }
 
 const COMPARATOR_PREFS_KEY = "cdc_comparator_prefs_v1";
