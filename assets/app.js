@@ -1206,19 +1206,56 @@ function renderTemplateGallery() {
     const ops = Array.isArray(template.ops) ? template.ops.length : 0;
 
     const stats = [
-      { label: "Seed rows", value: rows },
-      { label: "Ops queued", value: ops },
+      {
+        label: "Seed rows",
+        value: rows,
+        className: "template-stat--rows",
+        iconPath: "M6 8.5h12m-12 4h12M6 12.5v3.75A1.25 1.25 0 0 0 7.25 17.5h9.5A1.25 1.25 0 0 0 18 16.25V12.5m0-4.75V7.75A1.25 1.25 0 0 0 16.75 6.5h-9.5A1.25 1.25 0 0 0 6 7.75V7.9",
+      },
+      {
+        label: "Ops queued",
+        value: ops,
+        className: "template-stat--ops",
+        iconPath: "M6.75 8.75v-2m0 0h-2m2 0 6.5 6.5m4-4v2m0 0h2m-2 0-2.75-2.75M7 18h10.25M7 15.5h6.5",
+      },
     ];
+
+    const buildStatIcon = pathD => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("aria-hidden", "true");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathD);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", "1.5");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(path);
+      return svg;
+    };
 
     stats.forEach(stat => {
       const statEl = document.createElement("span");
-      statEl.className = "template-stat";
+      statEl.className = `template-stat ${stat.className}`;
+
+      const iconWrap = document.createElement("span");
+      iconWrap.className = "template-stat__icon";
+      iconWrap.appendChild(buildStatIcon(stat.iconPath));
+
+      const textWrap = document.createElement("span");
+      textWrap.className = "template-stat__text";
       const valueEl = document.createElement("strong");
       valueEl.textContent = String(stat.value);
+      valueEl.className = "template-stat__value";
       const labelEl = document.createElement("small");
       labelEl.textContent = stat.label;
-      statEl.appendChild(valueEl);
-      statEl.appendChild(labelEl);
+      labelEl.className = "template-stat__label";
+      textWrap.appendChild(valueEl);
+      textWrap.appendChild(labelEl);
+
+      statEl.appendChild(iconWrap);
+      statEl.appendChild(textWrap);
       metaRow.appendChild(statEl);
     });
 
