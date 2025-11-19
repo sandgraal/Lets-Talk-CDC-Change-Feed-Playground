@@ -1140,6 +1140,74 @@
   margin: 0.4rem 0 0.6rem;
 }
 
+.cdc-event-log__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  border-radius: 12px;
+}
+
+.cdc-event-log__summary-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cdc-event-log__summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.cdc-event-log__summary-heading h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.cdc-event-log__summary-heading span {
+  font-size: 0.8rem;
+}
+
+.cdc-event-log__summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cdc-event-log__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08);
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+.cdc-event-log__pill strong {
+  font-weight: 700;
+}
+
+.cdc-event-log__pill span {
+  color: #475569;
+}
+
+.cdc-event-log__pill--muted {
+  border-style: dashed;
+  background: rgba(248, 250, 252, 0.9);
+  color: #64748b;
+}
+
 .sim-shell__event-log-filters label,
 .cdc-event-log__filters label {
   display: grid;

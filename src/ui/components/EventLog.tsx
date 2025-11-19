@@ -67,6 +67,45 @@ const DEFAULT_STRINGS = {
   noMatch: "No events match the current filters.",
 };
 
+type SummaryRow = {
+  id: string;
+  label: string;
+  count: number;
+  percent: number;
+};
+
+const summarise = <T,>(
+  items: readonly T[],
+  getId: (item: T) => string,
+  getLabel: (item: T) => string,
+): SummaryRow[] => {
+  const counts = new Map<string, { label: string; count: number }>();
+  items.forEach(item => {
+    const id = getId(item);
+    if (!id) return;
+    const label = getLabel(item);
+    if (!counts.has(id)) {
+      counts.set(id, { label, count: 0 });
+    }
+    counts.get(id)!.count += 1;
+  });
+
+  const total = items.length || 1;
+  const rows = Array.from(counts.entries()).map(([id, value]) => ({
+    id,
+    label: value.label,
+    count: value.count,
+    percent: Math.round((value.count / total) * 100),
+  }));
+
+  rows.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.label.localeCompare(b.label);
+  });
+
+  return rows;
+};
+
 const formatRowPreview = (row: Record<string, unknown> | null | undefined) => {
   if (!row) return "";
   try {
@@ -148,6 +187,30 @@ export const EventLog: FC<EventLogProps> = ({
     const startIndex = Math.max(events.length - count, 0);
     return events.slice(startIndex);
   }, [events, visibleCount]);
+  const visibleSummaryLabel = useMemo(() => {
+    if (!events.length) return "";
+    if (visibleEvents.length === events.length) return `${visibleEvents.length} visible`;
+    return `Latest ${visibleEvents.length} of ${events.length}`;
+  }, [events.length, visibleEvents.length]);
+
+  const opSummary = useMemo(
+    () =>
+      summarise(
+        visibleEvents,
+        row => normaliseOpCode(row.op),
+        row => formatOpLabel(row.op),
+      ),
+    [visibleEvents],
+  );
+  const methodSummary = useMemo(
+    () =>
+      summarise(
+        visibleEvents,
+        row => row.methodId ?? row.methodLabel ?? "",
+        row => row.methodLabel || row.methodId || "",
+      ),
+    [visibleEvents],
+  );
 
   const canLoadMore = visibleEvents.length < events.length;
   const canShowLatest = visibleCount > baseVisible;
@@ -308,6 +371,51 @@ export const EventLog: FC<EventLogProps> = ({
           </select>
         </label>
       </div>
+
+      {visibleEvents.length > 0 && (
+        <div className="cdc-event-log__summary" role="status" aria-live="polite">
+          <div className="cdc-event-log__summary-block">
+            <div className="cdc-event-log__summary-heading">
+              <h4>Change mix</h4>
+              {visibleSummaryLabel ? <span>{visibleSummaryLabel}</span> : null}
+            </div>
+            <div className="cdc-event-log__summary-pills" aria-label="Change operations distribution">
+              {opSummary.length > 0 ? (
+                opSummary.map(row => (
+                  <span key={row.id} className="cdc-event-log__pill">
+                    <strong>{row.label}</strong>
+                    <span>
+                      {row.count} · {row.percent}%
+                    </span>
+                  </span>
+                ))
+              ) : (
+                <span className="cdc-event-log__pill cdc-event-log__pill--muted">No op codes</span>
+              )}
+            </div>
+          </div>
+          <div className="cdc-event-log__summary-block">
+            <div className="cdc-event-log__summary-heading">
+              <h4>Method mix</h4>
+              {visibleSummaryLabel ? <span>{visibleSummaryLabel}</span> : null}
+            </div>
+            <div className="cdc-event-log__summary-pills" aria-label="Method distribution">
+              {methodSummary.length > 0 ? (
+                methodSummary.map(row => (
+                  <span key={row.id} className="cdc-event-log__pill">
+                    <strong>{row.label || "Unknown"}</strong>
+                    <span>
+                      {row.count} · {row.percent}%
+                    </span>
+                  </span>
+                ))
+              ) : (
+                <span className="cdc-event-log__pill cdc-event-log__pill--muted">No method labels</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {events.length === 0 ? (
         <p className="cdc-event-log__empty">

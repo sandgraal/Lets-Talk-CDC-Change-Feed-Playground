@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EventLog } from "../../ui/components/EventLog";
 
@@ -69,6 +69,33 @@ describe("EventLog", () => {
     expect(replayButton).toBeDisabled();
     fireEvent.click(replayButton);
     expect(onReplay).not.toHaveBeenCalled();
+  });
+
+  it("surfaces change and method mix summaries for the visible window", () => {
+    render(
+      <EventLog
+        events={[
+          { id: "evt-1", op: "c", methodId: "polling", methodLabel: "Polling" },
+          { id: "evt-2", op: "u", methodId: "log", methodLabel: "Log" },
+          { id: "evt-3", op: "c", methodId: "polling", methodLabel: "Polling" },
+        ]}
+      />,
+    );
+
+    const changeMix = screen.getByText("Change mix").closest(".cdc-event-log__summary-block");
+    const methodMix = screen.getByText("Method mix").closest(".cdc-event-log__summary-block");
+
+    expect(changeMix).toBeTruthy();
+    expect(methodMix).toBeTruthy();
+
+    if (changeMix) {
+      expect(within(changeMix).getByText(/INSERT/)).toBeInTheDocument();
+      expect(within(changeMix).getByText(/UPDATE/)).toBeInTheDocument();
+    }
+    if (methodMix) {
+      expect(within(methodMix).getByText(/Polling/)).toBeInTheDocument();
+      expect(within(methodMix).getByText(/Log/)).toBeInTheDocument();
+    }
   });
 
   it("invokes filter callbacks when selecting an operation", () => {
