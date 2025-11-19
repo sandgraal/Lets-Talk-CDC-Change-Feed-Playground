@@ -758,7 +758,7 @@ body[data-theme="light"] .hero-pathways-eyebrow {
 .template-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .template-empty {
@@ -777,10 +777,12 @@ body[data-theme="light"] .hero-pathways-eyebrow {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
+  padding: 16px;
+  border-radius: 18px;
   border: 1px solid rgba(82, 114, 169, 0.35);
-  background: linear-gradient(160deg, rgba(16, 27, 50, 0.9), rgba(16, 27, 50, 0.7));
+  background: radial-gradient(circle at 16% 20%, rgba(86, 146, 255, 0.08), transparent 30%),
+    radial-gradient(circle at 85% 10%, rgba(80, 246, 255, 0.08), transparent 26%),
+    linear-gradient(165deg, rgba(16, 27, 50, 0.95), rgba(10, 18, 34, 0.92));
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
@@ -788,13 +790,29 @@ body[data-theme="light"] .hero-pathways-eyebrow {
 
 .template-card:hover {
   border-color: var(--accent);
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
 }
 
 .template-card.is-active {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(75, 163, 255, 0.32), 0 16px 44px rgba(0, 0, 0, 0.35);
+}
+
+.template-card__glow {
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 60%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.18), transparent 42%);
+  filter: blur(42px);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.template-card:hover .template-card__glow,
+.template-card.is-active .template-card__glow {
+  opacity: 1;
 }
 
 .template-card__header {
@@ -845,6 +863,24 @@ body[data-theme="light"] .hero-pathways-eyebrow {
   flex: 1;
 }
 
+.template-card__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Light theme override for .template-card__kicker to ensure good contrast */
+body[data-theme="light"] .template-card__kicker {
+  color: #222;
+}
 .template-card__title-row {
   display: flex;
   align-items: center;
@@ -871,6 +907,39 @@ body[data-theme="light"] .hero-pathways-eyebrow {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.template-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.template-stat {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(82, 114, 169, 0.4);
+  background: rgba(24, 36, 64, 0.7);
+  color: #e2e8f0;
+  min-width: 96px;
+}
+
+.template-stat strong {
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.template-stat small {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.68);
 }
 
 .template-card__metrics {
@@ -952,28 +1021,28 @@ body[data-theme="light"] .hero-pathways-eyebrow {
 }
 
 .template-card__actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .template-card__actions button {
-  width: fit-content;
+  width: 100%;
   font-size: 13px;
-  padding: 8px 14px;
+  padding: 10px 14px;
 }
 
 .template-card .template-download {
   font-size: 12px;
-  padding: 6px 12px;
+  padding: 8px 12px;
 }
 
 .template-card .template-preview {
   font-size: 12px;
-  padding: 6px 12px;
-  border: 1px solid rgba(37, 99, 235, 0.4);
-  background: rgba(37, 99, 235, 0.16);
-  color: #1d4ed8;
+  padding: 8px 12px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.12);
+  color: #bfdbfe;
 }
 
 .template-chip-row {
@@ -998,6 +1067,16 @@ body[data-theme="light"] .hero-pathways-eyebrow {
   color: #bfdbfe;
 }
 
+.template-chip--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(226, 232, 240, 0.85);
+}
+
+/* Light theme override for .template-chip--ghost for better contrast */
+body[data-theme="light"] .template-chip--ghost {
+  background: rgba(24, 36, 64, 0.08); /* subtle dark background */
+  color: #1e293b; /* readable dark text */
+}
 .template-tag {
   border: 1px solid rgba(82, 114, 169, 0.4);
   background: rgba(24, 36, 64, 0.6);
@@ -1032,6 +1111,10 @@ body[data-theme="light"] .template-card:hover {
 
 body[data-theme="light"] .template-card.is-active {
   box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.35), 0 16px 44px rgba(148, 163, 184, 0.3);
+}
+
+body[data-theme="light"] .template-card__glow {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.26), transparent 45%);
 }
 
 body[data-theme="light"] .template-icon {
