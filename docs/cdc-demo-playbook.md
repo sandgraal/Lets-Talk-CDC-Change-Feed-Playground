@@ -17,6 +17,7 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 | Schema evolution | Column backfills and schema drift | Add column, backfill toggle, trigger vs. log comparison |
 | Orders + items transactions | Multi-table atomicity and apply-on-commit | Apply-on-commit toggle + lag overlays |
 | Outbox relay | Contrasting change feed vs. application-managed outbox | Enable Polling + Log + Trigger, then enable snapshot drop / dedupe |
+| Snapshot replay | Offset resets and re-seeding change feeds | Drop snapshot rows + dedupe on PK toggles |
 | Retention & erasure | Privacy deletes, masking, and retention windows | Soft delete visibility + Drop snapshot + Dedupe on PK |
 
 ## Demo 1 – CRUD basics and delete capture
@@ -90,6 +91,19 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 - Tombstones vs. masking: why masking `email` before delete keeps privacy obligations even if polling lags.
 - How retention windows/holds mean log streams keep emitting events even when soft-deleted rows linger for compliance.
 - Why downstream dedupe + drop-snapshot controls matter when replaying erasure workflows from change feeds.
+
+## Demo 6 – Snapshot replay and idempotent apply
+
+1. Load **Snapshot Replay** from the gallery.
+2. Enable **Polling** and **Log** lanes to compare replay behaviour; leave **Trigger** off for clarity.
+3. Run once with default Event Log settings to show how replayed snapshot rows (`LED-100`) surface as duplicate inserts when offsets reset.
+4. Toggle **Drop snapshot rows** and **Dedupe on PK** in the Event Log toolbar, then rerun to demonstrate how downstream apply stays idempotent even if the source re-seeds.
+5. Use **Load in workspace** and tweak **Polling interval** to simulate long-running catch-ups; open **Lane diff overlay** to see where duplicate rows would have landed without dedupe.
+
+**Talking points**
+- Why offset resets or full refreshes often replay historical rows even when downstream already applied them.
+- How PK-based dedupe and drop-snapshot controls prevent data drift when reprocessing a feed.
+- When to combine snapshot drops with **Apply on commit** to keep multi-row ledger updates consistent across sinks.
 
 ## Tips for live sessions
 

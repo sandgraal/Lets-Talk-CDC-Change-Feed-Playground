@@ -35,6 +35,13 @@ const EXPECTED_SCENARIOS = [
     tags: ["outbox", "eventing", "ordering"],
   },
   {
+    id: "snapshot-replay",
+    name: "Snapshot Replay",
+    description: "Offset resets and re-seeding change feeds.",
+    highlight: "Drop-snapshot and dedupe controls for idempotent apply.",
+    tags: ["snapshot", "replay", "dedupe"],
+  },
+  {
     id: "retention-erasure",
     name: "Retention & Erasure",
     description: "Walk through right-to-be-forgotten and legal hold flows.",
