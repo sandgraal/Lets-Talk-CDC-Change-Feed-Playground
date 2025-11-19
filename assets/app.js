@@ -1149,6 +1149,10 @@ function renderTemplateGallery() {
     const isActive = state.scenarioId === template.id;
     const isExpanded = uiState.expandedTemplateId === template.id || isActive;
 
+    const glow = document.createElement("span");
+    glow.className = "template-card__glow";
+    card.appendChild(glow);
+
     if (isActive) card.classList.add("is-active");
     if (isExpanded) card.classList.add("is-expanded");
 
@@ -1164,6 +1168,11 @@ function renderTemplateGallery() {
 
     const textWrap = document.createElement("div");
     textWrap.className = "template-card__text";
+
+    const kicker = document.createElement("span");
+    kicker.className = "template-card__kicker";
+    kicker.textContent = template.kicker || "Real-world scenario";
+    textWrap.appendChild(kicker);
 
     const titleRow = document.createElement("div");
     titleRow.className = "template-card__title-row";
@@ -1184,6 +1193,36 @@ function renderTemplateGallery() {
 
     textWrap.appendChild(titleRow);
     textWrap.appendChild(summary);
+
+    const metaRow = document.createElement("div");
+    metaRow.className = "template-card__meta";
+
+    const tableChip = document.createElement("span");
+    tableChip.className = "template-chip template-chip--ghost";
+    tableChip.textContent = template.table ? `${template.table} table` : "Generic table";
+    metaRow.appendChild(tableChip);
+
+    const rows = Array.isArray(template.rows) ? template.rows.length : 0;
+    const ops = Array.isArray(template.ops) ? template.ops.length : 0;
+
+    const stats = [
+      { label: "Seed rows", value: rows },
+      { label: "Ops queued", value: ops },
+    ];
+
+    stats.forEach(stat => {
+      const statEl = document.createElement("span");
+      statEl.className = "template-stat";
+      const valueEl = document.createElement("strong");
+      valueEl.textContent = String(stat.value);
+      const labelEl = document.createElement("small");
+      labelEl.textContent = stat.label;
+      statEl.appendChild(valueEl);
+      statEl.appendChild(labelEl);
+      metaRow.appendChild(statEl);
+    });
+
+    textWrap.appendChild(metaRow);
 
     leading.appendChild(textWrap);
     header.appendChild(leading);
@@ -1239,6 +1278,7 @@ function renderTemplateGallery() {
 
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "btn-primary";
     if (state.scenarioId === template.id) {
       button.textContent = "Active";
       button.disabled = true;
