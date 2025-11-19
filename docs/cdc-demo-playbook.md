@@ -92,18 +92,19 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 - How retention windows/holds mean log streams keep emitting events even when soft-deleted rows linger for compliance.
 - Why downstream dedupe + drop-snapshot controls matter when replaying erasure workflows from change feeds.
 
-## Demo 6 – Snapshot replay and idempotent apply
+## Demo 6 – Snapshot handoff to live tail
 
-1. Load **Snapshot Replay** from the gallery.
-2. Enable **Polling** and **Log** lanes to compare replay behaviour; leave **Trigger** off for clarity.
-3. Run once with default Event Log settings to show how replayed snapshot rows (`LED-100`) surface as duplicate inserts when offsets reset.
-4. Toggle **Drop snapshot rows** and **Dedupe on PK** in the Event Log toolbar, then rerun to demonstrate how downstream apply stays idempotent even if the source re-seeds.
-5. Use **Load in workspace** and tweak **Polling interval** to simulate long-running catch-ups; open **Lane diff overlay** to see where duplicate rows would have landed without dedupe.
+1. Load **Snapshot ➜ Stream** from the gallery.
+2. Enable **Polling**, **Trigger**, and **Log** to mirror a typical snapshot-then-stream rollout.
+3. Start the run with **Drop snapshot rows** **off** so the initial rows land, then toggle it **on** once the stream catches up to show how sinks avoid replaying the snapshot.
+4. Turn **Dedupe on PK** on and pause when `AC-301` updates to highlight how resumptions collapse duplicate keys after reconnects.
+5. Flip **Trigger** off midway to demonstrate how application-driven captures can stop while log streaming continues for the live tail.
+6. Re-run with **Polling interval** widened to emphasise how snapshot copies can drift if polling misses intervening updates.
 
 **Talking points**
-- Why offset resets or full refreshes often replay historical rows even when downstream already applied them.
-- How PK-based dedupe and drop-snapshot controls prevent data drift when reprocessing a feed.
-- When to combine snapshot drops with **Apply on commit** to keep multi-row ledger updates consistent across sinks.
+- Snapshot vs. stream sequencing: why sinks need a drop-snapshot toggle to avoid reprocessing once change data arrives.
+- Resume semantics: how dedupe-on-PK protects against duplicates when connectors restart mid-snapshot.
+- Why pairing log/trigger streams with a one-time snapshot is the safest way to accelerate initial loads without sacrificing ordering.
 
 ## Tips for live sessions
 

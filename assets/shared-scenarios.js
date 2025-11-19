@@ -584,6 +584,71 @@ const defaultScenarios = [
       { t: 320, op: "update", table: "widgets", pk: { id: "W-1" }, after: { status: "ready" } },
     ],
   },
+  {
+    id: "snapshot-to-stream",
+    name: "Snapshot to Stream Handoff",
+    label: "Snapshot ➜ Stream",
+    description: "Show a snapshot catch-up handing off to the live change feed.",
+    highlight: "Great for dedupe/drop-snapshot comparisons and log vs. trigger resume semantics.",
+    tags: ["snapshot", "resume", "dedupe"],
+    seed: 118,
+    table: "accounts",
+    schema: [
+      { name: "id", type: "string", pk: true },
+      { name: "customer_id", type: "string", pk: false },
+      { name: "status", type: "string", pk: false },
+      { name: "balance", type: "number", pk: false },
+      { name: "last_change_id", type: "string", pk: false },
+    ],
+    rows: [
+      {
+        id: "AC-301",
+        customer_id: "C-77",
+        status: "pending_snapshot",
+        balance: 1250,
+        last_change_id: "chg-091",
+      },
+      {
+        id: "AC-302",
+        customer_id: "C-78",
+        status: "open",
+        balance: 4200,
+        last_change_id: "chg-094",
+      },
+    ],
+    events: [],
+    ops: [
+      {
+        t: 40,
+        op: "update",
+        table: "accounts",
+        pk: { id: "AC-301" },
+        after: { status: "open", balance: 1400, last_change_id: "chg-095" },
+      },
+      {
+        t: 110,
+        op: "insert",
+        table: "accounts",
+        pk: { id: "AC-303" },
+        after: { customer_id: "C-79", status: "open", balance: 800, last_change_id: "chg-101" },
+      },
+      {
+        t: 185,
+        op: "update",
+        table: "accounts",
+        pk: { id: "AC-302" },
+        after: { balance: 4680, last_change_id: "chg-104" },
+      },
+      { t: 240, op: "delete", table: "accounts", pk: { id: "AC-301" } },
+      {
+        t: 320,
+        op: "update",
+        table: "accounts",
+        pk: { id: "AC-303" },
+        after: { status: "review", balance: 740, last_change_id: "chg-107" },
+      },
+    ],
+  },
 ];
 
 if (typeof window !== "undefined") {
