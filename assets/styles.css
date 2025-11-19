@@ -1849,6 +1849,7 @@ select:focus {
 .stream-actions {
   flex-direction: column;
   gap: 16px;
+  flex-wrap: nowrap;
 }
 
 .stream-actions__row {
