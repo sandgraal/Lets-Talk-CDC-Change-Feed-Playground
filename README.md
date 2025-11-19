@@ -122,6 +122,7 @@ Latest assessment:
 - 🎬 [CDC Demo Playbook](docs/cdc-demo-playbook.md) – Ready-to-run scripts for showcasing change feed behaviors
 - 🧪 [CDC Lab Recipes](docs/cdc-lab-recipes.md) – Guided labs that highlight latency, ordering, schema change, and delete semantics
 - 🧭 [CDC Method Comparator Guide](docs/comparator-guide.md) – How to launch, navigate, and demo the React comparator shell
+- ⚙️ [Configuration Guide](docs/configuration-guide.md) – Run-mode matrix, feature flag sources, and Appwrite setup tips
 
 ## Contributing
 
