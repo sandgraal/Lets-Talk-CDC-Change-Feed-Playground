@@ -680,6 +680,20 @@ const els = {
   rowEditor: document.getElementById("rowEditor"),
   tbl: document.getElementById("tbl"),
   eventLog: document.getElementById("eventLog"),
+  eventStatsPanel: document.getElementById("eventStatsPanel"),
+  eventStatsPulse: document.getElementById("eventStatsPulse"),
+  eventStatsEmpty: document.getElementById("eventStatsEmpty"),
+  eventStatsGrid: document.getElementById("eventStatsGrid"),
+  eventStatsTotal: document.getElementById("eventStatsTotal"),
+  eventStatsLastOp: document.getElementById("eventStatsLastOp"),
+  eventStatsLastTs: document.getElementById("eventStatsLastTs"),
+  eventStatsCounts: {
+    c: document.getElementById("statInsertCount"),
+    u: document.getElementById("statUpdateCount"),
+    d: document.getElementById("statDeleteCount"),
+    r: document.getElementById("statSnapshotCount"),
+    s: document.getElementById("statSchemaCount"),
+  },
   debzWrap: document.getElementById("debzWrap"),
   includeBefore: document.getElementById("includeBefore"),
   copyNdjson: document.getElementById("btnCopyNdjson"),
@@ -727,6 +741,7 @@ const els = {
   inspectorPrev: document.getElementById("eventPrev"),
   inspectorNext: document.getElementById("eventNext"),
   inspectorReplay: document.getElementById("eventReplay"),
+  jumpInspector: document.getElementById("btnJumpInspector"),
 };
 
 function ensureHeroCtas() {
@@ -2786,8 +2801,64 @@ function renderJSONLog() {
   const filteredItems = buildEventLogItems(state.events, { applyEventLogFilters: true });
   renderReactEventLog(filteredItems, baseItems, filterOptions);
   renderEventInspector(filteredItems);
+  renderEventStats();
   updateLearning();
   broadcastComparatorState();
+}
+
+function renderEventStats() {
+  if (!els.eventStatsPanel) return;
+  const events = Array.isArray(state.events) ? state.events : [];
+  const counts = { c: 0, u: 0, d: 0, r: 0, s: 0 };
+  events.forEach(event => {
+    const op = getOp(event);
+    if (Object.prototype.hasOwnProperty.call(counts, op)) {
+      counts[op] += 1;
+    }
+  });
+
+  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  const hasEvents = total > 0;
+  els.eventStatsPanel.classList.toggle("is-empty", !hasEvents);
+  if (els.eventStatsEmpty) {
+    els.eventStatsEmpty.hidden = hasEvents;
+  }
+  if (els.eventStatsGrid) {
+    els.eventStatsGrid.setAttribute("aria-hidden", hasEvents ? "false" : "true");
+  }
+  if (els.eventStatsTotal) {
+    els.eventStatsTotal.textContent = formatCount(total);
+  }
+  if (els.eventStatsCounts) {
+    Object.entries(els.eventStatsCounts).forEach(([op, node]) => {
+      if (node) node.textContent = formatCount(counts[op] || 0);
+    });
+  }
+
+  const lastEvent = events[events.length - 1] || null;
+  if (els.eventStatsLastOp) {
+    if (lastEvent) {
+      const op = getOp(lastEvent);
+      const opMeta = OP_METADATA[op] || { label: "Event" };
+      els.eventStatsLastOp.textContent = `${opMeta.label} event`;
+    } else {
+      els.eventStatsLastOp.textContent = "Waiting for activity";
+    }
+  }
+  if (els.eventStatsLastTs) {
+    if (lastEvent) {
+      const ts = getEventTimestamp(lastEvent);
+      els.eventStatsLastTs.textContent = ts != null ? formatTimestamp(ts) : "Just now";
+    } else {
+      els.eventStatsLastTs.textContent = "—";
+    }
+  }
+  if (els.eventStatsPulse) {
+    els.eventStatsPulse.textContent = hasEvents ? "Live" : "Idle";
+  }
+  if (els.jumpInspector) {
+    els.jumpInspector.disabled = !hasEvents;
+  }
 }
 
 function renderLegacyEventLog(items) {
@@ -3533,6 +3604,8 @@ const OP_METADATA = {
   s: { label: "Schema", tone: "op-schema" },
 };
 
+const numberFormatter = typeof Intl !== "undefined" ? new Intl.NumberFormat() : null;
+
 function normalizeEvent(event) {
   if (!event) return { before: null, after: null, ts: null, op: "u", key: null, raw: event };
   const op = getOp(event);
@@ -3552,6 +3625,15 @@ function formatTimestamp(ts) {
     return date.toISOString().replace("T", " ").replace(".000Z", "Z");
   } catch {
     return String(ts);
+  }
+}
+
+function formatCount(value = 0) {
+  if (!numberFormatter) return String(value);
+  try {
+    return numberFormatter.format(value);
+  } catch {
+    return String(value);
   }
 }
 
@@ -4761,6 +4843,15 @@ function bindUiHandlers() {
   }
   if (els.inspectorReplay) {
     els.inspectorReplay.onclick = replaySelectedEvent;
+  }
+  if (els.jumpInspector) {
+    els.jumpInspector.onclick = () => {
+      const inspector = document.getElementById("eventInspector");
+      if (!inspector) return;
+      inspector.scrollIntoView({ behavior: "smooth", block: "start" });
+      inspector.classList.add("is-highlighted");
+      setTimeout(() => inspector.classList.remove("is-highlighted"), 1600);
+    };
   }
 
   const addColBtn = document.getElementById("addCol");

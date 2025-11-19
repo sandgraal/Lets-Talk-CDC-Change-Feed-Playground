@@ -324,92 +324,181 @@
                 </p>
               </div>
             </header>
-            <div class="stream-actions">
-              <button id="emitSnapshot" type="button">Emit Snapshot</button>
-              <button id="clearEvents" type="button">Clear events</button>
-              <label class="checkbox"
-                ><input type="checkbox" id="debzWrap" checked /> Debezium-style
-                envelope</label
-              >
-              <label class="checkbox"
-                ><input type="checkbox" id="includeBefore" checked /> include
-                <code>before</code> on updates/deletes</label
-              >
-            </div>
-            <div class="filter-actions">
-              <label class="checkbox"
-                ><input type="checkbox" id="filterC" checked /> Inserts</label
-              >
-              <label class="checkbox"
-                ><input type="checkbox" id="filterU" checked /> Updates</label
-              >
-              <label class="checkbox"
-                ><input type="checkbox" id="filterD" checked /> Deletes</label
-              >
-              <label class="checkbox"
-                ><input type="checkbox" id="filterR" checked /> Snapshots</label
-              >
-              <label class="checkbox"
-                ><input type="checkbox" id="filterS" checked /> Schema
-                changes</label
-              >
-            </div>
-            <div class="export-actions">
-              <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
-              <button id="btnDownloadNdjson" type="button">
-                Download NDJSON
-              </button>
-            </div>
-            <div
-              id="comparatorFeedback"
-              class="comparator-feedback"
-              hidden
-              aria-live="polite"
-            ></div>
-            <pre id="eventLog" class="log"></pre>
-            <section
-              class="inspector"
-              id="eventInspector"
-              aria-labelledby="inspectorTitle"
-            >
-              <div class="inspector-header">
-                <div>
-                  <h3 id="inspectorTitle">Event inspector</h3>
-                  <p class="inspector-lead">
-                    Peek at before/after payloads, diff fields, and replay to
-                    the table.
-                  </p>
-                </div>
+            <div class="change-feed-layout">
+              <div class="control-stack">
+                <article class="control-card control-card--primary">
+                  <div class="control-card__header">
+                    <p class="eyebrow">Envelope</p>
+                    <h3>Stream controls</h3>
+                    <p class="control-card__lead">
+                      Kick off snapshots, clear logs, and decide how much
+                      context to ship with each event.
+                    </p>
+                  </div>
+                  <div class="control-card__body">
+                    <div class="stream-actions" role="group" aria-label="Emit and wrap options">
+                      <div class="stream-actions__row">
+                        <button id="emitSnapshot" type="button">Emit Snapshot</button>
+                        <button id="clearEvents" type="button">Clear events</button>
+                      </div>
+                      <div class="stream-actions__row stream-actions__row--toggles">
+                        <label class="checkbox checkbox-pill">
+                          <input type="checkbox" id="debzWrap" checked />
+                          <span>Debezium-style envelope</span>
+                        </label>
+                        <label class="checkbox checkbox-pill">
+                          <input type="checkbox" id="includeBefore" checked />
+                          <span>include <code>before</code> on updates/deletes</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="control-card control-card--filters">
+                  <div class="control-card__header">
+                    <p class="eyebrow">Visibility</p>
+                    <h3>Filter &amp; export</h3>
+                    <p class="control-card__lead">
+                      Toggle operations and save NDJSON when you are ready to
+                      share.
+                    </p>
+                  </div>
+                  <div class="control-card__body">
+                    <div class="filter-actions" role="group" aria-label="Change feed filters">
+                      <label class="checkbox checkbox-chip">
+                        <input type="checkbox" id="filterC" checked />
+                        <span>Inserts</span>
+                      </label>
+                      <label class="checkbox checkbox-chip">
+                        <input type="checkbox" id="filterU" checked />
+                        <span>Updates</span>
+                      </label>
+                      <label class="checkbox checkbox-chip">
+                        <input type="checkbox" id="filterD" checked />
+                        <span>Deletes</span>
+                      </label>
+                      <label class="checkbox checkbox-chip">
+                        <input type="checkbox" id="filterR" checked />
+                        <span>Snapshots</span>
+                      </label>
+                      <label class="checkbox checkbox-chip">
+                        <input type="checkbox" id="filterS" checked />
+                        <span>Schema changes</span>
+                      </label>
+                    </div>
+                    <div class="export-actions" role="group" aria-label="Export change feed">
+                      <button id="btnCopyNdjson" type="button">Copy NDJSON</button>
+                      <button id="btnDownloadNdjson" type="button">
+                        Download NDJSON
+                      </button>
+                    </div>
+                  </div>
+                </article>
+
                 <div
-                  class="inspector-controls"
-                  role="group"
-                  aria-label="Event navigation"
-                >
-                  <button type="button" id="eventPrev" class="btn-ghost">
-                    Previous
-                  </button>
-                  <button type="button" id="eventNext" class="btn-ghost">
-                    Next
-                  </button>
-                  <button type="button" id="eventReplay">
-                    Replay to table
-                  </button>
-                </div>
-              </div>
-              <div class="inspector-body">
-                <ul
-                  class="inspector-list"
-                  id="eventList"
-                  role="listbox"
-                  aria-label="Filtered change events"
-                ></ul>
-                <div
-                  class="inspector-detail"
-                  id="eventDetail"
+                  id="comparatorFeedback"
+                  class="comparator-feedback"
+                  hidden
                   aria-live="polite"
                 ></div>
+                <pre id="eventLog" class="log"></pre>
+                <section
+                  class="inspector"
+                  id="eventInspector"
+                  aria-labelledby="inspectorTitle"
+                >
+                  <div class="inspector-header">
+                    <div>
+                      <h3 id="inspectorTitle">Event inspector</h3>
+                      <p class="inspector-lead">
+                        Peek at before/after payloads, diff fields, and replay to
+                        the table.
+                      </p>
+                    </div>
+                    <div
+                      class="inspector-controls"
+                      role="group"
+                      aria-label="Event navigation"
+                    >
+                      <button type="button" id="eventPrev" class="btn-ghost">
+                        Previous
+                      </button>
+                      <button type="button" id="eventNext" class="btn-ghost">
+                        Next
+                      </button>
+                      <button type="button" id="eventReplay">
+                        Replay to table
+                      </button>
+                    </div>
+                  </div>
+                  <div class="inspector-body">
+                    <ul
+                      class="inspector-list"
+                      id="eventList"
+                      role="listbox"
+                      aria-label="Filtered change events"
+                    ></ul>
+                    <div
+                      class="inspector-detail"
+                      id="eventDetail"
+                      aria-live="polite"
+                    ></div>
+                  </div>
+                </section>
               </div>
-            </section>
+              <aside class="change-feed-stats" id="eventStatsPanel" aria-live="polite">
+                <div class="stats-header">
+                  <div>
+                    <p class="eyebrow">Live signal</p>
+                    <h3>Stream health</h3>
+                    <p class="stats-lead">
+                      Auto-refreshes with every operation you run.
+                    </p>
+                  </div>
+                  <span class="stats-pill" id="eventStatsPulse">Idle</span>
+                </div>
+                <p class="stats-empty" id="eventStatsEmpty">
+                  No change events yet. Start emitting to light up the dashboard.
+                </p>
+                <dl class="stats-grid" id="eventStatsGrid">
+                  <div class="stat" data-op="c">
+                    <dt>Inserts</dt>
+                    <dd id="statInsertCount">0</dd>
+                  </div>
+                  <div class="stat" data-op="u">
+                    <dt>Updates</dt>
+                    <dd id="statUpdateCount">0</dd>
+                  </div>
+                  <div class="stat" data-op="d">
+                    <dt>Deletes</dt>
+                    <dd id="statDeleteCount">0</dd>
+                  </div>
+                  <div class="stat" data-op="r">
+                    <dt>Snapshots</dt>
+                    <dd id="statSnapshotCount">0</dd>
+                  </div>
+                  <div class="stat" data-op="s">
+                    <dt>Schema</dt>
+                    <dd id="statSchemaCount">0</dd>
+                  </div>
+                </dl>
+                <div class="stats-footer">
+                  <div>
+                    <p class="stats-label">Total events</p>
+                    <p class="stats-total" id="eventStatsTotal">0</p>
+                  </div>
+                  <div>
+                    <p class="stats-label">Last activity</p>
+                    <p class="stats-last" id="eventStatsLastOp">Waiting for activity</p>
+                    <p class="stats-ts" id="eventStatsLastTs">—</p>
+                  </div>
+                  <button type="button" class="btn-ghost stats-jump" id="btnJumpInspector">
+                    Focus inspector
+                  </button>
+                </div>
+              </aside>
+            </div>
           </section>
         </div>
       </section>
