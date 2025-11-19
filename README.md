@@ -93,6 +93,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 | Omnichannel Orders          | Walking through status transitions and fulfilment edge cases | Mix of inserts/updates with delete coverage; great for lag comparisons |
 | Real-time Payments          | Demonstrating idempotent updates or risk review flows        | Trigger overhead tuning + delete capture expectations                  |
 | Outbox Relay                | Contrasting log capture with an application-managed outbox   | Ordering and dedupe safety for downstream business events              |
+| Snapshot Replay             | Explaining offset resets and re-seeding change feeds         | Drop-snapshot + PK dedupe toggles for idempotent apply                 |
 | Retention & Erasure         | Teaching privacy deletes, masking, and legal holds           | Soft-delete visibility + drop snapshot and dedupe controls             |
 | Snapshot ➜ Stream Handoff   | Showing snapshot catch-up handing off to change feed tails   | Compare drop-snapshot + dedupe toggles; log vs. trigger resume semantics |
 | IoT Telemetry               | Showing rolling measurements with anomaly flags              | Highlights soft-delete vs. log consistency and clock controls          |

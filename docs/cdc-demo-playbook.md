@@ -17,6 +17,7 @@ Use these scripts to deliver crisp, repeatable walkthroughs of the playground fo
 | Schema evolution | Column backfills and schema drift | Add column, backfill toggle, trigger vs. log comparison |
 | Orders + items transactions | Multi-table atomicity and apply-on-commit | Apply-on-commit toggle + lag overlays |
 | Outbox relay | Contrasting change feed vs. application-managed outbox | Enable Polling + Log + Trigger, then enable snapshot drop / dedupe |
+| Snapshot replay | Offset resets and re-seeding change feeds | Drop snapshot rows + dedupe on PK toggles |
 | Retention & erasure | Privacy deletes, masking, and retention windows | Soft delete visibility + Drop snapshot + Dedupe on PK |
 
 ## Demo 1 – CRUD basics and delete capture

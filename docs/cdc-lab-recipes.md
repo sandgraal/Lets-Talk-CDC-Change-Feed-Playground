@@ -58,6 +58,20 @@ Use **Retention & Erasure** to explain delete handling and GDPR erasure workflow
 - Polling plus soft-delete visibility supports legal-hold workflows without hard deletion.
 - Log capture ensures tombstones propagate for sinks that require hard deletes.
 
+## Lab 5 – Snapshot Replay and Offset Resets
+Demonstrate how to keep downstream sinks consistent when snapshots or offsets replay historical rows using **Snapshot Replay**.
+
+1. Load **Snapshot Replay** and enable **Polling** and **Log** (keep **Trigger** off for signal clarity).
+2. Run once with default Event Log settings to surface the duplicate insert for `LED-100` when the snapshot replays at `t=190`.
+3. Toggle **Drop snapshot rows** and **Dedupe on PK** in the Event Log toolbar, then rerun.
+4. Open the **Lane diff overlay** to confirm duplicate rows are suppressed and ordering stays aligned despite the replayed snapshot.
+5. Use **Apply on commit** while re-running to show how multi-row ledger updates stay atomic even during catch-up.
+
+**What to highlight**
+- Snapshot replays and offset resets often re-emit historical rows; downstream dedupe is essential.
+- PK-based dedupe plus drop-snapshot controls prevent ledger drift when recovering from outages.
+- Pairing dedupe with apply-on-commit keeps multi-row ledger changes consistent across sinks during resyncs.
+
 ## Tips for Live Demos
 - Keep the **Lane checks** overlay pinned while running labs to anchor the discussion on measurable lag and ordering.
 - Use the **Load in workspace** shortcut from the comparator to let participants tweak scenarios interactively after the guided run.
