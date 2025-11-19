@@ -49,6 +49,13 @@ const EXPECTED_SCENARIOS = [
     tags: ["gdpr", "retention", "privacy"],
   },
   {
+    id: "snapshot-to-stream",
+    name: "Snapshot ➜ Stream Handoff",
+    description: "Showing snapshot catch-up handing off to change feed tails.",
+    highlight: "Compare drop-snapshot + dedupe toggles; log vs. trigger resume semantics.",
+    tags: ["snapshot", "resume", "dedupe"],
+  },
+  {
     id: "iot-telemetry",
     name: "IoT Telemetry",
     description: "Showing rolling measurements with anomaly flags.",

@@ -586,10 +586,10 @@ const defaultScenarios = [
   },
   {
     id: "snapshot-to-stream",
-    name: "Snapshot to Stream Handoff",
+    name: "Snapshot ➜ Stream Handoff",
     label: "Snapshot ➜ Stream",
-    description: "Show a snapshot catch-up handing off to the live change feed.",
-    highlight: "Great for dedupe/drop-snapshot comparisons and log vs. trigger resume semantics.",
+    description: "Showing snapshot catch-up handing off to change feed tails.",
+    highlight: "Compare drop-snapshot + dedupe toggles; log vs. trigger resume semantics.",
     tags: ["snapshot", "resume", "dedupe"],
     seed: 118,
     table: "accounts",
