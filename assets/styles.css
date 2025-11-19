@@ -879,7 +879,8 @@ body[data-theme="light"] .hero-pathways-eyebrow {
 
 /* Light theme override for .template-card__kicker to ensure good contrast */
 body[data-theme="light"] .template-card__kicker {
-  color: #222;
+  background: rgba(24, 36, 64, 0.08);
+  color: #1e293b;
 }
 .template-card__title-row {
   display: flex;
