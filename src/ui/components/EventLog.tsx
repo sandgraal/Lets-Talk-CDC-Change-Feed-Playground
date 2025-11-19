@@ -379,7 +379,7 @@ export const EventLog: FC<EventLogProps> = ({
               <h4>Change mix</h4>
               {visibleSummaryLabel ? <span>{visibleSummaryLabel}</span> : null}
             </div>
-            <div className="cdc-event-log__summary-pills" aria-label="Change operations distribution">
+            <div className="cdc-event-log__summary-pills">
               {opSummary.length > 0 ? (
                 opSummary.map(row => (
                   <span key={row.id} className="cdc-event-log__pill">
@@ -399,7 +399,7 @@ export const EventLog: FC<EventLogProps> = ({
               <h4>Method mix</h4>
               <span>Visible window</span>
             </div>
-            <div className="cdc-event-log__summary-pills" aria-label="Method distribution">
+            <div className="cdc-event-log__summary-pills">
               {methodSummary.length > 0 ? (
                 methodSummary.map(row => (
                   <span key={row.id} className="cdc-event-log__pill">
