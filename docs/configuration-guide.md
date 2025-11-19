@@ -7,7 +7,7 @@ Use this guide to configure the playground for different demos—from an offline
 | Mode | When to use | Steps |
 | --- | --- | --- |
 | **Offline (no build)** | Quick orientation to the base playground without the comparator | 1) Clone/zip the repo 2) Open `index.html` directly in the browser 3) Skip npm install/build |
-| **Comparator enabled** | Full CDC method comparison (Polling vs Trigger vs Log) with metrics, diffs, and exports | 1) `npm install` 2) `npm run build` to generate `assets/generated/ui-shell.js` & `sim-bundle.js` 3) Open `index.html` and scroll to the **CDC Method Comparator** |
+| **Comparator enabled** | Full CDC method comparison (Polling vs Trigger vs Log) with metrics, diffs, and exports | 1) `npm install` 2) `npm run build` to generate `assets/generated/ui-shell.js` & `assets/generated/sim-bundle.js` 3) Open `index.html` and scroll to the **CDC Method Comparator** |
 | **Appwrite-connected** | Sharing scenarios or assets from a remote host; injecting feature flags via config | 1) Provide `window.APPWRITE_CFG` before loaders run 2) Include any required `assetHeaders` for hosted bundles 3) Open `index.html` normally |
 
 > Tip: `npm run check:bundles` verifies generated assets are fresher than sources before you ship or demo.
