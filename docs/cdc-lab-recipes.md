@@ -17,7 +17,7 @@ Use the **Omnichannel Orders** scenario to demonstrate how extractor cadence dri
 5. Discuss trade-offs: Polling is simpler but shows higher lag; Log is faster but depends on WAL/binlog access.
 
 **What to highlight**
-- Ordering overlays show how Polling can deliver the fulfillment delete late.
+- Ordering overlays show how Polling can deliver the fulfilment delete late.
 - Metrics panel contrasts backlog and lag percentiles per method.
 
 ## Lab 2 – Trigger Overhead and Outbox Dedupe
