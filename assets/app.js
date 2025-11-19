@@ -1171,7 +1171,7 @@ function renderTemplateGallery() {
 
     const kicker = document.createElement("span");
     kicker.className = "template-card__kicker";
-    kicker.textContent = "Real-world scenario";
+    kicker.textContent = template.kicker || "Real-world scenario";
     textWrap.appendChild(kicker);
 
     const titleRow = document.createElement("div");
