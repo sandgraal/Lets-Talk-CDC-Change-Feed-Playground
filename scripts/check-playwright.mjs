@@ -11,7 +11,7 @@ const failures = [];
 
 for (const browser of browsers) {
   try {
-    const instance = await browser.launch({ headless: true });
+    const instance = await browser.launcher.launch({ headless: true });
     await instance.close();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
