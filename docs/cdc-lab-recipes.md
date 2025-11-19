@@ -2,7 +2,7 @@
 
 Hands-on walkthroughs for showcasing change data capture behaviors in the playground. Each lab runs entirely from `index.html` once the bundles are built (`npm run build`), and focuses on an observable outcome that data engineers and architects can discuss with stakeholders.
 
-## Pre-requisites
+## Prerequisites
 - Build bundles: `npm run build` (required for the comparator and metrics panels).
 - Enable comparator feature flags if you customized `APPWRITE_CFG.featureFlags`. For a full surface, leave `featureFlags` empty or include `ff_schema_demo`, `ff_multitable`, `ff_trigger_mode`, and `ff_walkthrough`.
 - Load a curated scenario from the gallery to match the recipe below (e.g., **Omnichannel Orders** or **Outbox Relay**).
