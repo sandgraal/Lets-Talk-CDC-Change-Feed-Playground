@@ -1824,6 +1824,7 @@ select:focus {
   border-radius: inherit;
   pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.03);
+  -webkit-mask: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent 60%);
   mask: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent 60%);
 }
 
