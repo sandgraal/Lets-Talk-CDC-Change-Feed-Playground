@@ -14,6 +14,7 @@ type StoredRow = {
   version: number;
   updatedAt: number;
   deleted: boolean;
+  txn?: SourceOp["txn"];
 };
 
 let eventSeq = 0;
@@ -167,6 +168,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
             version: 1,
             updatedAt: row.__ts ?? 0,
             deleted: false,
+            txn: undefined,
           });
           lastEmittedVersion.set(key, 1);
           const { id, __ts, ...rest } = row as { id: string; __ts?: number; [key: string]: unknown };
@@ -205,6 +207,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
           version: 1,
           updatedAt: commitTs,
           deleted: false,
+          txn: op.txn,
         });
       } else if (op.op === "update") {
         const current = rows.get(key);
@@ -216,6 +219,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
           version: (current?.version ?? 0) + 1,
           updatedAt: commitTs,
           deleted: false,
+          txn: op.txn,
         });
       } else if (op.op === "delete") {
         const current = rows.get(key);
@@ -226,6 +230,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
           version: (current?.version ?? 0) + 1,
           updatedAt: commitTs,
           deleted: true,
+          txn: op.txn,
         });
       }
     },
@@ -273,6 +278,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
                 null,
                 row.updatedAt,
                 `tx-${row.updatedAt}`,
+                row.txn,
               ),
             );
             lastEmittedVersion.set(key, row.version);
@@ -293,6 +299,7 @@ export function createQueryBasedAdapter(): ModeAdapter {
             clonePayload(row.data),
             row.updatedAt,
             `tx-${row.updatedAt}`,
+            row.txn,
           ),
         );
         lastEmittedVersion.set(key, row.version);
