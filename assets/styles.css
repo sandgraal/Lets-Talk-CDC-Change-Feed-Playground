@@ -877,6 +877,10 @@ body[data-theme="light"] .hero-pathways-eyebrow {
   text-transform: uppercase;
 }
 
+/* Light theme override for .template-card__kicker to ensure good contrast */
+body[data-theme="light"] .template-card__kicker {
+  color: #222;
+}
 .template-card__title-row {
   display: flex;
   align-items: center;
