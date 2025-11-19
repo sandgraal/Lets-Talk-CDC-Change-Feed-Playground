@@ -2,6 +2,8 @@
 
 Use these scripts to deliver crisp, repeatable walkthroughs of the playground for data engineers and architects. Each flow pairs a curated scenario with the comparator controls so you can highlight why different capture methods behave the way they do.
 
+For a fast orientation to the comparator UI before presenting these flows, skim the [CDC Method Comparator Guide](./comparator-guide.md).
+
 ## Prerequisites
 
 - Run `npm install && npm run build` to generate `assets/generated/` bundles.
