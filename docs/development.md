@@ -24,10 +24,15 @@ npm run test:sim       # Property-based CDC scenario tests
 ### End-to-End Tests (Playwright)
 E2E tests require Playwright browsers to be installed. **First-time setup:**
 ```bash
-npx playwright install --with-deps
+npm run setup:e2e
 ```
 
 This installs Chromium, Firefox, and WebKit browsers along with system dependencies. On macOS, you may need to allow the installation in System Preferences if prompted.
+
+To verify the browsers are available (and surface next steps if they are not), run the local doctor:
+```bash
+npm run doctor:e2e
+```
 
 **Running E2E tests:**
 ```bash

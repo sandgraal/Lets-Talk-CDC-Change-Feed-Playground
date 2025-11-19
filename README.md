@@ -46,6 +46,8 @@ To enable the CDC Method Comparator and all features:
 - `npm run build:sim` - Build simulator engines only
 - `npm run build:web` - Build React comparator shell only
 - `npm run check:bundles` - Verify generated assets are present and fresher than sources
+- `npm run setup:e2e` - Install Playwright browsers and system deps for E2E runs
+- `npm run doctor:e2e` - Confirm Playwright browsers are installed and launchable locally
 
 ### Verification
 
