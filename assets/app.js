@@ -4850,11 +4850,7 @@ function bindUiHandlers() {
       if (!inspector) return;
       inspector.scrollIntoView({ behavior: "smooth", block: "start" });
       inspector.classList.add("is-highlighted");
-      if (typeof window !== "undefined") {
-        window.setTimeout(() => inspector.classList.remove("is-highlighted"), 1600);
-      } else {
-        inspector.classList.remove("is-highlighted");
-      }
+      setTimeout(() => inspector.classList.remove("is-highlighted"), 1600);
     };
   }
 
