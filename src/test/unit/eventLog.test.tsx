@@ -148,4 +148,87 @@ describe("EventLog", () => {
     expect(screen.getByText(/Showing latest 2 of 5 events\./i)).toBeInTheDocument();
     expect(screen.queryByText(/table table-1/i)).not.toBeInTheDocument();
   });
+
+  it("handles events with missing or empty methodId and methodLabel fields gracefully", () => {
+    render(
+      <EventLog
+        events={[
+          { id: "evt-1", op: "c", methodId: "polling", methodLabel: "Polling" },
+          { id: "evt-2", op: "u", methodId: "log", methodLabel: null },
+          { id: "evt-3", op: "d", methodId: null, methodLabel: null },
+          { id: "evt-4", op: "c", methodId: "", methodLabel: "" },
+          { id: "evt-5", op: "u" },
+        ]}
+      />,
+    );
+
+    const methodMix = screen.getByText("Method mix").closest(".cdc-event-log__summary-block");
+
+    expect(methodMix).toBeTruthy();
+    if (methodMix) {
+      // Events with valid methodId/methodLabel should appear
+      expect(within(methodMix).getByText(/Polling/)).toBeInTheDocument();
+      // Event with methodId but no methodLabel should use methodId as label
+      expect(within(methodMix).getByText(/log/)).toBeInTheDocument();
+      // Events with both fields missing/empty are excluded from the summary
+    }
+  });
+
+  it("handles events with missing or invalid op codes", () => {
+    render(
+      <EventLog
+        events={[
+          { id: "evt-1", op: "" },
+          { id: "evt-2", op: "   " },
+          { id: "evt-3", op: "invalid-op" },
+        ]}
+      />,
+    );
+
+    const changeMix = screen.getByText("Change mix").closest(".cdc-event-log__summary-block");
+
+    expect(changeMix).toBeTruthy();
+    if (changeMix) {
+      // Empty and whitespace-only ops should be filtered out, but invalid-op should appear as uppercase
+      expect(within(changeMix).getByText(/INVALID-OP/)).toBeInTheDocument();
+    }
+  });
+
+  it("shows 'No op codes' fallback when all events have empty op values", () => {
+    render(
+      <EventLog
+        events={[
+          { id: "evt-1", op: "" },
+          { id: "evt-2", op: "   " },
+          { id: "evt-3", op: "" },
+        ]}
+      />,
+    );
+
+    const changeMix = screen.getByText("Change mix").closest(".cdc-event-log__summary-block");
+
+    expect(changeMix).toBeTruthy();
+    if (changeMix) {
+      expect(within(changeMix).getByText("No op codes")).toBeInTheDocument();
+    }
+  });
+
+  it("shows 'No method labels' fallback when all events have empty method values", () => {
+    render(
+      <EventLog
+        events={[
+          { id: "evt-1", op: "c", methodId: null, methodLabel: null },
+          { id: "evt-2", op: "u", methodId: "", methodLabel: "" },
+          { id: "evt-3", op: "d" },
+        ]}
+      />,
+    );
+
+    const methodMix = screen.getByText("Method mix").closest(".cdc-event-log__summary-block");
+
+    expect(methodMix).toBeTruthy();
+    if (methodMix) {
+      expect(within(methodMix).getByText("No method labels")).toBeInTheDocument();
+    }
+  });
 });

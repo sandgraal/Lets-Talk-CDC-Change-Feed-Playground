@@ -2043,7 +2043,7 @@ select:focus {
 
 .cdc-event-log__summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
   padding: 12px;
   background: rgba(15, 23, 42, 0.6);
