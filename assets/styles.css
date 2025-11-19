@@ -1072,6 +1072,11 @@ body[data-theme="light"] .template-card__kicker {
   color: rgba(226, 232, 240, 0.85);
 }
 
+/* Light theme override for .template-chip--ghost for better contrast */
+body[data-theme="light"] .template-chip--ghost {
+  background: rgba(24, 36, 64, 0.08); /* subtle dark background */
+  color: #1e293b; /* readable dark text */
+}
 .template-tag {
   border: 1px solid rgba(82, 114, 169, 0.4);
   background: rgba(24, 36, 64, 0.6);
