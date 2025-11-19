@@ -1907,7 +1907,6 @@ select:focus {
   border: 1px solid rgba(66, 125, 255, 0.35);
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.32), rgba(15, 23, 42, 0.92));
   box-shadow: 0 25px 80px -45px rgba(13, 19, 33, 0.85);
-  min-height: 100%;
 }
 
 .change-feed-stats.is-empty .stats-grid,
