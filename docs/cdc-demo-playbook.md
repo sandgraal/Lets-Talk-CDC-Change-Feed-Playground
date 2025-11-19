@@ -2,6 +2,8 @@
 
 Use these scripts to deliver crisp, repeatable walkthroughs of the playground for data engineers and architects. Each flow pairs a curated scenario with the comparator controls so you can highlight why different capture methods behave the way they do.
 
+If you need to **score** capture methods side by side, pair this playbook with the [Change Feed Evaluation Checklist](./change-feed-evaluation-checklist.md) so observers can capture lag/ordering metrics and NDJSON traces while you present.
+
 For a fast orientation to the comparator UI before presenting these flows, skim the [CDC Method Comparator Guide](./comparator-guide.md).
 
 ## Prerequisites
