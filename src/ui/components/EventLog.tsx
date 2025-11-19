@@ -397,7 +397,7 @@ export const EventLog: FC<EventLogProps> = ({
           <div className="cdc-event-log__summary-block">
             <div className="cdc-event-log__summary-heading">
               <h4>Method mix</h4>
-              <span>Visible window</span>
+              {visibleSummaryLabel ? <span>{visibleSummaryLabel}</span> : null}
             </div>
             <div className="cdc-event-log__summary-pills" aria-label="Method distribution">
               {methodSummary.length > 0 ? (
