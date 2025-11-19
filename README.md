@@ -121,6 +121,7 @@ Latest assessment:
 - 🎯 [Action Plan](docs/ACTION_PLAN.md) – Prioritized follow-ups to reach world-class readiness
 - 🎬 [CDC Demo Playbook](docs/cdc-demo-playbook.md) – Ready-to-run scripts for showcasing change feed behaviors
 - 🧪 [CDC Lab Recipes](docs/cdc-lab-recipes.md) – Guided labs that highlight latency, ordering, schema change, and delete semantics
+- 🧠 [CDC Method Cheat Sheet](docs/cdc-method-cheatsheet.md) – Quick selection guide for Polling, Triggers, Log, and Outbox
 - ✅ [Change Feed Evaluation Checklist](docs/change-feed-evaluation-checklist.md) – Quick scoring script for comparing Polling, Trigger, and Log capture
 - 🧭 [CDC Method Comparator Guide](docs/comparator-guide.md) – How to launch, navigate, and demo the React comparator shell
 - ⚙️ [Configuration Guide](docs/configuration-guide.md) – Run-mode matrix, feature flag sources, and Appwrite setup tips
