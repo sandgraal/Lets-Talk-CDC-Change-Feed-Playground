@@ -165,13 +165,51 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   };
 };
 
-const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
-  let consumer = { ...state.consumer };
-  for (const event of readyEvents) {
-    const existing = consumer.buffered[event.txId];
-    const buffered = existing
-      ? { ...existing, events: [...existing.events, event] }
-      : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
+  /**
+   * Processes change events by buffering them into transactions and applying them to the consumer state
+   * based on the configured apply policy. This function is central to maintaining transactional integrity
+   * and ordering guarantees in the change data capture (CDC) pipeline.
+   * 
+   * **Apply Policies:**
+   * 
+   * 1. `"apply-as-polled"`: Events are applied immediately as they are received, without waiting for
+   *    transaction completion. This provides lower latency but may expose partial transactions to the
+   *    consumer, which can violate atomicity guarantees.
+   * 
+   * 2. `"apply-on-commit"`: Events are buffered until all events in a transaction are received, then
+   *    applied atomically. This ensures transaction atomicity and correct commit-time ordering, at the
+   *    cost of higher latency and additional memory for buffering.
+   * 
+   * **Transaction Atomicity:**
+   * 
+   * Each transaction is tracked by `txId`. For the "apply-on-commit" policy:
+   * - Events are accumulated in `consumer.buffered` until `buffered.events.length >= buffered.total`
+   * - Once complete, the transaction moves to `consumer.ready` with events sorted by index
+   * - Only complete transactions in the ready queue are eligible for application
+   * 
+   * **Watermark-Based Commit Ordering:**
+   * 
+   * To ensure correct ordering when applying transactions in "apply-on-commit" mode:
+   * - A "floor commit timestamp" watermark is computed from all pending work:
+   *   - Transactions in the ready queue (`sortedReady`)
+   *   - Incomplete transactions still buffering (`consumer.buffered`)
+   *   - Events still in the broker queues (`state.broker.partitions`)
+   * - Only transactions with `commitTs <= floorCommitTs` are eligible for application
+   * - This guarantees that no earlier-committed transaction can arrive after we apply a later one
+   * - Eligible transactions are sorted by (commitTs, lsn) to maintain deterministic ordering
+   * - At most `maxApplyPerTick` transactions are applied per invocation for flow control
+   * 
+   * @param state - Current playground state containing consumer, broker, and configuration
+   * @param readyEvents - Array of change events polled from the broker and ready for processing
+   * @returns Updated playground state with events buffered/applied according to the policy
+   */
+  const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
+    let consumer = { ...state.consumer };
+    for (const event of readyEvents) {
+      const existing = consumer.buffered[event.txId];
+      const buffered = existing
+        ? { ...existing, events: [...existing.events, event] }
+        : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
 
     consumer = {
       ...consumer,
