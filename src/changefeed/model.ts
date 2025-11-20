@@ -220,12 +220,6 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
       ...state.metrics,
     },
     // TODO: Derive lag from metrics and consumer state, and document how this is calculated.
-    broker: state.broker,
-    lsn: state.lsn,
-    clockMs: state.clockMs,
-    source: state.source,
-    schemaVersion: state.schemaVersion,
-    options: state.options,
     // TODO: Decide whether to store backlog as a derived property on consumer, keep it as a metric, or attach it via latestCommitTs (computed in selectors).
   };
 };
