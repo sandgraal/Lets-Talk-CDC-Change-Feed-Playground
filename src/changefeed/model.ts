@@ -143,7 +143,7 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     queue.splice(insertAt, 0, {
       ...evt,
       partition,
-      offset: queue.length,
+      offset: insertAt,
       availableAt: state.clockMs + driftOffset * 50,
     });
     partitions[partition] = queue;
