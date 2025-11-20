@@ -165,56 +165,73 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   };
 };
 
-  const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
-    let consumer = { ...state.consumer };
-    for (const event of readyEvents) {
-      const existing = consumer.buffered[event.txId];
-      const buffered = existing
-        ? { ...existing, events: [...existing.events, event] }
-        : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
+const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
+  let consumer: PlaygroundState["consumer"] = {
+    ...state.consumer,
+    buffered: { ...state.consumer.buffered },
+  };
+  const newlyReady: PlaygroundState["consumer"]["ready"] = [];
 
-    consumer = {
-      ...consumer,
-      buffered: { ...consumer.buffered, [event.txId]: buffered },
-    };
+  for (const event of readyEvents) {
+    const existing = consumer.buffered[event.txId];
+    const buffered = existing
+      ? { ...existing, events: [...existing.events, event] }
+      : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
 
-      if (state.options.applyPolicy === "apply-as-polled") {
-        consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
-        consumer.appliedLog = [...consumer.appliedLog, event];
-        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
-      } else if (buffered.events.length === buffered.total) {
-        consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
-        const { [event.txId]: _removed, ...rest } = consumer.buffered;
-        consumer.buffered = rest;
+    if (state.options.applyPolicy === "apply-as-polled") {
+      consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
+      consumer.appliedLog = [...consumer.appliedLog, event];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
+      const shouldDropBuffer = buffered.events.length >= buffered.total;
+      consumer.buffered = shouldDropBuffer
+        ? Object.fromEntries(Object.entries(consumer.buffered).filter(([tx]) => tx !== event.txId))
+        : { ...consumer.buffered, [event.txId]: buffered };
+      continue;
+    }
+
+    const nextBuffered = { ...consumer.buffered, [event.txId]: buffered };
+    if (buffered.events.length >= buffered.total) {
+      newlyReady.push({
+        events: [...buffered.events].sort((a, b) => a.index - b.index),
+        commitTs: buffered.commitTs,
+        lsn: buffered.lsn,
+      });
+      const { [event.txId]: _removed, ...rest } = nextBuffered;
+      consumer.buffered = rest;
+    } else {
+      consumer.buffered = nextBuffered;
     }
   }
 
-    if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
-      const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
-      const pendingCommitCandidates = [
-        ...sortedReady.map(tx => tx.commitTs),
-        ...Object.values(consumer.buffered).map(buf => buf.commitTs),
-        ...state.broker.partitions.flat().map(evt => evt.commitTs),
-      ];
-      // If there are no pending commit candidates, set floorCommitTs to Infinity.
-      // This means all ready transactions will be eligible, which is intentional.
-      // Documented for clarity.
-      const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : Infinity;
-      const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
-      const slice = eligible.slice(0, state.options.maxApplyPerTick);
-      let tables = { ...consumer.tables };
-      const remaining = sortedReady.filter(tx => !slice.includes(tx));
-      for (const tx of slice) {
-        for (const event of tx.events) {
-          tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
-        }
-        consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
-        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
-      }
-    consumer.tables = tables;
-    consumer.ready = remaining;
-  }
+  if (state.options.applyPolicy === "apply-on-commit") {
+    const ready = [...consumer.ready, ...newlyReady];
+    const pendingCommitCandidates = [
+      ...ready.map(tx => tx.commitTs),
+      ...Object.values(consumer.buffered).map(buf => buf.commitTs),
+      ...state.broker.partitions.flat().map(evt => evt.commitTs),
+    ];
+    const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : Infinity;
+    const eligible = ready
+      .filter(tx => tx.commitTs <= floorCommitTs)
+      .sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
+    const slice = eligible.slice(0, state.options.maxApplyPerTick);
 
+    let tables = { ...consumer.tables };
+    for (const tx of slice) {
+      for (const event of tx.events) {
+        tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
+      }
+      consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
+    }
+
+    const remainingReady = ready.filter(tx => !slice.includes(tx));
+    consumer = {
+      ...consumer,
+      tables,
+      ready: remainingReady,
+    };
+  }
 
   return {
     ...state,
@@ -222,8 +239,6 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     metrics: {
       ...state.metrics,
     },
-    // TODO: Derive lag from metrics and consumer state, and document how this is calculated.
-    // TODO: Decide whether to store backlog as a derived property on consumer, keep it as a metric, or attach it via latestCommitTs (computed in selectors).
   };
 };
 
@@ -367,21 +382,29 @@ const deriveLag = (state: PlaygroundState) => {
 
 // Helper function to apply all ready transactions
 function applyAllReadyTransactions(state: PlaygroundState): PlaygroundState {
-  let next = state;
+  let tables = { ...state.consumer.tables };
+  let appliedLog = [...state.consumer.appliedLog];
+  let lastAppliedCommitTs = state.consumer.lastAppliedCommitTs;
+
   for (const tx of state.consumer.ready) {
-    // Apply each transaction's events
     for (const evt of tx.events) {
-      next = upsertSourceRow(next, evt.table, evt.after ?? {});
+      tables = applyEventToConsumer(tables, evt, state.options.projectSchemaDrift);
     }
-    next = captureEvents(next, tx.events);
-    // Update lastAppliedCommitTs if needed
-    if (tx.commitTs > next.consumer.lastAppliedCommitTs) {
-      next = { ...next, consumer: { ...next.consumer, lastAppliedCommitTs: tx.commitTs } };
-    }
+    appliedLog = [...appliedLog, ...tx.events];
+    lastAppliedCommitTs = Math.max(lastAppliedCommitTs, tx.commitTs);
   }
-  // Clear ready queue
-  next = { ...next, consumer: { ...next.consumer, ready: [] } };
-  return next;
+
+  return {
+    ...state,
+    consumer: {
+      ...state.consumer,
+      tables,
+      ready: [],
+      buffered: {},
+      appliedLog,
+      lastAppliedCommitTs,
+    },
+  };
 }
 
 export const reducePlayground = (state: PlaygroundState, action: PlaygroundAction): PlaygroundState => {
