@@ -359,11 +359,6 @@ const generateOrderWithItems = (state: PlaygroundState, customerId: string, item
   return { events, nextState: next };
 };
 
-const ensureTable = (state: PlaygroundState, table: string) => {
-  if (state.consumer.tables[table]) return state;
-  return { ...state, consumer: { ...state.consumer, tables: { ...state.consumer.tables, [table]: {} } } };
-};
-
 const deriveLag = (state: PlaygroundState) => {
   const lagMs =
     state.consumer.lastAppliedCommitTs > 0
