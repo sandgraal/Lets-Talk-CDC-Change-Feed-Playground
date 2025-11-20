@@ -265,11 +265,10 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
 const pollBroker = (state: PlaygroundState): { nextState: PlaygroundState; delivered: ChangeEvent[] } => {
   const partitions = state.broker.partitions.map(queue => [...queue]);
   const delivered: ChangeEvent[] = [];
-  const maxToDeliver = state.options.maxApplyPerTick * state.options.partitions + state.options.maxApplyPerTick;
   for (let idx = 0; idx < partitions.length; idx += 1) {
     const queue = partitions[idx];
     let consumed = 0;
-    while (queue.length > 0 && queue[0].availableAt <= state.clockMs && delivered.length < maxToDeliver && consumed < state.options.maxApplyPerTick) {
+    while (queue.length > 0 && queue[0].availableAt <= state.clockMs && consumed < state.options.maxApplyPerTick) {
       const evt = queue.shift()!;
       consumed += 1;
       if (shouldDrop(evt.lsn, state.options.dropProbability)) {
