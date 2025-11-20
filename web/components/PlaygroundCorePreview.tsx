@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CdcEvent, Scenario } from "../../sim";
 import { LogEngine, PollingEngine, ScenarioRunner, TriggerEngine } from "../../sim";
 import type { ShellScenario } from "../scenarios";
@@ -47,12 +47,12 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
   const timerRef = useRef<number | null>(null);
   const unsubscribesRef = useRef<Array<() => void>>([]);
 
-  const stopLoop = () => {
+  const stopLoop = useCallback(() => {
     if (timerRef.current != null) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  };
+  }, []);
 
   const resetEvents = () => {
     setLaneEvents({ polling: [], trigger: [], log: [] });
@@ -160,7 +160,7 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
     }
   };
 
-  useEffect(() => () => stopLoop(), []);
+  useEffect(() => () => stopLoop(), [stopLoop]);
 
   if (!scenario) return null;
 
