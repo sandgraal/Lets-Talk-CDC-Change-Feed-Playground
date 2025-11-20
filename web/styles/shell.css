@@ -1988,6 +1988,13 @@
   background: #e8f1ff;
 }
 
+.sim-core__toolbar button:focus,
+.sim-core__toolbar button:focus-visible {
+  border-color: #3366ff;
+  background: #e0edff;
+  outline: 2px solid #3366ff;
+  outline-offset: 2px;
+}
 .sim-core__label {
   font-weight: 600;
   color: #274060;
