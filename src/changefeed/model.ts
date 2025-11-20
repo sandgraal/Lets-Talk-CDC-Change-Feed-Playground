@@ -137,7 +137,7 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   let partitions = state.broker.partitions.map(queue => [...queue]);
   for (const evt of events) {
     const partition = partitionForKey(evt.pk, state.options.partitions);
-    const driftOffset = state.options.commitDrift ? hash(`${evt.txId}:${evt.index}`) % 2 : 0;
+    const driftOffset = state.options.commitDrift ? hash(evt.txId) % 2 : 0;
     const queue = [...partitions[partition]];
     const insertAt = state.options.commitDrift ? 0 : queue.length;
     queue.splice(insertAt, 0, {
@@ -165,6 +165,44 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   };
 };
 
+  /**
+   * Processes change events by buffering them into transactions and applying them to the consumer state
+   * based on the configured apply policy. This function is central to maintaining transactional integrity
+   * and ordering guarantees in the change data capture (CDC) pipeline.
+   * 
+   * **Apply Policies:**
+   * 
+   * 1. `"apply-as-polled"`: Events are applied immediately as they are received, without waiting for
+   *    transaction completion. This provides lower latency but may expose partial transactions to the
+   *    consumer, which can violate atomicity guarantees.
+   * 
+   * 2. `"apply-on-commit"`: Events are buffered until all events in a transaction are received, then
+   *    applied atomically. This ensures transaction atomicity and correct commit-time ordering, at the
+   *    cost of higher latency and additional memory for buffering.
+   * 
+   * **Transaction Atomicity:**
+   * 
+   * Each transaction is tracked by `txId`. For the "apply-on-commit" policy:
+   * - Events are accumulated in `consumer.buffered` until `buffered.events.length >= buffered.total`
+   * - Once complete, the transaction moves to `consumer.ready` with events sorted by index
+   * - Only complete transactions in the ready queue are eligible for application
+   * 
+   * **Watermark-Based Commit Ordering:**
+   * 
+   * To ensure correct ordering when applying transactions in "apply-on-commit" mode:
+   * - A "floor commit timestamp" watermark is computed from all pending work:
+   *   - Transactions in the ready queue (`sortedReady`)
+   *   - Incomplete transactions still buffering (`consumer.buffered`)
+   *   - Events still in the broker queues (`state.broker.partitions`)
+   * - Only transactions with `commitTs <= floorCommitTs` are eligible for application
+   * - This guarantees that no earlier-committed transaction can arrive after we apply a later one
+   * - Eligible transactions are sorted by (commitTs, lsn) to maintain deterministic ordering
+   * - At most `maxApplyPerTick` transactions are applied per invocation for flow control
+   * 
+   * @param state - Current playground state containing consumer, broker, and configuration
+   * @param readyEvents - Array of change events polled from the broker and ready for processing
+   * @returns Updated playground state with events buffered/applied according to the policy
+   */
   const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
     let consumer = { ...state.consumer };
     for (const event of readyEvents) {
@@ -178,14 +216,14 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
       buffered: { ...consumer.buffered, [event.txId]: buffered },
     };
 
-      if (state.options.applyPolicy === "apply-as-polled") {
-        consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
-        consumer.appliedLog = [...consumer.appliedLog, event];
-        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
-      } else if (buffered.events.length >= buffered.total) {
-        consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
-        const { [event.txId]: _removed, ...rest } = consumer.buffered;
-        consumer.buffered = rest;
+    if (state.options.applyPolicy === "apply-as-polled") {
+      consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
+      consumer.appliedLog = [...consumer.appliedLog, event];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
+    } else if (buffered.events.length >= buffered.total) {
+      consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
+      const { [event.txId]: _removed, ...rest } = consumer.buffered;
+      consumer.buffered = rest;
     }
   }
 
@@ -209,6 +247,9 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
         consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
         consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
       }
+      consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
+    }
     consumer.tables = tables;
     consumer.ready = remaining;
   }
@@ -220,14 +261,8 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     metrics: {
       ...state.metrics,
     },
-    // lag will be derived from metrics + consumer
-    broker: state.broker,
-    lsn: state.lsn,
-    clockMs: state.clockMs,
-    source: state.source,
-    schemaVersion: state.schemaVersion,
-    options: state.options,
-    // store backlog as derived on consumer? keep metric? we can attach via latestCommitTs, computed in selectors.
+    // TODO: Derive lag from metrics and consumer state, and document how this is calculated.
+    // TODO: Decide whether to store backlog as a derived property on consumer, keep it as a metric, or attach it via latestCommitTs (computed in selectors).
   };
 };
 
@@ -369,14 +404,37 @@ const deriveLag = (state: PlaygroundState) => {
   return { lagMs, backlog };
 };
 
+// Helper function to apply all ready transactions
+function applyAllReadyTransactions(state: PlaygroundState): PlaygroundState {
+  let next = state;
+  for (const tx of state.consumer.ready) {
+    // Apply each transaction's events
+    for (const evt of tx.events) {
+      next = upsertSourceRow(next, evt.table, evt.after ?? {});
+    }
+    next = captureEvents(next, tx.events);
+    // Update lastAppliedCommitTs if needed
+    if (tx.commitTs > next.consumer.lastAppliedCommitTs) {
+      next = { ...next, consumer: { ...next.consumer, lastAppliedCommitTs: tx.commitTs } };
+    }
+  }
+  // Clear ready queue
+  next = { ...next, consumer: { ...next.consumer, ready: [] } };
+  return next;
+}
+
 export const reducePlayground = (state: PlaygroundState, action: PlaygroundAction): PlaygroundState => {
   switch (action.type) {
     case "reset":
       return createInitialState({ ...state.options });
     case "seed":
       return createInitialState({ ...state.options });
-    case "setApplyPolicy":
-      return { ...state, options: { ...state.options, applyPolicy: action.policy }, consumer: { ...state.consumer, buffered: {}, ready: [] } };
+    case "setApplyPolicy": {
+      // Drain/apply all ready transactions before switching policy
+      let nextState = applyAllReadyTransactions(state);
+      // Optionally, could also drain buffered transactions if desired
+      return { ...nextState, options: { ...nextState.options, applyPolicy: action.policy }, consumer: { ...nextState.consumer, buffered: {}, ready: [] } };
+    }
     case "setDropProbability":
       return { ...state, options: { ...state.options, dropProbability: action.probability } };
     case "toggleCommitDrift":
