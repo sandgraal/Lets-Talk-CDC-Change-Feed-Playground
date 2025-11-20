@@ -276,12 +276,12 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
               <ol className="sim-core__lane-events" aria-label={`${method.label} events`}>
                 {events.length === 0 ? <li className="sim-core__empty">Waiting for events…</li> : null}
                 {events.map(event => (
-                  <li key={`${event.seq}-${event.pk.id}`} className="sim-core__event">
+                  <li key={`${event.seq}-${event.pk?.id ?? "unknown"}`} className="sim-core__event">
                     <span className={`sim-core__event-op sim-core__event-op--${event.op}`}>
                       {event.op.toUpperCase()}
                     </span>
                     <span className="sim-core__event-table">{event.table}</span>
-                    <span className="sim-core__event-pk">pk={String(event.pk.id)}</span>
+                    <span className="sim-core__event-pk">pk={String(event.pk?.id ?? "unknown")}</span>
                     <span className="sim-core__event-time">{event.ts_ms}ms</span>
                   </li>
                 ))}
