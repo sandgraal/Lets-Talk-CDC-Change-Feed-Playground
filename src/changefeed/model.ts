@@ -227,24 +227,26 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     }
   }
 
-  if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
-    const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
-    const pendingCommitCandidates = [
-      ...sortedReady.map(tx => tx.commitTs),
-      ...Object.values(consumer.buffered).map(buf => buf.commitTs),
-      ...state.broker.partitions.flat().map(evt => evt.commitTs),
-    ];
-    const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : 0;
-    const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
-    const slice = eligible.slice(0, state.options.maxApplyPerTick);
-    let tables = { ...consumer.tables };
-    const remaining = sortedReady.filter(tx => !slice.includes(tx));
-    for (const tx of slice) {
-      for (const event of tx.events) {
-        tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
+    if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
+      const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
+      const flattenedPartitions = state.broker.partitions.flat();
+      const pendingCommitCandidates = [
+        ...sortedReady.map(tx => tx.commitTs),
+        ...Object.values(consumer.buffered).map(buf => buf.commitTs),
+        ...flattenedPartitions.map(evt => evt.commitTs),
+      ];
+      const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : 0;
+      const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
+      const slice = eligible.slice(0, state.options.maxApplyPerTick);
+      let tables = { ...consumer.tables };
+      const remaining = sortedReady.filter(tx => !slice.includes(tx));
+      for (const tx of slice) {
+        for (const event of tx.events) {
+          tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
+        }
+        consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
+        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
       }
-      consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
-      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
     }
     consumer.tables = tables;
     consumer.ready = remaining;
