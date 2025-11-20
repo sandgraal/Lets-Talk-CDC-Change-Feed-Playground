@@ -10,3 +10,4 @@ export * from "./features/scenarioFilters";
 export * from "./features/scenarioGuidance";
 export * from "./domain/storage";
 export * from "./ui";
+export * from "./changefeed/model";
