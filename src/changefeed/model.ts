@@ -212,7 +212,6 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     consumer.ready = remaining;
   }
 
-  const backlog = state.broker.partitions.reduce((acc, queue) => acc + queue.length, 0) + Object.values(consumer.buffered).reduce((acc, buf) => acc + buf.events.length, 0) + consumer.ready.reduce((acc, tx) => acc + tx.events.length, 0);
 
   return {
     ...state,
