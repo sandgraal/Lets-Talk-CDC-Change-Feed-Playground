@@ -2,15 +2,15 @@ import { nanoid } from "../utils/nanoid";
 
 export type ApplyPolicy = "apply-on-commit" | "apply-as-polled";
 
-export type ChangeEvent = {
+export type ChangeEvent<RowType = Record<string, any>> = {
   txId: string;
   lsn: number;
   commitTs: number;
   type: "insert" | "update" | "delete" | "schema";
   table: string;
   pk: string;
-  before: Record<string, any> | null;
-  after: Record<string, any> | null;
+  before: RowType | null;
+  after: RowType | null;
   schemaVersion: number;
   partition?: number;
   offset?: number;
