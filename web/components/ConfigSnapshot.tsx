@@ -114,8 +114,8 @@ export function ConfigSnapshot({ snapshot, onCopy }: ConfigSnapshotProps) {
           </span>
         </div>
       </header>
-      <div className="sim-shell__config-grid" role="list">
-        <div role="listitem" className="sim-shell__config-card">
+      <div className="sim-shell__config-grid">
+        <div className="sim-shell__config-card">
           <p className="sim-shell__config-card-title">Capture methods</p>
           <ul>
             {snapshot.methods.map(method => (
@@ -129,7 +129,7 @@ export function ConfigSnapshot({ snapshot, onCopy }: ConfigSnapshotProps) {
             ))}
           </ul>
         </div>
-        <div role="listitem" className="sim-shell__config-card">
+        <div className="sim-shell__config-card">
           <p className="sim-shell__config-card-title">Cross-lane controls</p>
           <ul>
             {summaryLines.map((line, index) => (
