@@ -137,7 +137,7 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   let partitions = state.broker.partitions.map(queue => [...queue]);
   for (const evt of events) {
     const partition = partitionForKey(evt.pk, state.options.partitions);
-    const driftOffset = state.options.commitDrift ? hash(`${evt.txId}:${evt.index}`) % 2 : 0;
+    const driftOffset = state.options.commitDrift ? hash(evt.txId) % 2 : 0;
     const queue = [...partitions[partition]];
     const insertAt = state.options.commitDrift ? 0 : queue.length;
     queue.splice(insertAt, 0, {
