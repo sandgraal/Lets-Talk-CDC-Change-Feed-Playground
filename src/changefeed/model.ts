@@ -182,7 +182,7 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
         consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
         consumer.appliedLog = [...consumer.appliedLog, event];
         consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
-      } else if (buffered.events.length >= buffered.total) {
+      } else if (buffered.events.length === buffered.total) {
         consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
         const { [event.txId]: _removed, ...rest } = consumer.buffered;
         consumer.buffered = rest;
