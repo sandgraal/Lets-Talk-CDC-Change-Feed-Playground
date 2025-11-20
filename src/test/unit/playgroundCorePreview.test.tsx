@@ -49,7 +49,7 @@ describe("PlaygroundCorePreview", () => {
 
   it("shows scenario selector options", () => {
     render(<PlaygroundCorePreview scenarios={[demoScenario]} />);
-    const select = screen.getByLabelText(/Scenario/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/Preview blueprint/i) as HTMLSelectElement;
     expect(select.value).toBe("demo");
   });
 });
