@@ -19,6 +19,7 @@ The CDC Method Comparator (`#simShellRoot`) is the React shell that streams the 
 
 ## Interface tour
 - **Scenario picker**: Choose curated scenarios from `assets/shared-scenarios.js` or load the live workspace feed. Scenario cards surface tags (orders, payments, lag) and highlights to help select the right story.
+- **Vendor preset blueprint**: See the end-to-end pipeline (source → capture → transport → sink), an example topic/namespace, and quick docs links for the selected vendor preset so participants know which stack is being modelled.
 - **Method toggles**: Enable Polling, Trigger, or Log lanes individually to isolate a capture approach. Polling includes a soft-delete visibility toggle; Trigger exposes trigger overhead; Log exposes binlog/WAL fetch cadence.
 - **Event log overlay**: Click **Inspect** on any lane or the lane diff overlays to open the unified event log. Filter by operation type, table, or method to trace divergence.
 - **Lane diffs**: Overlays highlight missing/extra/out-of-order operations per method. The summary chips explain where lag or ordering drift appears and tie back to exact events.

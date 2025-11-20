@@ -83,6 +83,7 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Apply-on-commit toggle delays downstream apply until every event in the transaction is present, keeping multi-table writes atomic
 - Comparator lets you push any scenario back into the workspace via the new “Load in workspace” shortcut
 - Vendor presets badge the Source → Capture → Transport → Sink pipeline with tooltip copy + docs links per stack
+- Preset blueprint cards show example topics/namespaces plus "use when" and "watch for" guidance per method so demos stay opinionated
 - Lane diff overlays surface missing/extra/out-of-order operations and lag hotspots per method so insights link to exact events
 - Lane checks summary panel aggregates diff chips + max lag per method with an Inspect CTA that opens the detailed overlay
 - Metrics dashboard summarises produced/consumed counts, backlog, and lag percentiles per method
