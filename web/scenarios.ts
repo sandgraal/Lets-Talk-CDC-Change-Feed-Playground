@@ -46,7 +46,7 @@ function cloneJson<T>(value: T): T {
 function toShellScenario(template: ScenarioTemplate): ShellScenario {
   return {
     id: template.id,
-    name: template.id || template.name,
+    name: template.name,
     label: template.label,
     description: template.description,
     highlight: template.highlight,
