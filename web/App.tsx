@@ -3732,7 +3732,7 @@ export function App() {
         snapshot={comparatorConfigSnapshot}
         onCopy={() =>
           track("comparator.config.copy", {
-            scenario: scenario.name,
+            scenario: scenario.id,
             preset: preset.id,
             methods: comparatorConfigSnapshot.methods.filter(method => method.active).map(method => method.id).join(","),
           })
