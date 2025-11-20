@@ -1029,7 +1029,7 @@ export function App() {
   }
   const storedPrefs = storedPrefsRef.current || undefined;
   const safeLocalStorage = useMemo(() => ensureSafeLocalStorage(), []);
-  const featureFlags = useMemo<Set<string>>(() => readFeatureFlags(), []);
+  const [featureFlags, setFeatureFlags] = useState<Set<string>>(() => readFeatureFlags());
   const triggerModeEnabled = featureFlags.size === 0 || featureFlags.has("ff_trigger_mode");
   const schemaDemoEnabled = featureFlags.size === 0 || featureFlags.has("ff_schema_demo");
   const multiTableEnabled = featureFlags.size === 0 || featureFlags.has("ff_multitable");
@@ -1861,6 +1861,102 @@ export function App() {
     const opWithTable = scenario.ops.find(op => op.table);
     return opWithTable?.table ?? "table";
   }, [scenario.ops, scenario.table]);
+
+  const comparatorConfigSnapshot = useMemo<ComparatorConfigSnapshot>(() => {
+    const stats = scenario.stats ?? { rows: scenario.rows?.length ?? 0, ops: scenario.ops.length };
+    const methods = effectiveMethodOrder.map(method => {
+      const active = activeMethods.includes(method);
+      if (method === "polling") {
+        const config = methodConfig.polling;
+        return {
+          id: method,
+          label: methodCopy[method].label,
+          laneDescription: methodCopy[method].laneDescription,
+          active,
+          configSummary: `${config.pollIntervalMs}ms poll interval${config.includeSoftDeletes ? " + soft deletes" : ""}`,
+          configValues: {
+            poll_interval_ms: config.pollIntervalMs,
+            include_soft_deletes: config.includeSoftDeletes,
+          },
+        } as const;
+      }
+      if (method === "trigger") {
+        const config = methodConfig.trigger;
+        return {
+          id: method,
+          label: methodCopy[method].label,
+          laneDescription: methodCopy[method].laneDescription,
+          active,
+          configSummary: `${config.extractIntervalMs}ms extract · +${config.triggerOverheadMs}ms overhead`,
+          configValues: {
+            extract_interval_ms: config.extractIntervalMs,
+            trigger_overhead_ms: config.triggerOverheadMs,
+          },
+        } as const;
+      }
+      const config = methodConfig.log;
+      return {
+        id: method,
+        label: methodCopy[method].label,
+        laneDescription: methodCopy[method].laneDescription,
+        active,
+        configSummary: `${config.fetchIntervalMs}ms fetch cadence`,
+        configValues: {
+          fetch_interval_ms: config.fetchIntervalMs,
+        },
+      } as const;
+    });
+
+    return {
+      scenario: { id: scenario.id, label: scenario.label, tags: scenario.tags ?? [], stats },
+      preset: { id: preset.id, label: preset.label },
+      featureFlags: Array.from(featureFlags).sort(),
+      usesDefaultFlags: featureFlags.size === 0,
+      applyOnCommit,
+      consumerRate: consumerRateEnabled ? consumerRateLimit : null,
+      generatorRate: generatorEnabled ? generatorRate : null,
+      toggles: {
+        eventBus: eventBusEnabled,
+        eventLog: eventLogEnabled,
+        pauseResume: pauseResumeEnabled,
+        querySlider: querySliderEnabled,
+        metrics: metricsEnabled,
+        schemaWalkthrough: schemaDemoEnabled,
+        triggerMethod: triggerModeEnabled,
+        multiTable: multiTableEnabled,
+      },
+      methods,
+    } satisfies ComparatorConfigSnapshot;
+  }, [
+    activeMethods,
+    applyOnCommit,
+    consumerRateEnabled,
+    consumerRateLimit,
+    effectiveMethodOrder,
+    eventBusEnabled,
+    eventLogEnabled,
+    featureFlags,
+    generatorEnabled,
+    generatorRate,
+    methodConfig.log,
+    methodConfig.polling,
+    methodConfig.trigger,
+    methodCopy,
+    metricsEnabled,
+    multiTableEnabled,
+    pauseResumeEnabled,
+    preset.id,
+    preset.label,
+    querySliderEnabled,
+    scenario.id,
+    scenario.label,
+    scenario.ops.length,
+    scenario.rows?.length,
+    scenario.stats,
+    scenario.tags,
+    schemaDemoEnabled,
+    triggerModeEnabled,
+  ]);
 
   useEffect(() => {
     if (!summaryCopied) return;
