@@ -2,15 +2,15 @@ import { nanoid } from "../utils/nanoid";
 
 export type ApplyPolicy = "apply-on-commit" | "apply-as-polled";
 
-export type ChangeEvent = {
+export type ChangeEvent<RowType = Record<string, any>> = {
   txId: string;
   lsn: number;
   commitTs: number;
   type: "insert" | "update" | "delete" | "schema";
   table: string;
   pk: string;
-  before: Record<string, any> | null;
-  after: Record<string, any> | null;
+  before: RowType | null;
+  after: RowType | null;
   schemaVersion: number;
   partition?: number;
   offset?: number;
@@ -143,7 +143,7 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
     queue.splice(insertAt, 0, {
       ...evt,
       partition,
-      offset: queue.length,
+      offset: insertAt,
       availableAt: state.clockMs + driftOffset * 50,
     });
     partitions[partition] = queue;
@@ -212,7 +212,6 @@ const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent
     consumer.ready = remaining;
   }
 
-  const backlog = state.broker.partitions.reduce((acc, queue) => acc + queue.length, 0) + Object.values(consumer.buffered).reduce((acc, buf) => acc + buf.events.length, 0) + consumer.ready.reduce((acc, tx) => acc + tx.events.length, 0);
 
   return {
     ...state,
@@ -220,14 +219,8 @@ const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent
     metrics: {
       ...state.metrics,
     },
-    // lag will be derived from metrics + consumer
-    broker: state.broker,
-    lsn: state.lsn,
-    clockMs: state.clockMs,
-    source: state.source,
-    schemaVersion: state.schemaVersion,
-    options: state.options,
-    // store backlog as derived on consumer? keep metric? we can attach via latestCommitTs, computed in selectors.
+    // TODO: Derive lag from metrics and consumer state, and document how this is calculated.
+    // TODO: Decide whether to store backlog as a derived property on consumer, keep it as a metric, or attach it via latestCommitTs (computed in selectors).
   };
 };
 
@@ -360,16 +353,33 @@ const generateOrderWithItems = (state: PlaygroundState, customerId: string, item
   return { events, nextState: next };
 };
 
-const ensureTable = (state: PlaygroundState, table: string) => {
-  if (state.consumer.tables[table]) return state;
-  return { ...state, consumer: { ...state.consumer, tables: { ...state.consumer.tables, [table]: {} } } };
-};
-
 const deriveLag = (state: PlaygroundState) => {
-  const lagMs = Math.max(0, state.metrics.latestCommitTs - state.consumer.lastAppliedCommitTs);
+  const lagMs =
+    state.consumer.lastAppliedCommitTs > 0
+      ? Math.max(0, state.metrics.latestCommitTs - state.consumer.lastAppliedCommitTs)
+      : 0;
   const backlog = state.broker.partitions.reduce((acc, q) => acc + q.length, 0) + Object.values(state.consumer.buffered).reduce((acc, buf) => acc + buf.events.length, 0) + state.consumer.ready.reduce((acc, tx) => acc + tx.events.length, 0);
   return { lagMs, backlog };
 };
+
+// Helper function to apply all ready transactions
+function applyAllReadyTransactions(state: PlaygroundState): PlaygroundState {
+  let next = state;
+  for (const tx of state.consumer.ready) {
+    // Apply each transaction's events
+    for (const evt of tx.events) {
+      next = upsertSourceRow(next, evt.table, evt.after ?? {});
+    }
+    next = captureEvents(next, tx.events);
+    // Update lastAppliedCommitTs if needed
+    if (tx.commitTs > next.consumer.lastAppliedCommitTs) {
+      next = { ...next, consumer: { ...next.consumer, lastAppliedCommitTs: tx.commitTs } };
+    }
+  }
+  // Clear ready queue
+  next = { ...next, consumer: { ...next.consumer, ready: [] } };
+  return next;
+}
 
 export const reducePlayground = (state: PlaygroundState, action: PlaygroundAction): PlaygroundState => {
   switch (action.type) {
@@ -377,8 +387,12 @@ export const reducePlayground = (state: PlaygroundState, action: PlaygroundActio
       return createInitialState({ ...state.options });
     case "seed":
       return createInitialState({ ...state.options });
-    case "setApplyPolicy":
-      return { ...state, options: { ...state.options, applyPolicy: action.policy }, consumer: { ...state.consumer, buffered: {}, ready: [] } };
+    case "setApplyPolicy": {
+      // Drain/apply all ready transactions before switching policy
+      let nextState = applyAllReadyTransactions(state);
+      // Optionally, could also drain buffered transactions if desired
+      return { ...nextState, options: { ...nextState.options, applyPolicy: action.policy }, consumer: { ...nextState.consumer, buffered: {}, ready: [] } };
+    }
     case "setDropProbability":
       return { ...state, options: { ...state.options, dropProbability: action.probability } };
     case "toggleCommitDrift":
