@@ -69,7 +69,7 @@ import { MetricsDashboard } from "./components/MetricsDashboard";
 import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { PresetGuidance } from "./components/PresetGuidance";
-import { ConfigSnapshot, type ComparatorConfigSnapshot } from "./components/ConfigSnapshot";
+import { ScenarioGuidancePanel } from "./components/ScenarioGuidance";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
@@ -84,6 +84,7 @@ import {
   saveScenarioFilterDetail,
   scenarioFilterTagsEqual,
 } from "../src/features/scenarioFilters";
+import { getScenarioGuidance } from "../src/features/scenarioGuidance";
 
 const LIVE_SCENARIO_NAME = "workspace-live" as const;
 const PREFERENCES_KEY = "cdc_comparator_prefs_v1" as const;
@@ -1779,6 +1780,11 @@ export function App() {
     if (!scenarioOptions.length) return SCENARIOS[0];
     return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
   }, [scenarioId, scenarioOptions]);
+
+  const scenarioGuidance = useMemo(
+    () => getScenarioGuidance(scenario.name),
+    [scenario.name],
+  );
 
   const topicExample = useMemo(() => {
     const exampleTable =
@@ -3728,16 +3734,7 @@ export function App() {
         </p>
       )}
 
-      <ConfigSnapshot
-        snapshot={comparatorConfigSnapshot}
-        onCopy={() =>
-          track("comparator.config.copy", {
-            scenario: scenario.id,
-            preset: preset.id,
-            methods: comparatorConfigSnapshot.methods.filter(method => method.active).map(method => method.id).join(","),
-          })
-        }
-      />
+      {scenarioGuidance ? <ScenarioGuidancePanel guidance={scenarioGuidance} /> : null}
 
       <PresetGuidance
         preset={preset}
