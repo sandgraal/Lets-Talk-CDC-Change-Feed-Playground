@@ -44,6 +44,9 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
   });
 
   const runnerRef = useRef<ScenarioRunner | null>(null);
+  const pollingEngineRef = useRef<PollingEngine | null>(null);
+  const triggerEngineRef = useRef<TriggerEngine | null>(null);
+  const logEngineRef = useRef<LogEngine | null>(null);
   const timerRef = useRef<number | null>(null);
   const unsubscribesRef = useRef<Array<() => void>>([]);
 
@@ -58,6 +61,7 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
     setLaneEvents({ polling: [], trigger: [], log: [] });
   };
 
+  // Effect for scenario changes - recreates engines and runner
   useEffect(() => {
     stopLoop();
     setIsPlaying(false);
@@ -68,15 +72,18 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
 
     const polling = new PollingEngine();
     polling.configure({ poll_interval_ms: pollIntervalMs, include_soft_deletes: true });
+    pollingEngineRef.current = polling;
 
     const trigger = new TriggerEngine();
     trigger.configure({
       extract_interval_ms: extractIntervalMs,
       trigger_overhead_ms: triggerOverheadMs,
     });
+    triggerEngineRef.current = trigger;
 
     const log = new LogEngine();
     log.configure({ fetch_interval_ms: logFetchIntervalMs });
+    logEngineRef.current = log;
 
     const runner = new ScenarioRunner();
     runner.attach([polling, trigger, log]);
@@ -87,19 +94,17 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
     resetEvents();
     setClock(0);
 
-    unsubscribesRef.current.push(
-      polling.onEvent(event =>
-        setLaneEvents(prev => ({ ...prev, polling: [...prev.polling, event].slice(-MAX_EVENTS) })),
-      ),
-    );
-    unsubscribesRef.current.push(
-      trigger.onEvent(event =>
-        setLaneEvents(prev => ({ ...prev, trigger: [...prev.trigger, event].slice(-MAX_EVENTS) })),
-      ),
-    );
-    unsubscribesRef.current.push(
-    log.onEvent(event => setLaneEvents(prev => ({ ...prev, log: [...prev.log, event].slice(-MAX_EVENTS) }))),
-    );
+    const engines = { polling, trigger, log };
+    METHODS.forEach(method => {
+      unsubscribesRef.current.push(
+        engines[method.id].onEvent(event =>
+          setLaneEvents(prev => ({
+            ...prev,
+            [method.id]: [...prev[method.id], event].slice(-MAX_EVENTS),
+          }))
+        )
+      );
+    });
 
     runnerRef.current = runner;
 
@@ -117,15 +122,23 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
       unsubscribesRef.current.forEach(unsub => unsub());
       unsubscribesRef.current = [];
     };
-  }, [
-    scenario,
-    pollIntervalMs,
-    extractIntervalMs,
-    triggerOverheadMs,
-    logFetchIntervalMs,
-    autoStart,
-    tickMs,
-  ]);
+  }, [scenario, autoStart, tickMs]);
+
+  // Effect for configuration changes - updates existing engines
+  useEffect(() => {
+    if (pollingEngineRef.current) {
+      pollingEngineRef.current.configure({ poll_interval_ms: pollIntervalMs, include_soft_deletes: true });
+    }
+    if (triggerEngineRef.current) {
+      triggerEngineRef.current.configure({
+        extract_interval_ms: extractIntervalMs,
+        trigger_overhead_ms: triggerOverheadMs,
+      });
+    }
+    if (logEngineRef.current) {
+      logEngineRef.current.configure({ fetch_interval_ms: logFetchIntervalMs });
+    }
+  }, [pollIntervalMs, extractIntervalMs, triggerOverheadMs, logFetchIntervalMs]);
 
   const handlePlay = () => {
     if (!runnerRef.current) return;
