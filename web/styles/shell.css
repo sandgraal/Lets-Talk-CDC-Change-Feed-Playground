@@ -1779,3 +1779,104 @@
   font-size: 0.9rem;
   color: #475569;
 }
+
+.sim-shell__config-snapshot {
+  margin: 1.25rem 0 0.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.75);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sim-shell__config-snapshot-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sim-shell__config-snapshot-meta {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.sim-shell__config-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.sim-shell__config-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.sim-shell__config-card {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  background: #ffffff;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sim-shell__config-card-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.sim-shell__config-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.sim-shell__config-label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sim-shell__config-value {
+  text-align: right;
+  color: #334155;
+}
+
+.sim-shell__config-json {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.75rem 0.9rem;
+  overflow: auto;
+}
+
+.sim-shell__config-json-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+}
+
+.sim-shell__config-json pre {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}

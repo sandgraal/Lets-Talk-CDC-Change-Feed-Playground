@@ -23,6 +23,16 @@ The playground merges multiple inputs to decide which features are on:
 
 The consolidated API lives on `window.cdcFeatureFlags` and broadcasts `cdc:feature-flags` events so the comparator shell can lazy-load when `comparator_v2` becomes available. See [`docs/feature-flags.md`](./feature-flags.md) for rollout guidance and the full manifest.
 
+### Configuration snapshots inside the comparator
+
+The comparator now surfaces a **Configuration snapshot** card directly above the vendor preset guidance. It lists:
+
+- Active methods with their current cadences (poll interval, trigger overhead, log fetch interval)
+- Cross-lane controls (apply-on-commit, consumer throttle, synthetic generator rate)
+- Feature flag state and whether you’re running with the default manifest
+
+Use the **Copy** button in that card to grab a JSON payload that can seed guided labs, Appwrite configs, or reproducibility docs without re-typing knob values.
+
 ## Appwrite configuration surface
 
 `index.html` seeds an `APPWRITE_CFG` object that you can override for your own stack:
