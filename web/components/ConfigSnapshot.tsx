@@ -166,7 +166,7 @@ export function ConfigSnapshot({ snapshot, onCopy }: ConfigSnapshotProps) {
         <div className="sim-shell__config-json-header">
           <p>JSON export</p>
           <button type="button" className="sim-shell__scenario-download" onClick={handleCopy}>
-            {copied ? "Copied" : "Copy"}
+            <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
           </button>
         </div>
         <pre aria-label="Configuration JSON snapshot">{formattedSnapshot}</pre>
