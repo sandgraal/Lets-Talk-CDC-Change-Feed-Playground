@@ -70,6 +70,7 @@ import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { PresetGuidance } from "./components/PresetGuidance";
 import { ScenarioGuidancePanel } from "./components/ScenarioGuidance";
+import { PlaygroundCorePreview } from "./components/PlaygroundCorePreview";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
@@ -3748,6 +3749,8 @@ export function App() {
           active: activeMethods.includes(method),
         }))}
       />
+
+      <PlaygroundCorePreview scenarios={SCENARIOS} />
 
       <div className="sim-shell__event-filters" role="group" aria-label="Event filters">
         {isConsumerPaused && (
