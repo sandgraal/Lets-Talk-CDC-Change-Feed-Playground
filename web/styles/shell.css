@@ -1928,3 +1928,198 @@
   line-height: 1.35;
   white-space: pre-wrap;
 }
+
+/* Playground core lanes */
+
+.sim-core {
+  margin: 2rem 0;
+  padding: 1rem;
+  border: 1px solid #d8e3ef;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+  box-shadow: 0 6px 18px rgba(16, 42, 67, 0.08);
+}
+
+.sim-core__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.sim-core__toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sim-core__toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.sim-core__toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.sim-core__toolbar select,
+.sim-core__toolbar input[type="range"],
+.sim-core__toolbar button {
+  font-size: 0.9rem;
+}
+
+.sim-core__toolbar button {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #c1d4f0;
+  background: #f5f9ff;
+  cursor: pointer;
+}
+
+.sim-core__toolbar button:hover {
+  border-color: #8bb5ff;
+  background: #e8f1ff;
+}
+
+.sim-core__toolbar button:focus,
+.sim-core__toolbar button:focus-visible {
+  border-color: #3366ff;
+  background: #e0edff;
+  outline: 2px solid #3366ff;
+  outline-offset: 2px;
+}
+.sim-core__label {
+  font-weight: 600;
+  color: #274060;
+}
+
+.sim-core__value {
+  font-size: 0.75rem;
+  color: #4b647d;
+}
+
+.sim-core__clock {
+  margin-left: auto;
+  font-weight: 600;
+  color: #19324d;
+}
+
+.sim-core__lanes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.sim-core__lane {
+  background: #fff;
+  border: 1px solid #dce6f3;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sim-core__lane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sim-core__lane-title {
+  font-weight: 700;
+  color: #0f2b46;
+  margin: 0;
+}
+
+.sim-core__lane-subtitle {
+  margin: 0;
+  color: #486280;
+  font-size: 0.85rem;
+}
+
+.sim-core__lane-count {
+  font-weight: 700;
+  color: #183a62;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: #eef5ff;
+}
+
+.sim-core__lane-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sim-core__event {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: #f7f9fc;
+  border: 1px solid #e4edf7;
+}
+
+.sim-core__event-op {
+  font-weight: 800;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+  color: #0f2b46;
+  background: #e8eef6;
+}
+
+.sim-core__event-op--c {
+  background: #e6f6ec;
+  color: #0d5b2a;
+}
+
+.sim-core__event-op--u {
+  background: #fdf3e3;
+  color: #8a5400;
+}
+
+.sim-core__event-op--d {
+  background: #fdeaea;
+  color: #8b1d1d;
+}
+
+.sim-core__event-table {
+  font-weight: 600;
+  color: #1f3a5a;
+}
+
+.sim-core__event-pk,
+.sim-core__event-time {
+  color: #4d647b;
+  font-size: 0.85rem;
+}
+
+.sim-core__empty {
+  color: #5c7590;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .sim-core__toolbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sim-core__toolbar-group {
+    width: 100%;
+  }
+}
