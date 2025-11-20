@@ -191,10 +191,11 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
 
     if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
       const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
+      const flattenedPartitions = state.broker.partitions.flat();
       const pendingCommitCandidates = [
         ...sortedReady.map(tx => tx.commitTs),
         ...Object.values(consumer.buffered).map(buf => buf.commitTs),
-        ...state.broker.partitions.flat().map(evt => evt.commitTs),
+        ...flattenedPartitions.map(evt => evt.commitTs),
       ];
       const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : 0;
       const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
