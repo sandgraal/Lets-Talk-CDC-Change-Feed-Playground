@@ -246,6 +246,54 @@
   font-size: 0.9rem;
 }
 
+.sim-shell__scenario-guidance {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sim-shell__scenario-guidance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sim-shell__scenario-guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.sim-shell__scenario-guidance-card {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 0.85rem 0.95rem;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sim-shell__scenario-guidance-card h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.sim-shell__scenario-guidance-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: #0f172a;
+}
+
+.sim-shell__scenario-guidance-card li strong {
+  color: #1d4ed8;
+}
+
 .sim-shell__method-guidance {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
