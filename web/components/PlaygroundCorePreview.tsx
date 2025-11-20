@@ -87,19 +87,17 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
     resetEvents();
     setClock(0);
 
-    unsubscribesRef.current.push(
-      polling.onEvent(event =>
-        setLaneEvents(prev => ({ ...prev, polling: [...prev.polling, event].slice(-MAX_EVENTS) })),
-      ),
-    );
-    unsubscribesRef.current.push(
-      trigger.onEvent(event =>
-        setLaneEvents(prev => ({ ...prev, trigger: [...prev.trigger, event].slice(-MAX_EVENTS) })),
-      ),
-    );
-    unsubscribesRef.current.push(
-    log.onEvent(event => setLaneEvents(prev => ({ ...prev, log: [...prev.log, event].slice(-MAX_EVENTS) }))),
-    );
+    const engines = { polling, trigger, log };
+    METHODS.forEach(method => {
+      unsubscribesRef.current.push(
+        engines[method.id].onEvent(event =>
+          setLaneEvents(prev => ({
+            ...prev,
+            [method.id]: [...prev[method.id], event].slice(-MAX_EVENTS),
+          }))
+        )
+      );
+    });
 
     runnerRef.current = runner;
 
