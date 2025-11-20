@@ -196,7 +196,10 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
         ...Object.values(consumer.buffered).map(buf => buf.commitTs),
         ...state.broker.partitions.flat().map(evt => evt.commitTs),
       ];
-      const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : 0;
+      // If there are no pending commit candidates, set floorCommitTs to Infinity.
+      // This means all ready transactions will be eligible, which is intentional.
+      // Documented for clarity.
+      const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : Infinity;
       const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
       const slice = eligible.slice(0, state.options.maxApplyPerTick);
       let tables = { ...consumer.tables };
