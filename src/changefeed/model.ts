@@ -366,7 +366,10 @@ const ensureTable = (state: PlaygroundState, table: string) => {
 };
 
 const deriveLag = (state: PlaygroundState) => {
-  const lagMs = Math.max(0, state.metrics.latestCommitTs - state.consumer.lastAppliedCommitTs);
+  const lagMs =
+    state.consumer.lastAppliedCommitTs > 0
+      ? Math.max(0, state.metrics.latestCommitTs - state.consumer.lastAppliedCommitTs)
+      : 0;
   const backlog = state.broker.partitions.reduce((acc, q) => acc + q.length, 0) + Object.values(state.consumer.buffered).reduce((acc, buf) => acc + buf.events.length, 0) + state.consumer.ready.reduce((acc, tx) => acc + tx.events.length, 0);
   return { lagMs, backlog };
 };
