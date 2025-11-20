@@ -121,7 +121,7 @@ export function ConfigSnapshot({ snapshot, onCopy }: ConfigSnapshotProps) {
             {snapshot.methods.map(method => (
               <li key={method.id} className="sim-shell__config-line">
                 <span className="sim-shell__config-label">{method.label}</span>
-                <span className="sim-shell__config-value" aria-live="polite">
+                <span className="sim-shell__config-value">
                   {method.active ? method.configSummary : "Off"}
                 </span>
                 <span className="visually-hidden">{method.laneDescription}</span>
