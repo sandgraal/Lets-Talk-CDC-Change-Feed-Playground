@@ -247,8 +247,6 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
         consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
         consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
       }
-      consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
-      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
     }
     consumer.tables = tables;
     consumer.ready = remaining;
