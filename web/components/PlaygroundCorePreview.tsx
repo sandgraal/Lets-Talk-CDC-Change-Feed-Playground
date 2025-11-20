@@ -168,8 +168,12 @@ export function PlaygroundCorePreview({ scenarios, autoStart = false }: { scenar
         <div className="sim-core__toolbar-row">
           <div className="sim-core__toolbar-group">
             <label>
-              <span className="sim-core__label">Scenario</span>
-              <select value={scenarioId} onChange={event => setScenarioId(event.target.value)}>
+              <span className="sim-core__label">Preview blueprint</span>
+              <select
+                aria-label="Preview blueprint"
+                value={scenarioId}
+                onChange={event => setScenarioId(event.target.value)}
+              >
                 {scenarios.map(item => (
                   <option key={item.id} value={item.id}>
                     {item.label}
