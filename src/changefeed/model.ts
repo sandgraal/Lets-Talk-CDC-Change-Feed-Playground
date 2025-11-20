@@ -368,14 +368,37 @@ const deriveLag = (state: PlaygroundState) => {
   return { lagMs, backlog };
 };
 
+// Helper function to apply all ready transactions
+function applyAllReadyTransactions(state: PlaygroundState): PlaygroundState {
+  let next = state;
+  for (const tx of state.consumer.ready) {
+    // Apply each transaction's events
+    for (const evt of tx.events) {
+      next = upsertSourceRow(next, evt.table, evt.after ?? {});
+    }
+    next = captureEvents(next, tx.events);
+    // Update lastAppliedCommitTs if needed
+    if (tx.commitTs > next.consumer.lastAppliedCommitTs) {
+      next = { ...next, consumer: { ...next.consumer, lastAppliedCommitTs: tx.commitTs } };
+    }
+  }
+  // Clear ready queue
+  next = { ...next, consumer: { ...next.consumer, ready: [] } };
+  return next;
+}
+
 export const reducePlayground = (state: PlaygroundState, action: PlaygroundAction): PlaygroundState => {
   switch (action.type) {
     case "reset":
       return createInitialState({ ...state.options });
     case "seed":
       return createInitialState({ ...state.options });
-    case "setApplyPolicy":
-      return { ...state, options: { ...state.options, applyPolicy: action.policy }, consumer: { ...state.consumer, buffered: {}, ready: [] } };
+    case "setApplyPolicy": {
+      // Drain/apply all ready transactions before switching policy
+      let nextState = applyAllReadyTransactions(state);
+      // Optionally, could also drain buffered transactions if desired
+      return { ...nextState, options: { ...nextState.options, applyPolicy: action.policy }, consumer: { ...nextState.consumer, buffered: {}, ready: [] } };
+    }
     case "setDropProbability":
       return { ...state, options: { ...state.options, dropProbability: action.probability } };
     case "toggleCommitDrift":
