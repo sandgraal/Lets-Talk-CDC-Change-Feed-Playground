@@ -68,6 +68,7 @@ import { MetricsStrip } from "./components/MetricsStrip";
 import { MetricsDashboard } from "./components/MetricsDashboard";
 import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
+import { PresetGuidance } from "./components/PresetGuidance";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
@@ -1778,6 +1779,16 @@ export function App() {
     return scenarioOptions.find(s => s.name === scenarioId) ?? scenarioOptions[0];
   }, [scenarioId, scenarioOptions]);
 
+  const topicExample = useMemo(() => {
+    const exampleTable =
+      scenario.table ?? (scenario.ops.find(op => op.table)?.table ?? "table");
+    try {
+      return preset.topicFormat(exampleTable);
+    } catch {
+      return exampleTable;
+    }
+  }, [preset, scenario]);
+
   useEffect(() => {
     initializeGeneratorState(scenario);
   }, [scenario, initializeGeneratorState]);
@@ -3341,16 +3352,6 @@ export function App() {
       metrics,
     }));
 
-    const exampleTable =
-      scenario.table ??
-      (scenario.ops.find(op => op.table)?.table ?? "table");
-    let topicExample = exampleTable;
-    try {
-      topicExample = preset.topicFormat(exampleTable);
-    } catch {
-      topicExample = exampleTable;
-    }
-
     const presetDetail = {
       id: preset.id,
       label: preset.label,
@@ -3458,6 +3459,7 @@ export function App() {
     methodCopy,
     preset,
     scenario,
+    topicExample,
     scenarioComparatorDetail,
     scenarioTags,
     summary,
@@ -3628,6 +3630,19 @@ export function App() {
           {scenario.stats.rows} rows · {scenario.stats.ops} ops
         </p>
       )}
+
+      <PresetGuidance
+        preset={preset}
+        topicExample={topicExample}
+        methods={effectiveMethodOrder.map(method => ({
+          id: method,
+          label: methodCopy[method].label,
+          laneDescription: methodCopy[method].laneDescription,
+          whenToUse: methodCopy[method].whenToUse,
+          callout: methodCopy[method].callout,
+          active: activeMethods.includes(method),
+        }))}
+      />
 
       <div className="sim-shell__event-filters" role="group" aria-label="Event filters">
         {isConsumerPaused && (
