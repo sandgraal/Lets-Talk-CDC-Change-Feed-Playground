@@ -1,0 +1,155 @@
+{
+  "id": "outbox-relay",
+  "name": "Outbox Relay",
+  "description": "Contrasting log capture with an application-managed outbox.",
+  "tags": [
+    "outbox",
+    "eventing",
+    "ordering"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "total",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "last_event_id",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "ORD-221",
+      "customer_id": "C-14",
+      "status": "packed",
+      "total": 275,
+      "last_event_id": "EVT-220"
+    }
+  ],
+  "ops": [
+    {
+      "t": 75,
+      "op": "insert",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-221"
+      },
+      "after": {
+        "customer_id": "C-14",
+        "status": "created",
+        "total": 275
+      }
+    },
+    {
+      "t": 120,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-221"
+      },
+      "after": {
+        "status": "ready_for_dispatch"
+      }
+    },
+    {
+      "t": 125,
+      "op": "insert",
+      "table": "outbox_events",
+      "pk": {
+        "id": "EVT-221-1"
+      },
+      "after": {
+        "order_id": "ORD-221",
+        "type": "order.ready",
+        "event_key": "ORD-221",
+        "payload": {
+          "status": "ready_for_dispatch",
+          "total": 275
+        }
+      }
+    },
+    {
+      "t": 180,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-221"
+      },
+      "after": {
+        "status": "shipped",
+        "last_event_id": "EVT-221-2"
+      }
+    },
+    {
+      "t": 185,
+      "op": "insert",
+      "table": "outbox_events",
+      "pk": {
+        "id": "EVT-221-2"
+      },
+      "after": {
+        "order_id": "ORD-221",
+        "type": "order.shipped",
+        "event_key": "ORD-221",
+        "payload": {
+          "status": "shipped",
+          "tracking_ref": "TRK-221"
+        }
+      }
+    },
+    {
+      "t": 230,
+      "op": "update",
+      "table": "orders",
+      "pk": {
+        "id": "ORD-221"
+      },
+      "after": {
+        "status": "cancelled",
+        "last_event_id": "EVT-221-3"
+      }
+    },
+    {
+      "t": 235,
+      "op": "insert",
+      "table": "outbox_events",
+      "pk": {
+        "id": "EVT-221-3"
+      },
+      "after": {
+        "order_id": "ORD-221",
+        "type": "order.cancelled",
+        "event_key": "ORD-221",
+        "payload": {
+          "status": "cancelled",
+          "reason": "carrier_blocked"
+        }
+      }
+    },
+    {
+      "t": 280,
+      "op": "delete",
+      "table": "outbox_events",
+      "pk": {
+        "id": "EVT-221-1"
+      }
+    }
+  ]
+}

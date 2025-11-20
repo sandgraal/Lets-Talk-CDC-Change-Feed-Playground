@@ -1,0 +1,117 @@
+{
+  "id": "snapshot-replay",
+  "name": "Snapshot Replay",
+  "description": "Offset resets and re-seeding change feeds.",
+  "tags": [
+    "snapshot",
+    "replay",
+    "dedupe"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "account_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "balance",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "checkpoint_ts",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "version",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "LED-100",
+      "account_id": "AC-9",
+      "balance": 12500,
+      "checkpoint_ts": 1000,
+      "version": "v1"
+    },
+    {
+      "id": "LED-101",
+      "account_id": "AC-21",
+      "balance": 8800,
+      "checkpoint_ts": 1000,
+      "version": "v1"
+    }
+  ],
+  "ops": [
+    {
+      "t": 120,
+      "op": "insert",
+      "table": "ledgers",
+      "pk": {
+        "id": "LED-102"
+      },
+      "after": {
+        "account_id": "AC-55",
+        "balance": 4200,
+        "checkpoint_ts": 1200,
+        "version": "v1"
+      }
+    },
+    {
+      "t": 150,
+      "op": "update",
+      "table": "ledgers",
+      "pk": {
+        "id": "LED-100"
+      },
+      "after": {
+        "balance": 12750,
+        "checkpoint_ts": 1500,
+        "version": "v2"
+      }
+    },
+    {
+      "t": 190,
+      "op": "insert",
+      "table": "ledgers",
+      "pk": {
+        "id": "LED-100"
+      },
+      "after": {
+        "account_id": "AC-9",
+        "balance": 12500,
+        "checkpoint_ts": 1000,
+        "version": "v1"
+      }
+    },
+    {
+      "t": 230,
+      "op": "update",
+      "table": "ledgers",
+      "pk": {
+        "id": "LED-100"
+      },
+      "after": {
+        "balance": 12980,
+        "checkpoint_ts": 1800,
+        "version": "v3"
+      }
+    },
+    {
+      "t": 260,
+      "op": "delete",
+      "table": "ledgers",
+      "pk": {
+        "id": "LED-101"
+      }
+    }
+  ]
+}

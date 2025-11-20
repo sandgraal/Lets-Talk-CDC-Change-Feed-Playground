@@ -1,0 +1,115 @@
+{
+  "id": "snapshot-to-stream",
+  "name": "Snapshot ➜ Stream Handoff",
+  "description": "Showing snapshot catch-up handing off to change feed tails.",
+  "tags": [
+    "snapshot",
+    "resume",
+    "dedupe"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "string",
+      "pk": true
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "pk": false
+    },
+    {
+      "name": "balance",
+      "type": "number",
+      "pk": false
+    },
+    {
+      "name": "last_change_id",
+      "type": "string",
+      "pk": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "AC-301",
+      "customer_id": "C-77",
+      "status": "pending_snapshot",
+      "balance": 1250,
+      "last_change_id": "chg-091"
+    },
+    {
+      "id": "AC-302",
+      "customer_id": "C-78",
+      "status": "open",
+      "balance": 4200,
+      "last_change_id": "chg-094"
+    }
+  ],
+  "ops": [
+    {
+      "t": 40,
+      "op": "update",
+      "table": "accounts",
+      "pk": {
+        "id": "AC-301"
+      },
+      "after": {
+        "status": "open",
+        "balance": 1400,
+        "last_change_id": "chg-095"
+      }
+    },
+    {
+      "t": 110,
+      "op": "insert",
+      "table": "accounts",
+      "pk": {
+        "id": "AC-303"
+      },
+      "after": {
+        "customer_id": "C-79",
+        "status": "open",
+        "balance": 800,
+        "last_change_id": "chg-101"
+      }
+    },
+    {
+      "t": 185,
+      "op": "update",
+      "table": "accounts",
+      "pk": {
+        "id": "AC-302"
+      },
+      "after": {
+        "balance": 4680,
+        "last_change_id": "chg-104"
+      }
+    },
+    {
+      "t": 240,
+      "op": "delete",
+      "table": "accounts",
+      "pk": {
+        "id": "AC-301"
+      }
+    },
+    {
+      "t": 320,
+      "op": "update",
+      "table": "accounts",
+      "pk": {
+        "id": "AC-303"
+      },
+      "after": {
+        "status": "review",
+        "balance": 740,
+        "last_change_id": "chg-107"
+      }
+    }
+  ]
+}

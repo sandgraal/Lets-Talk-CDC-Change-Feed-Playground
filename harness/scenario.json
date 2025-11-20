@@ -1,8 +1,8 @@
 {
-  "id": "orders-items-transactions",
-  "name": "Orders + Items Transactions",
-  "description": "Teaching multi-table commit semantics.",
-  "highlight": "Toggle apply-on-commit to keep orders/items destinations consistent.",
+  "id": "crud-basic",
+  "name": "CRUD Basic",
+  "description": "Teaching delete visibility basics.",
+  "highlight": "Minimal ops for first-time comparator demos.",
   "schema": [
     {
       "name": "id",
@@ -10,103 +10,53 @@
       "pk": true
     },
     {
-      "name": "customer_id",
+      "name": "name",
       "type": "string",
       "pk": false
     },
     {
-      "name": "status",
+      "name": "email",
       "type": "string",
-      "pk": false
-    },
-    {
-      "name": "subtotal",
-      "type": "number",
-      "pk": false
-    },
-    {
-      "name": "shipped_ts",
-      "type": "number",
       "pk": false
     }
   ],
   "rows": [
     {
-      "id": "ORD-720",
-      "customer_id": "C-32",
-      "status": "shipped",
-      "subtotal": 412.5,
-      "shipped_ts": 520
+      "id": "1",
+      "name": "Alice",
+      "email": "alice@contoso.io"
     }
   ],
   "ops": [
     {
-      "t": 300,
+      "t": 100,
       "op": "insert",
-      "table": "orders",
+      "table": "customers",
       "pk": {
-        "id": "ORD-720"
+        "id": "1"
       },
       "after": {
-        "customer_id": "C-32",
-        "status": "pending",
-        "subtotal": 412.5
-      },
-      "txn": {
-        "id": "TX-720",
-        "index": 0,
-        "total": 3
+        "name": "Alice",
+        "email": "alice@example.com"
       }
     },
     {
-      "t": 300,
-      "op": "insert",
-      "table": "order_items",
-      "pk": {
-        "id": "ORD-720-1"
-      },
-      "after": {
-        "order_id": "ORD-720",
-        "sku": "SKU-9",
-        "qty": 2,
-        "price": 99.5
-      },
-      "txn": {
-        "id": "TX-720",
-        "index": 1,
-        "total": 3
-      }
-    },
-    {
-      "t": 300,
-      "op": "insert",
-      "table": "order_items",
-      "pk": {
-        "id": "ORD-720-2"
-      },
-      "after": {
-        "order_id": "ORD-720",
-        "sku": "SKU-44",
-        "qty": 1,
-        "price": 213.5
-      },
-      "txn": {
-        "id": "TX-720",
-        "index": 2,
-        "total": 3,
-        "last": true
-      }
-    },
-    {
-      "t": 520,
+      "t": 350,
       "op": "update",
-      "table": "orders",
+      "table": "customers",
       "pk": {
-        "id": "ORD-720"
+        "id": "1"
       },
       "after": {
-        "status": "shipped",
-        "shipped_ts": 520
+        "email": "alice@contoso.io"
+      }
+    },
+    {
+      "t": 700,
+      "op": "delete",
+      "table": "customers",
+      "pk": {
+        "id": "1"
       }
     }
   ]
