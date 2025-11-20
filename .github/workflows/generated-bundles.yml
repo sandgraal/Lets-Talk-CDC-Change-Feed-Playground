@@ -1,4 +1,6 @@
 name: Generated Bundles
+permissions:
+  contents: read
 
 on:
   push:
