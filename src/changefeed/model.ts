@@ -165,52 +165,49 @@ const enqueueTransaction = (state: PlaygroundState, events: ChangeEvent[]): Play
   };
 };
 
-  const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
-    let consumer = { ...state.consumer };
-    for (const event of readyEvents) {
-      const existing = consumer.buffered[event.txId];
-      const buffered = existing
-        ? { ...existing, events: [...existing.events, event] }
-        : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
+const applyReadyTransactions = (state: PlaygroundState, readyEvents: ChangeEvent[]): PlaygroundState => {
+  let consumer = { ...state.consumer };
+  for (const event of readyEvents) {
+    const existing = consumer.buffered[event.txId];
+    const buffered = existing
+      ? { ...existing, events: [...existing.events, event] }
+      : { events: [event], total: event.total, commitTs: event.commitTs, lsn: event.lsn };
 
     consumer = {
       ...consumer,
       buffered: { ...consumer.buffered, [event.txId]: buffered },
     };
 
-      if (state.options.applyPolicy === "apply-as-polled") {
-        consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
-        consumer.appliedLog = [...consumer.appliedLog, event];
-        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
-      } else if (buffered.events.length === buffered.total) {
-        consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
-        const { [event.txId]: _removed, ...rest } = consumer.buffered;
-        consumer.buffered = rest;
+    if (state.options.applyPolicy === "apply-as-polled") {
+      consumer.tables = applyEventToConsumer(consumer.tables, event, state.options.projectSchemaDrift);
+      consumer.appliedLog = [...consumer.appliedLog, event];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, event.commitTs);
+    } else if (buffered.events.length >= buffered.total) {
+      consumer.ready = [...consumer.ready, { events: buffered.events.sort((a, b) => a.index - b.index), commitTs: buffered.commitTs, lsn: buffered.lsn }];
+      const { [event.txId]: _removed, ...rest } = consumer.buffered;
+      consumer.buffered = rest;
     }
   }
 
-    if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
-      const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
-      const pendingCommitCandidates = [
-        ...sortedReady.map(tx => tx.commitTs),
-        ...Object.values(consumer.buffered).map(buf => buf.commitTs),
-        ...state.broker.partitions.flat().map(evt => evt.commitTs),
-      ];
-      // If there are no pending commit candidates, set floorCommitTs to Infinity.
-      // This means all ready transactions will be eligible, which is intentional.
-      // Documented for clarity.
-      const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : Infinity;
-      const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
-      const slice = eligible.slice(0, state.options.maxApplyPerTick);
-      let tables = { ...consumer.tables };
-      const remaining = sortedReady.filter(tx => !slice.includes(tx));
-      for (const tx of slice) {
-        for (const event of tx.events) {
-          tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
-        }
-        consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
-        consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
+  if (state.options.applyPolicy === "apply-on-commit" && consumer.ready.length > 0) {
+    const sortedReady = [...consumer.ready].sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
+    const pendingCommitCandidates = [
+      ...sortedReady.map(tx => tx.commitTs),
+      ...Object.values(consumer.buffered).map(buf => buf.commitTs),
+      ...state.broker.partitions.flat().map(evt => evt.commitTs),
+    ];
+    const floorCommitTs = pendingCommitCandidates.length > 0 ? Math.min(...pendingCommitCandidates) : 0;
+    const eligible = sortedReady.filter(tx => tx.commitTs <= floorCommitTs);
+    const slice = eligible.slice(0, state.options.maxApplyPerTick);
+    let tables = { ...consumer.tables };
+    const remaining = sortedReady.filter(tx => !slice.includes(tx));
+    for (const tx of slice) {
+      for (const event of tx.events) {
+        tables = applyEventToConsumer(tables, event, state.options.projectSchemaDrift);
       }
+      consumer.appliedLog = [...consumer.appliedLog, ...tx.events];
+      consumer.lastAppliedCommitTs = Math.max(consumer.lastAppliedCommitTs, tx.commitTs);
+    }
     consumer.tables = tables;
     consumer.ready = remaining;
   }
