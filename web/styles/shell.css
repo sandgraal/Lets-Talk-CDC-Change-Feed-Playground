@@ -326,10 +326,6 @@
   font-size: 0.95rem;
 }
 
-.sim-shell__description--subtle {
-  color: #475569;
-}
-
 .sim-shell__description--highlight {
   color: #1d4ed8;
   font-style: italic;
