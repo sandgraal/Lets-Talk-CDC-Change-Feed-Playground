@@ -227,6 +227,7 @@ export function ChangefeedPlayground() {
               step={0.05}
               value={viewState.options.dropProbability}
               onChange={event => dispatch({ type: "setDropProbability", probability: Number(event.target.value) })}
+              aria-valuetext={`${Math.round(viewState.options.dropProbability * 100)}%`}
             />
             <span className="cf-field__value">{Math.round(viewState.options.dropProbability * 100)}%</span>
           </label>
