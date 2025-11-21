@@ -30,14 +30,22 @@ const EventCard = memo(({
   showAvailability = false,
   tone,
   showSchemaVersion = false,
+  isHighlighted = false,
+  onHighlight,
 }: {
   event: ChangeEvent;
   showPartition?: boolean;
   showAvailability?: boolean;
   tone?: "muted" | "active";
   showSchemaVersion?: boolean;
+  isHighlighted?: boolean;
+  onHighlight?: (lsn: number | null) => void;
 }) => (
-  <div className={`cf-event-card${tone ? ` cf-event-card--${tone}` : ""}`}>
+  <div 
+    className={`cf-event-card${tone ? ` cf-event-card--${tone}` : ""}${isHighlighted ? " cf-event-card--highlighted" : ""}`}
+    onClick={() => onHighlight?.(isHighlighted ? null : event.lsn)}
+    style={{ cursor: onHighlight ? "pointer" : undefined }}
+  >
     <div className="cf-event-card__header">
       <TypeBadge type={event.type} />
       <span className="cf-event-card__tx">tx {event.txId}</span>
@@ -155,6 +163,7 @@ export function ChangefeedPlayground() {
   const [speed, setSpeed] = useState<(typeof SPEED_OPTIONS)[number]>(1);
   const [isRunning, setIsRunning] = useState(true);
   const [eventFilter, setEventFilter] = useState<string>("");
+  const [highlightedLsn, setHighlightedLsn] = useState<number | null>(null);
 
   const viewState: PlaygroundViewState = useMemo(
     () => ({ ...selectLanes(state), clockMs: state.clockMs }),
@@ -191,6 +200,7 @@ export function ChangefeedPlayground() {
     // Reset and pause before running scenario
     dispatch({ type: "reset" });
     setIsRunning(false);
+    setHighlightedLsn(null);
     
     // Run scenario actions with delays
     scenario.actions.forEach((action, index) => {
@@ -202,6 +212,10 @@ export function ChangefeedPlayground() {
         }
       }, index * 800);
     });
+  }, []);
+
+  const handleHighlightEvent = useCallback((lsn: number | null) => {
+    setHighlightedLsn(lsn);
   }, []);
 
   const filterEvents = useCallback((events: ChangeEvent[]) => {
@@ -229,6 +243,11 @@ export function ChangefeedPlayground() {
           <p className="cf-shell__lede">
             Drive inserts, updates, deletes, and multi-table transactions to watch ordering, drift, and apply policies across the
             pipeline.
+            {highlightedLsn !== null && (
+              <span className="cf-flow-hint">
+                {" "}💡 <strong>Tracking LSN {highlightedLsn}</strong> across lanes (click event to deselect)
+              </span>
+            )}
           </p>
         </div>
         <div className="cf-shell__metrics" role="status" aria-live="polite">
@@ -391,7 +410,13 @@ export function ChangefeedPlayground() {
             <VirtualEventStack
               events={recentEvents}
               renderEvent={(evt) => (
-                <EventCard key={`source-${evt.lsn}`} event={evt} showSchemaVersion={viewState.options.schemaDrift} />
+                <EventCard 
+                  key={`source-${evt.lsn}`} 
+                  event={evt} 
+                  showSchemaVersion={viewState.options.schemaDrift}
+                  isHighlighted={highlightedLsn === evt.lsn}
+                  onHighlight={handleHighlightEvent}
+                />
               )}
               threshold={30}
               maxHeight={500}
@@ -433,7 +458,9 @@ export function ChangefeedPlayground() {
                               showPartition 
                               showAvailability 
                               showSchemaVersion={viewState.options.schemaDrift}
-                              tone="muted" 
+                              tone="muted"
+                              isHighlighted={highlightedLsn === evt.lsn}
+                              onHighlight={handleHighlightEvent}
                             />
                           )}
                           threshold={20}
@@ -493,7 +520,9 @@ export function ChangefeedPlayground() {
                               key={`buffered-${evt.lsn}`} 
                               event={evt} 
                               showSchemaVersion={viewState.options.schemaDrift}
-                              tone="muted" 
+                              tone="muted"
+                              isHighlighted={highlightedLsn === evt.lsn}
+                              onHighlight={handleHighlightEvent}
                             />
                           )}
                           threshold={20}
@@ -522,7 +551,9 @@ export function ChangefeedPlayground() {
                               key={`applied-${evt.lsn}`} 
                               event={evt} 
                               showSchemaVersion={viewState.options.schemaDrift}
-                              tone="active" 
+                              tone="active"
+                              isHighlighted={highlightedLsn === evt.lsn}
+                              onHighlight={handleHighlightEvent}
                             />
                           )}
                           threshold={20}

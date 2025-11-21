@@ -96,6 +96,28 @@
   max-width: 52ch;
 }
 
+.cf-flow-hint {
+  color: var(--cf-accent-2);
+  background: rgba(168, 85, 247, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-top: 0.5rem;
+  animation: fade-in 0.3s ease-in;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .cf-shell__metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -509,6 +531,29 @@
   border-color: rgba(34, 197, 94, 0.6);
   border-left-color: var(--cf-positive);
   box-shadow: 0 10px 30px rgba(34, 197, 94, 0.1);
+}
+
+.cf-event-card--highlighted {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: var(--cf-accent-2);
+  border-left-color: var(--cf-accent-2);
+  border-left-width: 4px;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+  transform: scale(1.02);
+  z-index: 10;
+  animation: pulse-highlight 2s ease-in-out infinite;
+}
+
+@keyframes pulse-highlight {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4),
+      0 0 40px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.6),
+      0 0 60px rgba(168, 85, 247, 0.3);
+  }
 }
 
 .cf-event-card__header {
