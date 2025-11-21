@@ -505,6 +505,33 @@
 
       <section
         class="workspace-panel"
+        id="changefeed-playground"
+        aria-labelledby="changefeedPlaygroundTitle"
+      >
+        <div class="section-title-row">
+          <div>
+            <p class="section-eyebrow">Playground core</p>
+            <h2 id="changefeedPlaygroundTitle" class="section-title">
+              Change Feed Atomicity Playground
+            </h2>
+            <p class="section-lead">
+              Three-lane view of source rows, change feed partitions, and consumer apply policies. Toggle drift, drop faults,
+              and backlog throttling to see how transactions behave.
+            </p>
+          </div>
+          <div class="section-actions" role="group" aria-label="Playground actions">
+            <span class="section-pill">Apply on commit vs as polled</span>
+            <span class="section-pill">Commit &amp; schema drift</span>
+            <span class="section-pill">Lag &amp; backlog badges</span>
+          </div>
+        </div>
+        <div id="changefeedPlaygroundRoot" class="playground-react-root">
+          <p class="sim-shell__placeholder">Preparing the change feed playground…</p>
+        </div>
+      </section>
+
+      <section
+        class="workspace-panel"
         id="sim-shell-preview"
         aria-labelledby="simShellTitle"
       >
@@ -688,6 +715,7 @@
           ];
     </script>
     <script src="./assets/feature-flags.js"></script>
+    <script src="./assets/changefeed-playground-loader.js"></script>
     <script src="./assets/ui-shell-loader.js"></script>
     <script>
       (() => {
