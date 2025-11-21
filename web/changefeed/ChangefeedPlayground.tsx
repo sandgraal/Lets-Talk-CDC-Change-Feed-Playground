@@ -151,6 +151,7 @@ export function ChangefeedPlayground() {
   const [state, dispatch] = useReducer(reducePlayground, undefined, () => createInitialState());
   const [speed, setSpeed] = useState<(typeof SPEED_OPTIONS)[number]>(1);
   const [isRunning, setIsRunning] = useState(true);
+  const [eventFilter, setEventFilter] = useState<string>("");
 
   const viewState: PlaygroundViewState = useMemo(
     () => ({ ...selectLanes(state), clockMs: state.clockMs }),
@@ -179,7 +180,25 @@ export function ChangefeedPlayground() {
     dispatch({ type: "setProjectSchemaDrift", project });
   }, []);
 
-  const recentEvents = useMemo(() => viewState.source.log.slice(-EVENT_LOG_LIMIT).reverse(), [viewState.source.log]);
+  const handleFilterChange = useCallback((filter: string) => {
+    setEventFilter(filter);
+  }, []);
+
+  const filterEvents = useCallback((events: ChangeEvent[]) => {
+    if (!eventFilter) return events;
+    const lower = eventFilter.toLowerCase();
+    return events.filter(evt => 
+      evt.table.toLowerCase().includes(lower) ||
+      evt.txId.toLowerCase().includes(lower) ||
+      evt.pk.toString().includes(lower) ||
+      evt.type.toLowerCase().includes(lower)
+    );
+  }, [eventFilter]);
+
+  const recentEvents = useMemo(() => {
+    const filtered = filterEvents(viewState.source.log);
+    return filtered.slice(-EVENT_LOG_LIMIT).reverse();
+  }, [viewState.source.log, filterEvents]);
 
   return (
     <section className="cf-shell" aria-label="Change feed playground">
@@ -212,6 +231,26 @@ export function ChangefeedPlayground() {
 
       <div className="cf-toolbar" role="group" aria-label="Playground controls">
         <div className="cf-toolbar__row">
+          <label className="cf-field cf-field--search">
+            <span className="cf-field__label">🔍</span>
+            <input
+              type="text"
+              placeholder="Filter events (table, tx, pk, type)"
+              value={eventFilter}
+              onChange={event => handleFilterChange(event.target.value)}
+              aria-label="Filter events by table, transaction ID, primary key, or type"
+            />
+            {eventFilter && (
+              <button 
+                type="button" 
+                className="cf-field__clear"
+                onClick={() => handleFilterChange("")}
+                aria-label="Clear filter"
+              >
+                ×
+              </button>
+            )}
+          </label>
           <label className="cf-field">
             <span className="cf-field__label">Speed</span>
             <input
@@ -352,24 +391,27 @@ export function ChangefeedPlayground() {
           </header>
           <div className="cf-lane__body">
             <div className="cf-partitions">
-              {viewState.broker.partitions.map((queue, idx) => (
-                <div key={`partition-${idx}`} className="cf-partition">
-                  <div className="cf-partition__header">Partition {idx}</div>
-                  <div className="cf-partition__queue">
-                    {queue.length === 0 ? <p className="cf-empty">idle</p> : null}
-                    {queue.map(evt => (
-                      <EventCard 
-                        key={`broker-${evt.lsn}`} 
-                        event={evt} 
-                        showPartition 
-                        showAvailability 
-                        showSchemaVersion={viewState.options.schemaDrift}
-                        tone="muted" 
-                      />
-                    ))}
+              {viewState.broker.partitions.map((queue, idx) => {
+                const filteredQueue = filterEvents(queue);
+                return (
+                  <div key={`partition-${idx}`} className="cf-partition">
+                    <div className="cf-partition__header">Partition {idx}</div>
+                    <div className="cf-partition__queue">
+                      {filteredQueue.length === 0 ? <p className="cf-empty">{eventFilter ? "no matches" : "idle"}</p> : null}
+                      {filteredQueue.map(evt => (
+                        <EventCard 
+                          key={`broker-${evt.lsn}`} 
+                          event={evt} 
+                          showPartition 
+                          showAvailability 
+                          showSchemaVersion={viewState.options.schemaDrift}
+                          tone="muted" 
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -400,26 +442,26 @@ export function ChangefeedPlayground() {
               <div>
                 <p className="cf-subtitle">Buffered</p>
                 <div className="cf-event-stack">
-                  {Object.values(viewState.consumer.buffered).map(buf =>
-                    buf.events.map(evt => (
-                      <EventCard 
-                        key={`buffered-${evt.lsn}`} 
-                        event={evt} 
-                        showSchemaVersion={viewState.options.schemaDrift}
-                        tone="muted" 
-                      />
-                    )),
-                  )}
+                  {Object.values(viewState.consumer.buffered).flatMap(buf => filterEvents(buf.events)).map(evt => (
+                    <EventCard 
+                      key={`buffered-${evt.lsn}`} 
+                      event={evt} 
+                      showSchemaVersion={viewState.options.schemaDrift}
+                      tone="muted" 
+                    />
+                  ))}
                   {viewState.consumer.ready.flatMap(tx => tx.events).length === 0 &&
                   Object.values(viewState.consumer.buffered).flatMap(buf => buf.events).length === 0 ? (
                     <p className="cf-empty">No buffered events</p>
+                  ) : eventFilter && Object.values(viewState.consumer.buffered).flatMap(buf => filterEvents(buf.events)).length === 0 ? (
+                    <p className="cf-empty">No matching buffered events</p>
                   ) : null}
                 </div>
               </div>
               <div>
                 <p className="cf-subtitle">Applied</p>
                 <div className="cf-event-stack">
-                  {viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT).map(evt => (
+                  {filterEvents(viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT)).map(evt => (
                     <EventCard 
                       key={`applied-${evt.lsn}`} 
                       event={evt} 
@@ -427,6 +469,9 @@ export function ChangefeedPlayground() {
                       tone="active" 
                     />
                   ))}
+                  {eventFilter && filterEvents(viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT)).length === 0 ? (
+                    <p className="cf-empty">No matching applied events</p>
+                  ) : null}
                 </div>
               </div>
             </div>

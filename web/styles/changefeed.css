@@ -179,6 +179,59 @@
   gap: 0.4rem;
 }
 
+.cf-field--search {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.cf-field--search input[type="text"] {
+  width: 100%;
+  background: var(--cf-card);
+  color: var(--cf-text);
+  border: 1px solid var(--cf-border);
+  border-radius: 0.5rem;
+  padding: 0.4rem 2rem 0.4rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.cf-field--search input[type="text"]::placeholder {
+  color: var(--cf-muted);
+}
+
+.cf-field--search input[type="text"]:focus {
+  outline: none;
+  border-color: var(--cf-accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.cf-field__clear {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--cf-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.cf-field__clear:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--cf-danger);
+}
+
 .cf-toolbar__actions {
   display: flex;
   gap: 0.5rem;
