@@ -76,6 +76,13 @@
       '<p class="sim-shell__placeholder">Enable the comparator_v2 feature flag to load the CDC Method Comparator.</p>';
   }
 
+  function markMissingBundle() {
+    const root = document.getElementById("simShellRoot");
+    if (!root) return;
+    root.innerHTML =
+      '<p class="sim-shell__placeholder">Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.</p>';
+  }
+
   async function loadShell() {
     try {
       await importGeneratedModule(bundleHref);
@@ -85,6 +92,7 @@
         "Simulator UI shell bundle missing. Run `npm run build:web` to generate assets/generated/ui-shell.js before loading the page.",
         error
       );
+      markMissingBundle();
     }
   }
 
