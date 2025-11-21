@@ -9,6 +9,8 @@ import {
 } from "../../src";
 import { Tooltip } from "./Tooltip";
 import { VirtualEventStack } from "./VirtualEventStack";
+import { DemoScenariosPanel } from "./DemoScenariosPanel";
+import type { DemoScenario } from "./DemoScenarios";
 
 const SPEED_OPTIONS = [0.5, 1, 2] as const;
 const TICK_BASE_MS = 50;
@@ -185,6 +187,23 @@ export function ChangefeedPlayground() {
     setEventFilter(filter);
   }, []);
 
+  const handleRunScenario = useCallback((scenario: DemoScenario) => {
+    // Reset and pause before running scenario
+    dispatch({ type: "reset" });
+    setIsRunning(false);
+    
+    // Run scenario actions with delays
+    scenario.actions.forEach((action, index) => {
+      setTimeout(() => {
+        dispatch(action);
+        // Resume on last action
+        if (index === scenario.actions.length - 1) {
+          setTimeout(() => setIsRunning(true), 500);
+        }
+      }, index * 800);
+    });
+  }, []);
+
   const filterEvents = useCallback((events: ChangeEvent[]) => {
     if (!eventFilter) return events;
     const lower = eventFilter.toLowerCase();
@@ -334,6 +353,8 @@ export function ChangefeedPlayground() {
           </div>
         </div>
       </div>
+
+      <DemoScenariosPanel onRunScenario={handleRunScenario} />
 
       <div className="cf-lanes" role="group" aria-label="Change feed lanes">
         <div className="cf-lane">
