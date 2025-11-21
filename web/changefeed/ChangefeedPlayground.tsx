@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState, memo, useCallback } from "react";
 import {
   PROJECTED_COLUMNS,
   createInitialState,
@@ -7,18 +7,21 @@ import {
   type ApplyPolicy,
   type ChangeEvent,
 } from "../../src";
+import { Tooltip } from "./Tooltip";
 
 const SPEED_OPTIONS = [0.5, 1, 2] as const;
 const TICK_BASE_MS = 50;
 const EVENT_LOG_LIMIT = 12;
+const MAX_TRANSACTIONS_SHOWN = 20;
 
 const formatTs = (value: number) => `${value} ms`;
 
-const TypeBadge = ({ type }: { type: ChangeEvent["type"] }) => (
+const TypeBadge = memo(({ type }: { type: ChangeEvent["type"] }) => (
   <span className={`cf-badge cf-badge--${type}`}>{type}</span>
-);
+));
+TypeBadge.displayName = "TypeBadge";
 
-const EventCard = ({
+const EventCard = memo(({
   event,
   showPartition = false,
   showAvailability = false,
@@ -43,11 +46,11 @@ const EventCard = ({
     </div>
     <dl className="cf-event-card__meta">
       <div>
-        <dt>lsn</dt>
+        <dt><Tooltip data-tooltip="Log Sequence Number - unique, monotonically increasing identifier ensuring event ordering">lsn</Tooltip></dt>
         <dd>{event.lsn}</dd>
       </div>
       <div>
-        <dt>commit</dt>
+        <dt><Tooltip data-tooltip="Database timestamp when the transaction was committed">commit</Tooltip></dt>
         <dd>{formatTs(event.commitTs)}</dd>
       </div>
       <div>
@@ -74,7 +77,8 @@ const EventCard = ({
       <div className="cf-event-card__pk">pk {event.pk}</div>
     </div>
   </div>
-);
+));
+EventCard.displayName = "EventCard";
 
 type PlaygroundViewState = ReturnType<typeof selectLanes> & { clockMs: number };
 
@@ -87,44 +91,60 @@ type TxProgress = {
 };
 
 const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
-  const sourceEvents = state.source.log;
-  const brokerEvents = state.broker.partitions.flat();
-  const bufferedEvents = Object.values(state.consumer.buffered).flatMap(buf => buf.events);
-  const readyEvents = state.consumer.ready.flatMap(buf => buf.events);
-  const appliedEvents = state.consumer.appliedLog;
-
-  const stageMap: Array<[ChangeEvent[], keyof TxProgress["stages"]]> = [
-    [sourceEvents, "source"],
-    [brokerEvents, "broker"],
-    [bufferedEvents, "buffered"],
-    [readyEvents, "ready"],
-    [appliedEvents, "applied"],
-  ];
+  // Early return if no events
+  if (state.source.log.length === 0) return [];
 
   const byTx = new Map<string, TxProgress>();
 
-  const pushEvent = (event: ChangeEvent, stage: keyof TxProgress["stages"]) => {
+  // Process source events
+  for (const event of state.source.log) {
     const existing = byTx.get(event.txId);
-    const base: TxProgress =
-      existing ?? {
+    if (existing) {
+      existing.stages.source += 1;
+    } else {
+      byTx.set(event.txId, {
         txId: event.txId,
         total: event.total,
         commitTs: event.commitTs,
         lsn: event.lsn,
-        stages: { source: 0, broker: 0, buffered: 0, ready: 0, applied: 0 },
-      };
-    base.stages[stage] += 1;
-    base.total = Math.max(base.total, event.total);
-    base.commitTs = Math.max(base.commitTs, event.commitTs);
-    base.lsn = Math.max(base.lsn, event.lsn);
-    byTx.set(event.txId, base);
-  };
+        stages: { source: 1, broker: 0, buffered: 0, ready: 0, applied: 0 },
+      });
+    }
+  }
 
-  stageMap.forEach(([events, stage]) => {
-    events.forEach(evt => pushEvent(evt, stage));
-  });
+  // Process broker events
+  for (const partition of state.broker.partitions) {
+    for (const event of partition) {
+      const tx = byTx.get(event.txId);
+      if (tx) tx.stages.broker += 1;
+    }
+  }
 
-  return Array.from(byTx.values()).sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
+  // Process buffered events
+  for (const buf of Object.values(state.consumer.buffered)) {
+    for (const event of buf.events) {
+      const tx = byTx.get(event.txId);
+      if (tx) tx.stages.buffered += 1;
+    }
+  }
+
+  // Process ready events
+  for (const ready of state.consumer.ready) {
+    for (const event of ready.events) {
+      const tx = byTx.get(event.txId);
+      if (tx) tx.stages.ready += 1;
+    }
+  }
+
+  // Process applied events
+  for (const event of state.consumer.appliedLog) {
+    const tx = byTx.get(event.txId);
+    if (tx) tx.stages.applied += 1;
+  }
+
+  return Array.from(byTx.values())
+    .sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs))
+    .slice(-MAX_TRANSACTIONS_SHOWN);
 };
 
 export function ChangefeedPlayground() {
@@ -147,9 +167,17 @@ export function ChangefeedPlayground() {
 
   const transactions = useMemo(() => buildTransactionProgress(viewState), [viewState]);
 
-  const handlePolicyChange = (policy: ApplyPolicy) => dispatch({ type: "setApplyPolicy", policy });
-  const handleSchemaToggle = (enabled: boolean) => dispatch({ type: "toggleSchemaDrift", enabled });
-  const handleProjectToggle = (project: boolean) => dispatch({ type: "setProjectSchemaDrift", project });
+  const handlePolicyChange = useCallback((policy: ApplyPolicy) => {
+    dispatch({ type: "setApplyPolicy", policy });
+  }, []);
+
+  const handleSchemaToggle = useCallback((enabled: boolean) => {
+    dispatch({ type: "toggleSchemaDrift", enabled });
+  }, []);
+
+  const handleProjectToggle = useCallback((project: boolean) => {
+    dispatch({ type: "setProjectSchemaDrift", project });
+  }, []);
 
   const recentEvents = useMemo(() => viewState.source.log.slice(-EVENT_LOG_LIMIT).reverse(), [viewState.source.log]);
 
@@ -198,7 +226,7 @@ export function ChangefeedPlayground() {
             <span className="cf-field__value">{speed}x</span>
           </label>
           <label className="cf-field">
-            <span className="cf-field__label">Apply policy</span>
+            <span className="cf-field__label"><Tooltip data-tooltip="When to apply changes: on-commit waits for full transaction, as-polled applies each event immediately">Apply policy</Tooltip></span>
             <select value={viewState.options.applyPolicy} onChange={event => handlePolicyChange(event.target.value as ApplyPolicy)}>
               <option value="apply-on-commit">Apply on commit</option>
               <option value="apply-as-polled">Apply as polled</option>
@@ -210,7 +238,7 @@ export function ChangefeedPlayground() {
               checked={viewState.options.commitDrift}
               onChange={event => dispatch({ type: "toggleCommitDrift", enabled: event.target.checked })}
             />
-            <span>Commit drift</span>
+            <span><Tooltip data-tooltip="Simulates delays between transaction commit and events appearing in the change feed">Commit drift</Tooltip></span>
           </label>
           <label className="cf-field cf-field--toggle">
             <input
@@ -218,7 +246,7 @@ export function ChangefeedPlayground() {
               checked={viewState.options.schemaDrift}
               onChange={event => handleSchemaToggle(event.target.checked)}
             />
-            <span>Schema drift</span>
+            <span><Tooltip data-tooltip="Simulates schema evolution where events contain different column versions">Schema drift</Tooltip></span>
           </label>
           <label className="cf-field cf-field--toggle">
             <input
@@ -360,8 +388,9 @@ export function ChangefeedPlayground() {
                   className={`cf-badge-lag ${viewState.metrics.lagMs < 200 ? "cf-badge-lag--low" : viewState.metrics.lagMs < 500 ? "cf-badge-lag--medium" : ""}`}
                   role="status" 
                   aria-live="polite"
+                  title="Time delay between source commit and consumer application"
                 >
-                  ⏱️ {formatTs(viewState.metrics.lagMs)} lag
+                  ⏱️ <Tooltip data-tooltip="Time delay between source commit and consumer application">{formatTs(viewState.metrics.lagMs)}</Tooltip> lag
                 </span>
               )}
             </div>

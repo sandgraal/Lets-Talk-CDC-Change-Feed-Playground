@@ -10,6 +10,49 @@
   --cf-positive: #22c55e;
   --cf-warning: #f59e0b;
   --cf-danger: #ef4444;
+  --cf-tooltip-bg: #1e293b;
+  --cf-tooltip-border: #334155;
+}
+
+/* Tooltip Styles */
+.cf-tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted var(--cf-accent);
+  cursor: help;
+}
+
+.cf-tooltip[data-tooltip]:hover::after,
+.cf-tooltip[data-tooltip]:focus::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--cf-tooltip-bg);
+  color: var(--cf-text);
+  border: 1px solid var(--cf-tooltip-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.cf-tooltip[data-tooltip]:hover::before,
+.cf-tooltip[data-tooltip]:focus::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--cf-tooltip-border);
+  z-index: 1000;
+  pointer-events: none;
 }
 
 .cf-shell {
