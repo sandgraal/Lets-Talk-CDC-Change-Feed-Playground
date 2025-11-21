@@ -83,7 +83,7 @@ const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
   // Early return if no data to process
   if (
     state.source.log.length === 0 &&
-    state.broker.partitions.every(p => p.length === 0) &&
+    state.broker.partitions.flat().length === 0 &&
     Object.keys(state.consumer.buffered).length === 0 &&
     state.consumer.ready.length === 0 &&
     state.consumer.appliedLog.length === 0
