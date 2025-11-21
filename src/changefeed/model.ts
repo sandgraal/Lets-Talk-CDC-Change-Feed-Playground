@@ -72,6 +72,7 @@ export type PlaygroundAction =
   | { type: "toggleCommitDrift"; enabled: boolean }
   | { type: "toggleSchemaDrift"; enabled: boolean }
   | { type: "setDropProbability"; probability: number }
+  | { type: "setProjectSchemaDrift"; project: boolean }
   | { type: "setMaxApply"; maxApplyPerTick: number }
   | { type: "reset" };
 
@@ -425,6 +426,8 @@ export const reducePlayground = (state: PlaygroundState, action: PlaygroundActio
       return { ...state, options: { ...state.options, commitDrift: action.enabled } };
     case "toggleSchemaDrift":
       return { ...state, options: { ...state.options, schemaDrift: action.enabled }, schemaVersion: action.enabled ? state.schemaVersion + 1 : state.schemaVersion };
+    case "setProjectSchemaDrift":
+      return { ...state, options: { ...state.options, projectSchemaDrift: action.project } };
     case "setMaxApply":
       return { ...state, options: { ...state.options, maxApplyPerTick: action.maxApplyPerTick } };
     case "insertCustomers": {

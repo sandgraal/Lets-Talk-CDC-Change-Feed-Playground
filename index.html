@@ -149,70 +149,6 @@
       </section>
 
       <section class="workspace" id="playground">
-        <aside class="sidebar" aria-labelledby="learningTitle">
-          <h2 id="learningTitle">Learning path</h2>
-          <p class="sidebar-intro">
-            Work through each step to understand how change data capture
-            scenarios are assembled.
-          </p>
-          <ol class="learning-steps" id="learningSteps">
-            <li>
-              <button
-                type="button"
-                class="learning-step"
-                data-step="schema"
-                data-target="#schema"
-              >
-                <span class="step-index">1</span>
-                <span class="step-body">
-                  <span class="step-title">Model your schema</span>
-                  <span class="step-detail"
-                    >Define columns plus primary keys.</span
-                  >
-                </span>
-                <span class="step-status" aria-live="polite">Pending</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                class="learning-step"
-                data-step="rows"
-                data-target="#table-state"
-              >
-                <span class="step-index">2</span>
-                <span class="step-body">
-                  <span class="step-title">Populate rows</span>
-                  <span class="step-detail"
-                    >Seed or insert data to operate on.</span
-                  >
-                </span>
-                <span class="step-status" aria-live="polite">Pending</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                class="learning-step"
-                data-step="events"
-                data-target="#change-feed"
-              >
-                <span class="step-index">3</span>
-                <span class="step-body">
-                  <span class="step-title">Inspect events</span>
-                  <span class="step-detail"
-                    >Trigger operations and review the log.</span
-                  >
-                </span>
-                <span class="step-status" aria-live="polite">Pending</span>
-              </button>
-            </li>
-          </ol>
-          <div class="learning-tip" id="learningTip">
-            Add at least one column to begin building your scenario.
-          </div>
-        </aside>
-
         <div class="workspace-panels">
           <!-- Schema + Row editor -->
           <section class="card step-card" data-step="schema" id="schema">
@@ -505,6 +441,33 @@
 
       <section
         class="workspace-panel"
+        id="changefeed-playground"
+        aria-labelledby="changefeedPlaygroundTitle"
+      >
+        <div class="section-title-row">
+          <div>
+            <p class="section-eyebrow">Playground core</p>
+            <h2 id="changefeedPlaygroundTitle" class="section-title">
+              Change Feed Atomicity Playground
+            </h2>
+            <p class="section-lead">
+              Three-lane view of source rows, change feed partitions, and consumer apply policies. Toggle drift, drop faults,
+              and backlog throttling to see how transactions behave.
+            </p>
+          </div>
+          <div class="section-actions" role="group" aria-label="Playground actions">
+            <span class="section-pill">Apply on commit vs as polled</span>
+            <span class="section-pill">Commit &amp; schema drift</span>
+            <span class="section-pill">Lag &amp; backlog badges</span>
+          </div>
+        </div>
+        <div id="changefeedPlaygroundRoot" class="playground-react-root">
+          <p class="sim-shell__placeholder">Preparing the change feed playground…</p>
+        </div>
+      </section>
+
+      <section
+        class="workspace-panel"
         id="sim-shell-preview"
         aria-labelledby="simShellTitle"
       >
@@ -688,6 +651,7 @@
           ];
     </script>
     <script src="./assets/feature-flags.js"></script>
+    <script src="./assets/changefeed-playground-loader.js"></script>
     <script src="./assets/ui-shell-loader.js"></script>
     <script>
       (() => {

@@ -31,6 +31,7 @@ To enable the CDC Method Comparator and all features:
    - `assets/generated/sim-bundle.js` (simulator engines)
    - `assets/generated/ui-shell.js` (React comparator UI)
    - `assets/generated/ui-shell.css` (comparator styles)
+   - `assets/generated/changefeed-playground.js` (atomicity playground)
 
 3. **Open in browser:**
    ```bash
