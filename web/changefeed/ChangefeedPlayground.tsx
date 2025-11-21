@@ -233,7 +233,13 @@ export function ChangefeedPlayground() {
             <span className="cf-field__value">{Math.round(viewState.options.dropProbability * 100)}%</span>
           </label>
           <div className="cf-toolbar__actions">
-            <button type="button" onClick={() => setIsRunning(prev => !prev)}>{isRunning ? "Pause" : "Resume"}</button>
+            <button
+              type="button"
+              onClick={() => setIsRunning(prev => !prev)}
+              aria-label={isRunning ? "Pause simulation" : "Resume simulation"}
+            >
+              {isRunning ? "Pause" : "Resume"}
+            </button>
             <button type="button" onClick={() => dispatch({ type: "reset" })}>Reset &amp; Seed</button>
           </div>
         </div>
