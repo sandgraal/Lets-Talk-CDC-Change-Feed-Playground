@@ -134,7 +134,7 @@ export function ChangefeedPlayground() {
     if (!isRunning) return undefined;
     const handle = window.setInterval(() => {
       dispatch({ type: "tick", deltaMs: Math.round(TICK_BASE_MS * speed) });
-    }, Math.round(TICK_BASE_MS * 2));
+    }, Math.round(TICK_BASE_MS * 2 / speed));
     return () => window.clearInterval(handle);
   }, [speed, isRunning]);
 
