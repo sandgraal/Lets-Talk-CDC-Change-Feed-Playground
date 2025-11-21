@@ -5,7 +5,7 @@
   function markUnavailable(message) {
     const root = typeof document !== "undefined" ? document.getElementById(mountId) : null;
     if (root) {
-      root.innerHTML = `<p class="cf-shell__placeholder">${message}</p>`;
+      root.innerHTML = `<p class="sim-shell__placeholder">${message}</p>`;
     }
   }
 
