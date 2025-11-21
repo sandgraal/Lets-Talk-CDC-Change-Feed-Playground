@@ -13,7 +13,7 @@
     try {
       await import(/* @vite-ignore */ bundleHref);
     } catch (error) {
-      console.warn("Change feed playground bundle missing. Run `npm run build:web` to generate assets/generated/changefeed-playground.js.", error);
+      console.warn("Change feed playground bundle missing. Run `npm run build:web` to generate ./generated/changefeed-playground.js.", error);
       markUnavailable("Build the playground bundle to view the interactive lanes.");
     }
   }
