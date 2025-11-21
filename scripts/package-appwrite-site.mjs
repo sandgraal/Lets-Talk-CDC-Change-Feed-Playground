@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, relative } from 'node:path';
 import AdmZip from 'adm-zip';
 
 const projectRoot = resolve(new URL(import.meta.url).pathname, '..', '..');
@@ -69,8 +69,8 @@ async function prepareAppwriteBundle() {
   zip.addLocalFolder(outDir);
   zip.writeZip(zipPath);
 
-  const relativeOut = outDir.replace(`${projectRoot}/`, '');
-  const relativeZip = zipPath.replace(`${projectRoot}/`, '');
+  const relativeOut = relative(projectRoot, outDir);
+  const relativeZip = relative(projectRoot, zipPath);
   // eslint-disable-next-line no-console
   console.log(`Appwrite site bundle ready:\n- Directory: ${relativeOut}\n- Archive:   ${relativeZip}`);
 }
