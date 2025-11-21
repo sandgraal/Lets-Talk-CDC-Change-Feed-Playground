@@ -80,19 +80,16 @@ type TxProgress = {
 };
 
 const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
-  const sourceEvents = state.source.log;
-  const brokerEvents = state.broker.partitions.flat();
-  const bufferedEvents = Object.values(state.consumer.buffered).flatMap(buf => buf.events);
-  const readyEvents = state.consumer.ready.flatMap(buf => buf.events);
-  const appliedEvents = state.consumer.appliedLog;
-
-  const stageMap: Array<[ChangeEvent[], keyof TxProgress["stages"]]> = [
-    [sourceEvents, "source"],
-    [brokerEvents, "broker"],
-    [bufferedEvents, "buffered"],
-    [readyEvents, "ready"],
-    [appliedEvents, "applied"],
-  ];
+  // Early return if no data to process
+  if (
+    state.source.log.length === 0 &&
+    state.broker.partitions.every(p => p.length === 0) &&
+    Object.keys(state.consumer.buffered).length === 0 &&
+    state.consumer.ready.length === 0 &&
+    state.consumer.appliedLog.length === 0
+  ) {
+    return [];
+  }
 
   const byTx = new Map<string, TxProgress>();
 
@@ -113,9 +110,28 @@ const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
     byTx.set(event.txId, base);
   };
 
-  stageMap.forEach(([events, stage]) => {
-    events.forEach(evt => pushEvent(evt, stage));
-  });
+  // Process events in a single pass without creating intermediate arrays
+  state.source.log.forEach(evt => pushEvent(evt, "source"));
+  
+  for (const partition of state.broker.partitions) {
+    for (const evt of partition) {
+      pushEvent(evt, "broker");
+    }
+  }
+  
+  for (const buf of Object.values(state.consumer.buffered)) {
+    for (const evt of buf.events) {
+      pushEvent(evt, "buffered");
+    }
+  }
+  
+  for (const buf of state.consumer.ready) {
+    for (const evt of buf.events) {
+      pushEvent(evt, "ready");
+    }
+  }
+  
+  state.consumer.appliedLog.forEach(evt => pushEvent(evt, "applied"));
 
   return Array.from(byTx.values()).sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
 };
@@ -439,6 +455,7 @@ export function ChangefeedPlayground() {
                     aria-valuemax={tx.total}
                     style={{ width: `${Math.min(1, buffered / tx.total) * 100}%` }}
                   />
+                </div>
               </div>
             );
           })}
