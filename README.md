@@ -44,11 +44,13 @@ To enable the CDC Method Comparator and all features:
 ## Key Features
 
 ### 🚀 Performance Optimized
+
 - **Virtual Scrolling:** Handles 500+ events at 60fps with automatic windowing
 - **React.memo & useCallback:** Optimized renders prevent unnecessary re-calculations
 - **Smart Transaction Limits:** Display capped at 20 most recent for smooth UX
 
 ### 🎓 Beginner-Friendly
+
 - **Guided Demo Scenarios:** 6 one-click workflows showcasing CDC features
   - Multi-Table Transactions, Schema Evolution, Commit Lag & Drift
   - Backlog Recovery, Event Drops & Faults, Apply Policies
@@ -56,11 +58,13 @@ To enable the CDC Method Comparator and all features:
 - **Visual Event Tracking:** Click any event card to highlight and trace it across all lanes
 
 ### 🔧 Developer Tools
+
 - **Event Search & Filter:** Find events by table, transaction ID, primary key, or type across all lanes
 - **Cross-Lane Highlighting:** Click an event to see its journey from source → broker → consumer
 - **Real-time Metrics:** Lag, backlog, and dropped events displayed with visual indicators
 
 ### 📊 Interactive Playground
+
 - **Three-Lane Visualization:** Source rows → Change feed partitions → Consumer tables
 - **Apply Policy Toggle:** Compare apply-on-commit vs apply-as-polled behavior
 - **Fault Injection:** Simulate network drops (0-40%) to test resilience
@@ -117,19 +121,19 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 
 ### Scenario matrix
 
-| Scenario                    | Use it when…                                                 | Highlights                                      |
-| --------------------------- | ------------------------------------------------------------ | ----------------------------------------------- |
-| Omnichannel Orders          | Walking through status transitions and fulfilment edge cases | Mix of inserts/updates with delete coverage; great for lag comparisons |
-| Real-time Payments          | Demonstrating idempotent updates or risk review flows        | Trigger overhead tuning + delete capture expectations                  |
-| Outbox Relay                | Contrasting log capture with an application-managed outbox   | Ordering and dedupe safety for downstream business events              |
-| Snapshot Replay             | Explaining offset resets and re-seeding change feeds         | Drop-snapshot + PK dedupe toggles for idempotent apply                 |
-| Retention & Erasure         | Teaching privacy deletes, masking, and legal holds           | Soft-delete visibility + drop snapshot and dedupe controls             |
+| Scenario                    | Use it when…                                                 | Highlights                                                               |
+| --------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Omnichannel Orders          | Walking through status transitions and fulfilment edge cases | Mix of inserts/updates with delete coverage; great for lag comparisons   |
+| Real-time Payments          | Demonstrating idempotent updates or risk review flows        | Trigger overhead tuning + delete capture expectations                    |
+| Outbox Relay                | Contrasting log capture with an application-managed outbox   | Ordering and dedupe safety for downstream business events                |
+| Snapshot Replay             | Explaining offset resets and re-seeding change feeds         | Drop-snapshot + PK dedupe toggles for idempotent apply                   |
+| Retention & Erasure         | Teaching privacy deletes, masking, and legal holds           | Soft-delete visibility + drop snapshot and dedupe controls               |
 | Snapshot ➜ Stream Handoff   | Showing snapshot catch-up handing off to change feed tails   | Compare drop-snapshot + dedupe toggles; log vs. trigger resume semantics |
-| IoT Telemetry               | Showing rolling measurements with anomaly flags              | Highlights soft-delete vs. log consistency and clock controls          |
-| Schema Evolution            | Demonstrating column additions while capturing changes       | Compare immediate log/trigger propagation with polling lag             |
-| Orders + Items Transactions | Teaching multi-table commit semantics                        | Toggle apply-on-commit to keep orders/items destinations consistent    |
-| CRUD Basic                  | Teaching delete visibility basics                            | Minimal ops for first-time comparator demos                            |
-| Burst Updates               | Stressing lag/ordering behaviour under rapid updates         | Highlights polling gaps and diff overlays                              |
+| IoT Telemetry               | Showing rolling measurements with anomaly flags              | Highlights soft-delete vs. log consistency and clock controls            |
+| Schema Evolution            | Demonstrating column additions while capturing changes       | Compare immediate log/trigger propagation with polling lag               |
+| Orders + Items Transactions | Teaching multi-table commit semantics                        | Toggle apply-on-commit to keep orders/items destinations consistent      |
+| CRUD Basic                  | Teaching delete visibility basics                            | Minimal ops for first-time comparator demos                              |
+| Burst Updates               | Stressing lag/ordering behaviour under rapid updates         | Highlights polling gaps and diff overlays                                |
 
 ## Hacktoberfest 2025
 
