@@ -1461,7 +1461,6 @@ body[data-theme="light"] .hero-ambient .orb-three {
 
 @media (max-width: 768px) {
   .workspace {
-    grid-template-columns: 1fr;
     gap: 1rem;
     width: 100%;
   }
