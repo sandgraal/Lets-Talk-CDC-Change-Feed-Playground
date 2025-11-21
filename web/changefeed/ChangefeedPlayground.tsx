@@ -184,6 +184,7 @@ export function ChangefeedPlayground() {
               step={1}
               value={SPEED_OPTIONS.indexOf(speed)}
               onChange={event => setSpeed(SPEED_OPTIONS[Number(event.target.value)] ?? 1)}
+              aria-valuetext={`${speed}x`}
             />
             <span className="cf-field__value">{speed}x</span>
           </label>
