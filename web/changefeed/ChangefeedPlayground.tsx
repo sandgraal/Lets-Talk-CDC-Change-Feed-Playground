@@ -363,8 +363,8 @@ export function ChangefeedPlayground() {
                     <div className="cf-table__nested">
                       {Object.values(rows)
                         .slice(-4)
-                        .map(row => (
-                          <div key={row.id ?? JSON.stringify(row)} className="cf-table__nested-row">
+                        .map((row, index) => (
+                          <div key={row.id ?? `${table}-${index}`} className="cf-table__nested-row">
                             <span>{row.id ?? "row"}</span>
                             <span className="cf-table__cell--muted">{JSON.stringify(row)}</span>
                           </div>
