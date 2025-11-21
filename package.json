@@ -22,6 +22,7 @@
     "check:bundles": "node scripts/check-generated-bundles.mjs",
     "setup:e2e": "playwright install --with-deps",
     "doctor:e2e": "node scripts/check-playwright.mjs",
+    "package:appwrite": "npm run build && node scripts/package-appwrite-site.mjs",
     "audit:prod": "npm audit --omit=dev",
     "ci:preflight": "npm-run-all2 build:sim build:web check:bundles lint:flags lint:scenarios test:sim test:e2e test:harness-report ci:harness",
     "ci:harness": "node scripts/run-harness-ci.mjs",
