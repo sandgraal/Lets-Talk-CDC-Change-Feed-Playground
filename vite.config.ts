@@ -13,10 +13,10 @@ export default defineConfig(({ mode }) => {
           input: {
             shell: "web/main.tsx",
             "event-log-widget": "web/event-log-widget.tsx",
-            "changefeed-playground": "web/changefeed-playground.tsx",
+            "changefeed-playground": "web/changefeed.tsx",
           },
           output: {
-            entryFileNames: chunk => {
+            entryFileNames: (chunk) => {
               const entryNames: Record<string, string> = {
                 "event-log-widget": "event-log-widget.js",
                 "changefeed-playground": "changefeed-playground.js",
