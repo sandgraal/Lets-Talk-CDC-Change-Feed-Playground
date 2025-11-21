@@ -131,8 +131,9 @@ const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
     }
   }
   
-  state.consumer.appliedLog.forEach(evt => pushEvent(evt, "applied"));
-
+  for (const evt of state.consumer.appliedLog) {
+    pushEvent(evt, "applied");
+  }
   return Array.from(byTx.values()).sort((a, b) => (a.commitTs === b.commitTs ? a.lsn - b.lsn : a.commitTs - b.commitTs));
 };
 
