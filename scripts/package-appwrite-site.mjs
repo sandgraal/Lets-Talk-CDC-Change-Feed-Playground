@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs';
 import { resolve, join } from 'node:path';
 import AdmZip from 'adm-zip';
-
-const projectRoot = resolve(new URL(import.meta.url).pathname, '..', '..');
+import { fileURLToPath } from 'node:url';
+const projectRoot = resolve(fileURLToPath(import.meta.url), '..', '..');
 const outDir = join(projectRoot, 'dist', 'appwrite-site');
 const zipPath = join(projectRoot, 'dist', 'appwrite-site.zip');
 
