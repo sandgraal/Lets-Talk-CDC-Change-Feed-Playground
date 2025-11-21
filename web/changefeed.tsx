@@ -6,7 +6,7 @@ import "./styles/changefeed.css";
 function mount() {
   const rootElement = document.getElementById("changefeedPlaygroundRoot");
   if (!rootElement) {
-    console.warn("Change feed playground mount point not found (changefeedPlaygroundRoot).");
+    console.warn("Change feed playground mount point with id 'changefeedPlaygroundRoot' not found in the DOM. Ensure the HTML contains this element before loading the script.");
     return;
   }
   const root = ReactDOM.createRoot(rootElement);
