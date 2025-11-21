@@ -13,16 +13,16 @@ export default defineConfig(({ mode }) => {
           input: {
             shell: "web/main.tsx",
             "event-log-widget": "web/event-log-widget.tsx",
-            "changefeed-playground": "web/changefeed.tsx",
+            "changefeed-playground": "web/changefeed-playground.tsx",
           },
           output: {
             entryFileNames: chunk => {
-              const entryFileMap = {
+              const entryNames: Record<string, string> = {
                 "event-log-widget": "event-log-widget.js",
                 "changefeed-playground": "changefeed-playground.js",
-                "shell": "ui-shell.js"
+                shell: "ui-shell.js",
               };
-              return entryFileMap[chunk.name] || "ui-shell.js";
+              return entryNames[chunk.name] || "ui-shell.js";
             },
             chunkFileNames: "ui-[name].js",
             assetFileNames: "ui-[name].[ext]",
