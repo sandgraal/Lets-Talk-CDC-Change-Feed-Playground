@@ -419,10 +419,25 @@ export function ChangefeedPlayground() {
                     <span className="cf-stage__value">{tx.stages.applied}</span>
                   </div>
                 </div>
-                <div className="cf-transaction__progress" aria-label="Transaction apply status">
-                  <span className="cf-progress" style={{ width: `${completion * 100}%` }} />
-                  <span className="cf-progress cf-progress--buffered" style={{ width: `${Math.min(1, buffered / tx.total) * 100}%` }} />
-                </div>
+                <div className="cf-transaction__progress">
+                  <span
+                    className="cf-progress"
+                    role="progressbar"
+                    aria-label="Applied progress"
+                    aria-valuenow={tx.stages.applied}
+                    aria-valuemin={0}
+                    aria-valuemax={tx.total}
+                    style={{ width: `${completion * 100}%` }}
+                  />
+                  <span
+                    className="cf-progress cf-progress--buffered"
+                    role="progressbar"
+                    aria-label="Buffered progress"
+                    aria-valuenow={buffered}
+                    aria-valuemin={0}
+                    aria-valuemax={tx.total}
+                    style={{ width: `${Math.min(1, buffered / tx.total) * 100}%` }}
+                  />
               </div>
             );
           })}
