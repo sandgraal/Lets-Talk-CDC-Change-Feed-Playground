@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
 } from "../../src";
 import { Tooltip } from "./Tooltip";
+import { VirtualEventStack } from "./VirtualEventStack";
 
 const SPEED_OPTIONS = [0.5, 1, 2] as const;
 const TICK_BASE_MS = 50;
@@ -366,11 +367,14 @@ export function ChangefeedPlayground() {
                 ))}
               </div>
             </div>
-            <div className="cf-event-stack" aria-label="Source log">
-              {recentEvents.map(evt => (
+            <VirtualEventStack
+              events={recentEvents}
+              renderEvent={(evt) => (
                 <EventCard key={`source-${evt.lsn}`} event={evt} showSchemaVersion={viewState.options.schemaDrift} />
-              ))}
-            </div>
+              )}
+              threshold={30}
+              maxHeight={500}
+            />
           </div>
         </div>
 
@@ -398,16 +402,23 @@ export function ChangefeedPlayground() {
                     <div className="cf-partition__header">Partition {idx}</div>
                     <div className="cf-partition__queue">
                       {filteredQueue.length === 0 ? <p className="cf-empty">{eventFilter ? "no matches" : "idle"}</p> : null}
-                      {filteredQueue.map(evt => (
-                        <EventCard 
-                          key={`broker-${evt.lsn}`} 
-                          event={evt} 
-                          showPartition 
-                          showAvailability 
-                          showSchemaVersion={viewState.options.schemaDrift}
-                          tone="muted" 
+                      {filteredQueue.length > 0 && (
+                        <VirtualEventStack
+                          events={filteredQueue}
+                          renderEvent={(evt) => (
+                            <EventCard 
+                              key={`broker-${evt.lsn}`} 
+                              event={evt} 
+                              showPartition 
+                              showAvailability 
+                              showSchemaVersion={viewState.options.schemaDrift}
+                              tone="muted" 
+                            />
+                          )}
+                          threshold={20}
+                          maxHeight={400}
                         />
-                      ))}
+                      )}
                     </div>
                   </div>
                 );
@@ -441,38 +452,65 @@ export function ChangefeedPlayground() {
             <div className="cf-buffered">
               <div>
                 <p className="cf-subtitle">Buffered</p>
-                <div className="cf-event-stack">
-                  {Object.values(viewState.consumer.buffered).flatMap(buf => filterEvents(buf.events)).map(evt => (
-                    <EventCard 
-                      key={`buffered-${evt.lsn}`} 
-                      event={evt} 
-                      showSchemaVersion={viewState.options.schemaDrift}
-                      tone="muted" 
-                    />
-                  ))}
-                  {viewState.consumer.ready.flatMap(tx => tx.events).length === 0 &&
-                  Object.values(viewState.consumer.buffered).flatMap(buf => buf.events).length === 0 ? (
-                    <p className="cf-empty">No buffered events</p>
-                  ) : eventFilter && Object.values(viewState.consumer.buffered).flatMap(buf => filterEvents(buf.events)).length === 0 ? (
-                    <p className="cf-empty">No matching buffered events</p>
-                  ) : null}
-                </div>
+                {(() => {
+                  const bufferedEvents = Object.values(viewState.consumer.buffered).flatMap(buf => filterEvents(buf.events));
+                  const isEmpty = viewState.consumer.ready.flatMap(tx => tx.events).length === 0 &&
+                    Object.values(viewState.consumer.buffered).flatMap(buf => buf.events).length === 0;
+                  const noMatches = eventFilter && bufferedEvents.length === 0;
+                  
+                  return (
+                    <div className="cf-event-stack">
+                      {isEmpty ? (
+                        <p className="cf-empty">No buffered events</p>
+                      ) : noMatches ? (
+                        <p className="cf-empty">No matching buffered events</p>
+                      ) : bufferedEvents.length > 0 ? (
+                        <VirtualEventStack
+                          events={bufferedEvents}
+                          renderEvent={(evt) => (
+                            <EventCard 
+                              key={`buffered-${evt.lsn}`} 
+                              event={evt} 
+                              showSchemaVersion={viewState.options.schemaDrift}
+                              tone="muted" 
+                            />
+                          )}
+                          threshold={20}
+                          maxHeight={400}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <p className="cf-subtitle">Applied</p>
-                <div className="cf-event-stack">
-                  {filterEvents(viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT)).map(evt => (
-                    <EventCard 
-                      key={`applied-${evt.lsn}`} 
-                      event={evt} 
-                      showSchemaVersion={viewState.options.schemaDrift}
-                      tone="active" 
-                    />
-                  ))}
-                  {eventFilter && filterEvents(viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT)).length === 0 ? (
-                    <p className="cf-empty">No matching applied events</p>
-                  ) : null}
-                </div>
+                {(() => {
+                  const appliedEvents = filterEvents(viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT));
+                  const noMatches = eventFilter && appliedEvents.length === 0;
+                  
+                  return (
+                    <div className="cf-event-stack">
+                      {noMatches ? (
+                        <p className="cf-empty">No matching applied events</p>
+                      ) : appliedEvents.length > 0 ? (
+                        <VirtualEventStack
+                          events={appliedEvents}
+                          renderEvent={(evt) => (
+                            <EventCard 
+                              key={`applied-${evt.lsn}`} 
+                              event={evt} 
+                              showSchemaVersion={viewState.options.schemaDrift}
+                              tone="active" 
+                            />
+                          )}
+                          threshold={20}
+                          maxHeight={400}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="cf-table">

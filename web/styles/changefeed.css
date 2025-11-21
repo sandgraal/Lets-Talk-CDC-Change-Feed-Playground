@@ -394,6 +394,29 @@
   gap: 0.4rem;
 }
 
+.cf-event-stack--virtual {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cf-accent) var(--cf-card);
+}
+
+.cf-event-stack--virtual::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cf-event-stack--virtual::-webkit-scrollbar-track {
+  background: var(--cf-card);
+  border-radius: 4px;
+}
+
+.cf-event-stack--virtual::-webkit-scrollbar-thumb {
+  background: var(--cf-accent);
+  border-radius: 4px;
+}
+
+.cf-event-stack--virtual::-webkit-scrollbar-thumb:hover {
+  background: var(--cf-accent-2);
+}
+
 .cf-event-card {
   background: var(--cf-card);
   border: 1px solid var(--cf-border);
