@@ -41,6 +41,31 @@ To enable the CDC Method Comparator and all features:
 
 **Note:** The comparator (`#simShellRoot`) requires the built bundles. If you see "Preparing simulator preview…" or "Enable the comparator_v2 feature flag", run `npm run build` first.
 
+## Key Features
+
+### 🚀 Performance Optimized
+- **Virtual Scrolling:** Handles 500+ events at 60fps with automatic windowing
+- **React.memo & useCallback:** Optimized renders prevent unnecessary re-calculations
+- **Smart Transaction Limits:** Display capped at 20 most recent for smooth UX
+
+### 🎓 Beginner-Friendly
+- **Guided Demo Scenarios:** 6 one-click workflows showcasing CDC features
+  - Multi-Table Transactions, Schema Evolution, Commit Lag & Drift
+  - Backlog Recovery, Event Drops & Faults, Apply Policies
+- **Inline Help Tooltips:** Hover over technical terms (LSN, commit drift, apply policy) for instant explanations
+- **Visual Event Tracking:** Click any event card to highlight and trace it across all lanes
+
+### 🔧 Developer Tools
+- **Event Search & Filter:** Find events by table, transaction ID, primary key, or type across all lanes
+- **Cross-Lane Highlighting:** Click an event to see its journey from source → broker → consumer
+- **Real-time Metrics:** Lag, backlog, and dropped events displayed with visual indicators
+
+### 📊 Interactive Playground
+- **Three-Lane Visualization:** Source rows → Change feed partitions → Consumer tables
+- **Apply Policy Toggle:** Compare apply-on-commit vs apply-as-polled behavior
+- **Fault Injection:** Simulate network drops (0-40%) to test resilience
+- **Schema Drift Controls:** Enable column evolution and projection options
+
 ### Build Commands Reference
 
 - `npm run build` - Build everything (sim + web bundles)
