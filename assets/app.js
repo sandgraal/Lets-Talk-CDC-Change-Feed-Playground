@@ -710,8 +710,6 @@ const els = {
   scenarioPreviewOps: document.getElementById("scenarioPreviewOps"),
   scenarioPreviewLoad: document.getElementById("scenarioPreviewLoad"),
   scenarioPreviewDownload: document.getElementById("scenarioPreviewDownload"),
-  learningSteps: document.getElementById("learningSteps"),
-  learningTip: document.getElementById("learningTip"),
   schemaStatus: document.getElementById("schemaStatus"),
   stepCards: Array.from(document.querySelectorAll(".step-card")),
   autofillRow: document.getElementById("btnAutofillRow"),
@@ -3954,40 +3952,18 @@ function replayEventToTable(event) {
 }
 
 function updateLearning(activeId) {
-  if (!els.learningSteps) return;
+  const completion = learningConfig.reduce((acc, step) => {
+    acc[step.id] = step.isComplete();
+    return acc;
+  }, {});
 
-  const buttons = Array.from(els.learningSteps.querySelectorAll("button.learning-step"));
-  let firstIncomplete = null;
-
-  buttons.forEach(btn => {
-    const id = btn.dataset.step;
-    const config = learningConfig.find(step => step.id === id);
-    const complete = config?.isComplete() ?? false;
-    btn.classList.toggle("is-complete", complete);
-
-    const status = btn.querySelector(".step-status");
-    if (status) status.textContent = complete ? "Done" : "Pending";
-
-    if (!complete && firstIncomplete === null) firstIncomplete = id;
-  });
-
+  const firstIncomplete = learningConfig.find(step => !completion[step.id])?.id;
   const activeIdResolved = activeId || firstIncomplete || learningConfig[learningConfig.length - 1]?.id;
-
-  buttons.forEach(btn => {
-    btn.classList.toggle("is-active", btn.dataset.step === activeIdResolved);
-  });
 
   if (els.stepCards?.length) {
     els.stepCards.forEach(card => {
       card.classList.toggle("is-active", card.dataset.step === activeIdResolved);
     });
-  }
-
-  const activeConfig = learningConfig.find(step => step.id === activeIdResolved);
-  if (activeConfig && els.learningTip) {
-    const isComplete = activeConfig.isComplete();
-    const tip = isComplete && activeConfig.completeTip ? activeConfig.completeTip : activeConfig.tip;
-    els.learningTip.textContent = tip;
   }
 
   updateQuickstart(activeIdResolved);
@@ -4958,19 +4934,6 @@ function bindUiHandlers() {
     const cb = document.getElementById(id);
     if (cb) cb.onchange = renderJSONLog;
   });
-
-  if (els.learningSteps) {
-    els.learningSteps.addEventListener("click", (event) => {
-      const btn = event.target.closest("button.learning-step");
-      if (!btn) return;
-      const targetSel = btn.dataset.target;
-      if (targetSel) {
-        const node = document.querySelector(targetSel);
-        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      updateLearning(btn.dataset.step);
-    });
-  }
 
   const exportBtn = document.getElementById("btnExport");
   if (exportBtn) exportBtn.onclick = exportScenario;
