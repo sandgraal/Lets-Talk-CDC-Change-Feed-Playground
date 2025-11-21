@@ -3966,15 +3966,11 @@ function updateLearning(activeId) {
     });
   }
 
-  updateQuickstart(activeIdResolved);
+  updateQuickstart(activeIdResolved, completion);
 }
 
-function updateQuickstart(activeId) {
+function updateQuickstart(activeId, completion) {
   const cards = els.quickstartCards || {};
-  const completion = learningConfig.reduce((acc, step) => {
-    acc[step.id] = step.isComplete();
-    return acc;
-  }, {});
 
   const resolvedActive = activeId || learningConfig.find(step => !completion[step.id])?.id || "events";
 
