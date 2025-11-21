@@ -17,9 +17,12 @@ export default defineConfig(({ mode }) => {
           },
           output: {
             entryFileNames: chunk => {
-              if (chunk.name === "event-log-widget") return "event-log-widget.js";
-              if (chunk.name === "changefeed-playground") return "changefeed-playground.js";
-              return "ui-shell.js";
+              const entryNames: Record<string, string> = {
+                "event-log-widget": "event-log-widget.js",
+                "changefeed-playground": "changefeed-playground.js",
+                shell: "ui-shell.js",
+              };
+              return entryNames[chunk.name] || "ui-shell.js";
             },
             chunkFileNames: "ui-[name].js",
             assetFileNames: "ui-[name].[ext]",

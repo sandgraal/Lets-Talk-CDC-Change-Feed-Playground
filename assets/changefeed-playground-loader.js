@@ -67,7 +67,7 @@
       return resolved;
     } catch (error) {
       console.warn(
-        "Changefeed playground bundle missing. Run `npm run build:web` to generate assets/generated/changefeed-playground.js before loading the page.",
+        "Changefeed-playground bundle missing. Run `npm run build:web` to generate assets/generated/changefeed-playground.js before loading the page.",
         error,
       );
       throw error;
