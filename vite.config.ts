@@ -13,9 +13,17 @@ export default defineConfig(({ mode }) => {
           input: {
             shell: "web/main.tsx",
             "event-log-widget": "web/event-log-widget.tsx",
+            "changefeed-playground": "web/changefeed.tsx",
           },
           output: {
-            entryFileNames: chunk => (chunk.name === "event-log-widget" ? "event-log-widget.js" : "ui-shell.js"),
+            entryFileNames: chunk => {
+              const entryFileMap = {
+                "event-log-widget": "event-log-widget.js",
+                "changefeed-playground": "changefeed-playground.js",
+                "shell": "ui-shell.js"
+              };
+              return entryFileMap[chunk.name] || "ui-shell.js";
+            },
             chunkFileNames: "ui-[name].js",
             assetFileNames: "ui-[name].[ext]",
           },
