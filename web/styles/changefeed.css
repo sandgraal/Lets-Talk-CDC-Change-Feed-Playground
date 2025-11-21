@@ -182,6 +182,42 @@
   gap: 0.5rem;
   color: var(--cf-muted);
   font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.cf-badge-lag {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--cf-danger);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cf-badge-lag--low {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--cf-positive);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.cf-badge-lag--medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--cf-warning);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.cf-badge-backlog {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--cf-accent-2);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .cf-grid {
@@ -265,10 +301,19 @@
 .cf-event-card {
   background: var(--cf-card);
   border: 1px solid var(--cf-border);
+  border-left: 3px solid var(--cf-border);
   border-radius: 0.8rem;
   padding: 0.5rem 0.7rem;
   display: grid;
   gap: 0.35rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.cf-event-card:hover {
+  background: rgba(56, 189, 248, 0.05);
+  border-left-color: var(--cf-accent);
+  transform: translateX(2px);
 }
 
 .cf-event-card--muted {
@@ -277,6 +322,7 @@
 
 .cf-event-card--active {
   border-color: rgba(34, 197, 94, 0.6);
+  border-left-color: var(--cf-positive);
   box-shadow: 0 10px 30px rgba(34, 197, 94, 0.1);
 }
 
@@ -414,12 +460,29 @@
 
 .cf-transaction {
   border: 1px solid var(--cf-border);
+  border-left: 4px solid var(--cf-accent);
   border-radius: 0.75rem;
   padding: 0.6rem 0.75rem;
   background: var(--cf-card);
   display: grid;
   gap: 0.45rem;
   position: relative;
+  transition: all 0.2s ease;
+}
+
+.cf-transaction:hover {
+  background: rgba(56, 189, 248, 0.05);
+  border-left-color: var(--cf-accent-2);
+  transform: translateX(2px);
+}
+
+.cf-transaction--complete {
+  border-left-color: var(--cf-positive);
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.cf-transaction--partial {
+  border-left-color: var(--cf-warning);
 }
 
 .cf-transaction__meta {
@@ -433,6 +496,12 @@
 .cf-transaction__tx {
   color: var(--cf-text);
   font-weight: 700;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  font-size: 0.9rem;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .cf-transaction__stages {

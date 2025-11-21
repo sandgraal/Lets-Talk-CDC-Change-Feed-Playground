@@ -23,16 +23,23 @@ const EventCard = ({
   showPartition = false,
   showAvailability = false,
   tone,
+  showSchemaVersion = false,
 }: {
   event: ChangeEvent;
   showPartition?: boolean;
   showAvailability?: boolean;
   tone?: "muted" | "active";
+  showSchemaVersion?: boolean;
 }) => (
   <div className={`cf-event-card${tone ? ` cf-event-card--${tone}` : ""}`}>
     <div className="cf-event-card__header">
       <TypeBadge type={event.type} />
       <span className="cf-event-card__tx">tx {event.txId}</span>
+      {showSchemaVersion && event.schemaVersion > 1 && (
+        <span className="cf-badge cf-badge--schema" title={`Schema version ${event.schemaVersion}`}>
+          v{event.schemaVersion}
+        </span>
+      )}
     </div>
     <dl className="cf-event-card__meta">
       <div>
@@ -167,8 +174,10 @@ export function ChangefeedPlayground() {
             <span className="cf-metric__value">{viewState.metrics.backlog}</span>
           </div>
           <div className="cf-metric">
-            <span className="cf-metric__label">Commit drift</span>
-            <span className="cf-metric__value">{viewState.options.commitDrift ? "on" : "off"}</span>
+            <span className="cf-metric__label">Dropped</span>
+            <span className="cf-metric__value" style={{ color: viewState.broker.dropped > 0 ? "var(--cf-danger)" : undefined }}>
+              {viewState.broker.dropped}
+            </span>
           </div>
         </div>
       </header>
@@ -292,7 +301,7 @@ export function ChangefeedPlayground() {
             </div>
             <div className="cf-event-stack" aria-label="Source log">
               {recentEvents.map(evt => (
-                <EventCard key={`source-${evt.lsn}`} event={evt} />
+                <EventCard key={`source-${evt.lsn}`} event={evt} showSchemaVersion={viewState.options.schemaDrift} />
               ))}
             </div>
           </div>
@@ -306,7 +315,11 @@ export function ChangefeedPlayground() {
             </div>
             <div className="cf-lane__meta">
               <span>{viewState.broker.partitions.length} partitions</span>
-              <span>{viewState.broker.partitions.reduce((acc, q) => acc + q.length, 0)} buffered</span>
+              {viewState.metrics.backlog > 0 && (
+                <span className="cf-badge-backlog" role="status" aria-live="polite">
+                  🔥 {viewState.metrics.backlog} backlog
+                </span>
+              )}
             </div>
           </header>
           <div className="cf-lane__body">
@@ -317,7 +330,14 @@ export function ChangefeedPlayground() {
                   <div className="cf-partition__queue">
                     {queue.length === 0 ? <p className="cf-empty">idle</p> : null}
                     {queue.map(evt => (
-                      <EventCard key={`broker-${evt.lsn}`} event={evt} showPartition showAvailability tone="muted" />
+                      <EventCard 
+                        key={`broker-${evt.lsn}`} 
+                        event={evt} 
+                        showPartition 
+                        showAvailability 
+                        showSchemaVersion={viewState.options.schemaDrift}
+                        tone="muted" 
+                      />
                     ))}
                   </div>
                 </div>
@@ -335,6 +355,15 @@ export function ChangefeedPlayground() {
             <div className="cf-lane__meta">
               <span>{viewState.consumer.appliedLog.length} applied</span>
               <span>{Object.keys(viewState.consumer.tables).length} tables</span>
+              {viewState.metrics.lagMs > 0 && (
+                <span 
+                  className={`cf-badge-lag ${viewState.metrics.lagMs < 200 ? "cf-badge-lag--low" : viewState.metrics.lagMs < 500 ? "cf-badge-lag--medium" : ""}`}
+                  role="status" 
+                  aria-live="polite"
+                >
+                  ⏱️ {formatTs(viewState.metrics.lagMs)} lag
+                </span>
+              )}
             </div>
           </header>
           <div className="cf-lane__body">
@@ -343,7 +372,14 @@ export function ChangefeedPlayground() {
                 <p className="cf-subtitle">Buffered</p>
                 <div className="cf-event-stack">
                   {Object.values(viewState.consumer.buffered).map(buf =>
-                    buf.events.map(evt => <EventCard key={`buffered-${evt.lsn}`} event={evt} tone="muted" />),
+                    buf.events.map(evt => (
+                      <EventCard 
+                        key={`buffered-${evt.lsn}`} 
+                        event={evt} 
+                        showSchemaVersion={viewState.options.schemaDrift}
+                        tone="muted" 
+                      />
+                    )),
                   )}
                   {viewState.consumer.ready.flatMap(tx => tx.events).length === 0 &&
                   Object.values(viewState.consumer.buffered).flatMap(buf => buf.events).length === 0 ? (
@@ -355,7 +391,12 @@ export function ChangefeedPlayground() {
                 <p className="cf-subtitle">Applied</p>
                 <div className="cf-event-stack">
                   {viewState.consumer.appliedLog.slice(-EVENT_LOG_LIMIT).map(evt => (
-                    <EventCard key={`applied-${evt.lsn}`} event={evt} tone="active" />
+                    <EventCard 
+                      key={`applied-${evt.lsn}`} 
+                      event={evt} 
+                      showSchemaVersion={viewState.options.schemaDrift}
+                      tone="active" 
+                    />
                   ))}
                 </div>
               </div>
@@ -402,8 +443,11 @@ export function ChangefeedPlayground() {
           {transactions.map(tx => {
             const completion = Math.min(1, tx.stages.applied / tx.total);
             const buffered = tx.stages.buffered + tx.stages.ready;
+            const isComplete = tx.stages.applied === tx.total;
+            const isPartial = tx.stages.applied > 0 && tx.stages.applied < tx.total;
+            const txClass = `cf-transaction${isComplete ? " cf-transaction--complete" : ""}${isPartial ? " cf-transaction--partial" : ""}`;
             return (
-              <div key={tx.txId} className="cf-transaction">
+              <div key={tx.txId} className={txClass}>
                 <div className="cf-transaction__meta">
                   <span className="cf-transaction__tx">tx {tx.txId}</span>
                   <span className="cf-transaction__commit">commit {formatTs(tx.commitTs)}</span>
