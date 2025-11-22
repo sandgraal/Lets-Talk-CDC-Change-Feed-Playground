@@ -3,7 +3,10 @@
 
   const FLAG_NAME = "comparator_v2";
 
-  const fallbackOrigins = ["http://localhost:4173", "http://localhost:5173"];
+  if (!global.__LetstalkCdcFallbackOrigins) {
+    global.__LetstalkCdcFallbackOrigins = ["http://localhost:4173", "http://localhost:5173"];
+  }
+  const fallbackOrigins = global.__LetstalkCdcFallbackOrigins;
 
   const bundleHref = "./generated/ui-shell.js";
 
