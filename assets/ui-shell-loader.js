@@ -110,7 +110,7 @@
       '<p>Enable the comparator_v2 feature flag to load the CDC Method Comparator.</p>' +
       '<p class="sim-shell__placeholder-actions">' +
       '<button type="button" id="simShellEnableFlag">Enable & retry</button>' +
-      " <span aria-live=\"polite\">(persisted flags may disable the comparator if you previously turned it off)</span>" +
+      " <span aria-live=\"polite\">(Note: Previously saved flag state may override this setting)</span>" +
       "</p>" +
       "</div>";
 
