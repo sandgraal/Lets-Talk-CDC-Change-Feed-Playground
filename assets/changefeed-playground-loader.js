@@ -3,6 +3,8 @@
 
   const bundleHref = "./generated/changefeed-playground.js";
 
+  const fallbackOrigins = ["http://localhost:4173", "http://localhost:5173"];
+
   const scriptBase = (() => {
     if (typeof document !== "undefined" && document.currentScript?.src) {
       return document.currentScript.src;
@@ -19,14 +21,29 @@
     return Object.entries(raw).filter(([, value]) => typeof value === "string" && value);
   })();
 
-  async function importGeneratedModule(relativeHref) {
-    const resolved = (() => {
+  function resolveHref(relativeHref) {
+    try {
+      return new URL(relativeHref, scriptBase).toString();
+    } catch {
+      return relativeHref;
+    }
+  }
+
+  function candidateHrefs(relativeHref) {
+    const resolved = resolveHref(relativeHref);
+    const candidates = [resolved];
+    for (const origin of fallbackOrigins) {
       try {
-        return new URL(relativeHref, scriptBase).toString();
+        candidates.push(new URL(relativeHref, origin).toString());
       } catch {
-        return relativeHref;
+        /* ignore malformed origins */
       }
-    })();
+    }
+    return candidates;
+  }
+
+  async function importGeneratedModule(relativeHref) {
+    const resolved = resolveHref(relativeHref);
 
     if (assetHeaderEntries.length === 0) {
       return import(/* @vite-ignore */ resolved);
@@ -53,13 +70,29 @@
     }
   }
 
+  async function importFromCandidates(relativeHref) {
+    const candidates = candidateHrefs(relativeHref);
+    let lastError;
+
+    for (const candidate of candidates) {
+      try {
+        return await importGeneratedModule(candidate);
+      } catch (error) {
+        lastError = error;
+        console.warn(`Changefeed playground load failed for ${candidate}`, error);
+      }
+    }
+
+    throw lastError || new Error(`Unable to load ${relativeHref}`);
+  }
+
   async function loadBundle() {
     if (global.__LetstalkCdcChangefeedPlaygroundBundle) {
       return global.__LetstalkCdcChangefeedPlaygroundBundle;
     }
 
     try {
-      const mod = await importGeneratedModule(bundleHref);
+      const mod = await importFromCandidates(bundleHref);
       const resolved = mod?.default ?? mod;
       if (resolved) {
         global.__LetstalkCdcChangefeedPlaygroundBundle = resolved;
