@@ -105,14 +105,15 @@
   function markUnavailable() {
     const root = document.getElementById("simShellRoot");
     if (!root) return;
-    root.innerHTML =
-      '<div class="sim-shell__placeholder">' +
-      '<p>Enable the comparator_v2 feature flag to load the CDC Method Comparator.</p>' +
-      '<p class="sim-shell__placeholder-actions">' +
-      '<button type="button" id="simShellEnableFlag">Enable & retry</button>' +
-      " <span aria-live=\"polite\">(Note: Previously saved flag state may override this setting)</span>" +
-      "</p>" +
-      "</div>";
+    root.innerHTML = `
+      <div class="sim-shell__placeholder">
+        <p>Enable the comparator_v2 feature flag to load the CDC Method Comparator.</p>
+        <p class="sim-shell__placeholder-actions">
+          <button type="button" id="simShellEnableFlag">Enable & retry</button>
+          <span aria-live="polite">(Note: Previously saved flag state may override this setting)</span>
+        </p>
+      </div>
+    `;
 
     const enableButton = document.getElementById("simShellEnableFlag");
     if (enableButton) {
@@ -134,11 +135,12 @@
   function markMissingBundle() {
     const root = document.getElementById("simShellRoot");
     if (!root) return;
-    root.innerHTML =
-      '<div class="sim-shell__placeholder">' +
-      '<p>Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.</p>' +
-      `<p class="sim-shell__placeholder-actions">Tried: ${candidateHrefs(bundleHref).join(", ")}</p>` +
-      "</div>";
+    root.innerHTML = `
+      <div class="sim-shell__placeholder">
+        <p>Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.</p>
+        <p class="sim-shell__placeholder-actions">Tried: ${candidateHrefs(bundleHref).join(", ")}</p>
+      </div>
+    `;
   }
 
   async function loadShell() {
