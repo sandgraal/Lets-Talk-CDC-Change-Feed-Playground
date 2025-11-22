@@ -3,7 +3,10 @@
 
   const FLAG_NAME = "comparator_v2";
 
-  const fallbackOrigins = ["http://localhost:4173", "http://localhost:5173"];
+  if (!global.__LetstalkCdcFallbackOrigins) {
+    global.__LetstalkCdcFallbackOrigins = ["http://localhost:4173", "http://localhost:5173"];
+  }
+  const fallbackOrigins = global.__LetstalkCdcFallbackOrigins;
 
   const bundleHref = "./generated/ui-shell.js";
 
@@ -23,80 +26,13 @@
     return Object.entries(raw).filter(([, value]) => typeof value === "string" && value);
   })();
 
-  function resolveHref(relativeHref) {
-    try {
-      return new URL(relativeHref, scriptBase).toString();
-    } catch {
-      return relativeHref;
-    }
+  const loaderUtils = global.__LetstalkCdcLoaderUtils;
+  if (!loaderUtils) {
+    console.error("loader-utils.js must be loaded before ui-shell-loader.js");
+    return;
   }
 
-  function candidateHrefs(relativeHref) {
-    const resolved = resolveHref(relativeHref);
-    const candidates = [resolved];
-    for (const origin of fallbackOrigins) {
-      try {
-        candidates.push(new URL(relativeHref, origin).toString());
-      } catch {
-        /* ignore malformed origins */
-      }
-    }
-    return candidates;
-  }
-
-  async function importGeneratedModule(relativeHref) {
-    const resolved = resolveHref(relativeHref);
-
-    const shouldFetchWithHeaders = (() => {
-      if (assetHeaderEntries.length === 0) return false;
-      try {
-        const url = new URL(resolved, scriptBase);
-        return url.protocol === "http:" || url.protocol === "https:";
-      } catch {
-        return false;
-      }
-    })();
-
-    if (!shouldFetchWithHeaders) {
-      return import(/* @vite-ignore */ resolved);
-    }
-
-    const headers = {};
-    for (const [key, value] of assetHeaderEntries) {
-      headers[key] = value;
-    }
-
-    const response = await fetch(resolved, { headers, credentials: "include" });
-    if (!response.ok) {
-      throw new Error(`Failed to load ${resolved}: ${response.status} ${response.statusText}`);
-    }
-
-    const source = await response.text();
-    const blob = new Blob([source], { type: "text/javascript" });
-    const blobUrl = URL.createObjectURL(blob);
-
-    try {
-      return await import(/* @vite-ignore */ blobUrl);
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
-  }
-
-  async function importFromCandidates(relativeHref) {
-    const candidates = candidateHrefs(relativeHref);
-    let lastError;
-
-    for (const candidate of candidates) {
-      try {
-        return await importGeneratedModule(candidate);
-      } catch (error) {
-        lastError = error;
-        console.warn(`Simulator UI shell load failed for ${candidate}`, error);
-      }
-    }
-
-    throw lastError || new Error(`Unable to load ${relativeHref}`);
-  }
+  const { candidateHrefs, importFromCandidates } = loaderUtils;
 
   function hasComparatorFlag() {
     return Boolean(global.cdcFeatureFlags?.has?.(FLAG_NAME));
@@ -157,7 +93,13 @@
 
   async function loadShell() {
     try {
-      await importFromCandidates(bundleHref);
+      await importFromCandidates(
+        bundleHref,
+        scriptBase,
+        fallbackOrigins,
+        assetHeaderEntries,
+        "Simulator UI shell"
+      );
       global.__LetstalkCdcUiShellLoaded = true;
     } catch (error) {
       console.warn(
