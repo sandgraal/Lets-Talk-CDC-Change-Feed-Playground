@@ -134,11 +134,21 @@
   function markMissingBundle() {
     const root = document.getElementById("simShellRoot");
     if (!root) return;
-    root.innerHTML =
-      '<div class="sim-shell__placeholder">' +
-      '<p>Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.</p>' +
-      `<p class="sim-shell__placeholder-actions">Tried: ${candidateHrefs(bundleHref).join(", ")}</p>` +
-      "</div>";
+    
+    const placeholder = document.createElement('div');
+    placeholder.className = 'sim-shell__placeholder';
+    
+    const message = document.createElement('p');
+    message.innerHTML = 'Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.';
+    
+    const triedList = document.createElement('p');
+    triedList.className = 'sim-shell__placeholder-actions';
+    triedList.textContent = `Tried: ${candidateHrefs(bundleHref).join(", ")}`;
+    
+    placeholder.appendChild(message);
+    placeholder.appendChild(triedList);
+    root.innerHTML = '';
+    root.appendChild(placeholder);
   }
 
   async function loadShell() {
