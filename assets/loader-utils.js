@@ -42,14 +42,15 @@
   /**
    * Imports a module, optionally fetching with custom headers first.
    * @param {string} resolvedUrl - The resolved absolute URL to import
+   * @param {string} scriptBase - The base URL for URL validation
    * @param {Array<[string, string]>} assetHeaderEntries - Array of [key, value] header entries
    * @returns {Promise<any>} The imported module
    */
-  async function importGeneratedModule(resolvedUrl, assetHeaderEntries) {
+  async function importGeneratedModule(resolvedUrl, scriptBase, assetHeaderEntries) {
     const shouldFetchWithHeaders = (() => {
       if (assetHeaderEntries.length === 0) return false;
       try {
-        const url = new URL(resolvedUrl);
+        const url = new URL(resolvedUrl, scriptBase);
         return url.protocol === "http:" || url.protocol === "https:";
       } catch {
         return false;
@@ -103,7 +104,7 @@
 
     for (const candidate of candidates) {
       try {
-        return await importGeneratedModule(candidate, assetHeaderEntries);
+        return await importGeneratedModule(candidate, scriptBase, assetHeaderEntries);
       } catch (error) {
         lastError = error;
         console.warn(`${logContext} load failed for ${candidate}`, error);
