@@ -139,7 +139,11 @@
     placeholder.className = 'sim-shell__placeholder';
     
     const message = document.createElement('p');
-    message.innerHTML = 'Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.';
+    message.textContent = 'Simulator preview unavailable. Run ';
+    const code = document.createElement('code');
+    code.textContent = 'npm run build:web';
+    message.appendChild(code);
+    message.appendChild(document.createTextNode(' to generate comparator assets, then reload.'));
     
     const triedList = document.createElement('p');
     triedList.className = 'sim-shell__placeholder-actions';
