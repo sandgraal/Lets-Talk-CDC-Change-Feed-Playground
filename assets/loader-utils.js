@@ -41,16 +41,15 @@
 
   /**
    * Imports a module, optionally fetching with custom headers first.
-   * @param {string} resolved - The resolved URL to import
-   * @param {string} scriptBase - The base URL for protocol checking
+   * @param {string} resolvedUrl - The resolved absolute URL to import
    * @param {Array<[string, string]>} assetHeaderEntries - Array of [key, value] header entries
    * @returns {Promise<any>} The imported module
    */
-  async function importGeneratedModule(resolved, scriptBase, assetHeaderEntries) {
+  async function importGeneratedModule(resolvedUrl, assetHeaderEntries) {
     const shouldFetchWithHeaders = (() => {
       if (assetHeaderEntries.length === 0) return false;
       try {
-        const url = new URL(resolved, scriptBase);
+        const url = new URL(resolvedUrl);
         return url.protocol === "http:" || url.protocol === "https:";
       } catch {
         return false;
@@ -58,7 +57,7 @@
     })();
 
     if (!shouldFetchWithHeaders) {
-      return import(/* @vite-ignore */ resolved);
+      return import(/* @vite-ignore */ resolvedUrl);
     }
 
     const headers = {};
@@ -66,9 +65,9 @@
       headers[key] = value;
     }
 
-    const response = await fetch(resolved, { headers, credentials: "include" });
+    const response = await fetch(resolvedUrl, { headers, credentials: "include" });
     if (!response.ok) {
-      throw new Error(`Failed to load ${resolved}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to load ${resolvedUrl}: ${response.status} ${response.statusText}`);
     }
 
     const source = await response.text();
@@ -104,7 +103,7 @@
 
     for (const candidate of candidates) {
       try {
-        return await importGeneratedModule(candidate, scriptBase, assetHeaderEntries);
+        return await importGeneratedModule(candidate, assetHeaderEntries);
       } catch (error) {
         lastError = error;
         console.warn(`${logContext} load failed for ${candidate}`, error);
