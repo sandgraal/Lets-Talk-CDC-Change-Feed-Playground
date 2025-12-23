@@ -121,4 +121,51 @@ CREATE TABLE IF NOT EXISTS _cdc_processing_log (
 CREATE INDEX idx_cdc_log_type ON _cdc_processing_log(event_type);
 CREATE INDEX idx_cdc_log_time ON _cdc_processing_log(logged_at);
 
+-- =============================================================================
+-- SCHEMA EVOLUTION HELPER
+-- =============================================================================
+-- This function adds missing columns to sink tables when source schema changes.
+-- Called by the consumer when it detects new fields in CDC events.
+
+CREATE OR REPLACE FUNCTION add_column_if_missing(
+    p_table_name TEXT,
+    p_column_name TEXT,
+    p_column_type TEXT DEFAULT 'TEXT'
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = p_table_name 
+        AND column_name = p_column_name
+    ) INTO v_exists;
+    
+    IF NOT v_exists THEN
+        EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', 
+                       p_table_name, p_column_name, p_column_type);
+        
+        INSERT INTO _cdc_processing_log (event_type, table_name, details)
+        VALUES ('SCHEMA_EVOLUTION', p_table_name, 
+                jsonb_build_object('column', p_column_name, 'type', p_column_type));
+        
+        RETURN TRUE;
+    END IF;
+    
+    RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pre-add the 'tier' column to handle the schema evolution demo
+-- This makes the demo more resilient (column exists before ALTER TABLE on source)
+-- In production, you'd either:
+-- 1. Use Schema Registry with auto-evolve
+-- 2. Run migrations ahead of source changes
+-- 3. Have the consumer detect and add columns dynamically
+
+-- Note: We're NOT adding tier here - we'll let the demo show what happens
+-- when schema evolves and sink needs to adapt
+
 RAISE NOTICE 'Sink database initialized';

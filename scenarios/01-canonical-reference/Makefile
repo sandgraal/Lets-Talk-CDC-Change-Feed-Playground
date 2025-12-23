@@ -2,15 +2,21 @@
 # The Failure-Aware CDC Reference Pipeline
 # =============================================================================
 
-.PHONY: up down logs status watch trigger-restart trigger-lag trigger-schema trigger-duplicate trigger-backfill clean reset help
+.PHONY: up down logs status watch trigger-restart trigger-lag trigger-schema trigger-duplicate trigger-backfill clean reset help preflight healthcheck demo dashboard
 
 # Default target
 help:
 	@echo "The Failure-Aware CDC Reference Pipeline"
 	@echo "========================================="
 	@echo ""
-	@echo "Lifecycle commands:"
+	@echo "Getting started:"
+	@echo "  make preflight       Check prerequisites (Docker, resources, ports)"
 	@echo "  make up              Start the full pipeline"
+	@echo "  make healthcheck     Verify all services are healthy"
+	@echo "  make demo            Run interactive guided walkthrough"
+	@echo "  make dashboard       Open web dashboard (port 8089)"
+	@echo ""
+	@echo "Lifecycle commands:"
 	@echo "  make down            Stop all containers"
 	@echo "  make reset           Stop, clean, and restart"
 	@echo "  make clean           Remove all volumes and images"
@@ -34,6 +40,26 @@ help:
 	@echo "  make sink-shell      Open psql in sink database"
 	@echo "  make kafka-topics    List Kafka topics"
 	@echo "  make kafka-consume   Consume from customers topic"
+
+# =============================================================================
+# GETTING STARTED
+# =============================================================================
+
+preflight:
+	@echo "Running prerequisite checks..."
+	@./scripts/preflight.sh
+
+healthcheck:
+	@echo "Checking service health..."
+	@./scripts/healthcheck.sh
+
+demo:
+	@echo "Starting interactive demo..."
+	@./scripts/demo.sh
+
+dashboard:
+	@echo "Starting web dashboard on http://localhost:8089..."
+	@cd dashboard && npm install --silent 2>/dev/null && node server.mjs
 
 # =============================================================================
 # LIFECYCLE
