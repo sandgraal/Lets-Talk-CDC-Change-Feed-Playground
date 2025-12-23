@@ -182,47 +182,50 @@ async function handleSchemaEvolution(tableName, config, data) {
   // Find columns in the data that we don't know about
   const knownColumns = new Set(config.columns);
   const incomingColumns = Object.keys(data).filter(
-    (col) => !col.startsWith('_') && data[col] !== undefined
+    (col) => !col.startsWith("_") && data[col] !== undefined
   );
-  
-  const newColumns = incomingColumns.filter(col => !knownColumns.has(col));
-  
+
+  const newColumns = incomingColumns.filter((col) => !knownColumns.has(col));
+
   if (newColumns.length === 0) return;
 
-  log('info', `Schema evolution detected for ${tableName}`, { 
+  log("info", `Schema evolution detected for ${tableName}`, {
     newColumns,
-    existingColumns: config.columns.length 
+    existingColumns: config.columns.length,
   });
 
   // Try to add each new column to the sink table
   for (const col of newColumns) {
     // Infer column type from the data
     const value = data[col];
-    let pgType = 'TEXT'; // Default to TEXT for maximum flexibility
-    
-    if (typeof value === 'number') {
-      pgType = Number.isInteger(value) ? 'INTEGER' : 'NUMERIC';
-    } else if (typeof value === 'boolean') {
-      pgType = 'BOOLEAN';
-    } else if (value instanceof Date || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value))) {
-      pgType = 'TIMESTAMPTZ';
+    let pgType = "TEXT"; // Default to TEXT for maximum flexibility
+
+    if (typeof value === "number") {
+      pgType = Number.isInteger(value) ? "INTEGER" : "NUMERIC";
+    } else if (typeof value === "boolean") {
+      pgType = "BOOLEAN";
+    } else if (
+      value instanceof Date ||
+      (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value))
+    ) {
+      pgType = "TIMESTAMPTZ";
     }
 
     try {
       // Use the helper function to add column if missing
       const result = await pool.query(
-        'SELECT add_column_if_missing($1, $2, $3) as added',
+        "SELECT add_column_if_missing($1, $2, $3) as added",
         [tableName, col, pgType]
       );
-      
+
       if (result.rows[0]?.added) {
-        log('info', `Added new column: ${tableName}.${col} (${pgType})`);
+        log("info", `Added new column: ${tableName}.${col} (${pgType})`);
         // Update our config so we include this column going forward
         config.columns.push(col);
       }
     } catch (err) {
-      log('warn', `Failed to add column ${col} to ${tableName}`, { 
-        error: err.message 
+      log("warn", `Failed to add column ${col} to ${tableName}`, {
+        error: err.message,
       });
     }
   }
