@@ -1,0 +1,48 @@
+{
+  "name": "cdc-source-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    "database.hostname": "postgres-source",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "source",
+
+    "topic.prefix": "cdc-source",
+    "schema.include.list": "public",
+    "table.include.list": "public.customers,public.orders,public.order_items",
+
+    "plugin.name": "pgoutput",
+    "publication.name": "cdc_publication",
+    "publication.autocreate.mode": "disabled",
+
+    "slot.name": "cdc_slot",
+    "slot.drop.on.stop": "false",
+
+    "tombstones.on.delete": "true",
+    "decimal.handling.mode": "string",
+    "time.precision.mode": "adaptive_time_microseconds",
+
+    "snapshot.mode": "initial",
+    "snapshot.locking.mode": "minimal",
+
+    "heartbeat.interval.ms": "10000",
+    "heartbeat.action.query": "INSERT INTO cdc_event_log (table_name, operation, record_id, new_data) VALUES ('_heartbeat', 'HEARTBEAT', '00000000-0000-0000-0000-000000000000', '{}'::jsonb)",
+
+    "include.schema.changes": "true",
+    "provide.transaction.metadata": "true",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "true",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true",
+
+    "signal.data.collection": "public.cdc_event_log"
+  }
+}

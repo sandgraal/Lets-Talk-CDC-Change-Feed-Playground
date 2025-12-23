@@ -4,6 +4,35 @@
 
 A zero-dependency web app that simulates CDC operations and emits Debezium-style events.
 
+---
+
+## 🔥 Start Here: The Canonical Scenario
+
+> **CDC demos that don't show failure are useless.** Start with the real thing.
+
+**[The Failure-Aware CDC Reference Pipeline](scenarios/01-canonical-reference/)** is a complete, runnable CDC pipeline that intentionally triggers every common failure mode:
+
+| Failure               | What You'll Learn                         |
+| --------------------- | ----------------------------------------- |
+| **Connector Restart** | Offset management, exactly-once semantics |
+| **Consumer Lag**      | Backpressure, retention, monitoring       |
+| **Schema Evolution**  | Compatibility modes, DDL handling         |
+| **Duplicate Events**  | Idempotency, deduplication                |
+| **Backfill**          | Ordering guarantees, late-arriving data   |
+
+```bash
+cd scenarios/01-canonical-reference
+make up      # Start full pipeline
+make watch   # Watch failures unfold
+make status  # Verify source vs sink
+```
+
+📖 **[Full Documentation](docs/canonical-scenario.md)** – What should happen, what actually happens, where people get it wrong, agent sizing, recovery patterns.
+
+Everything else in this repository is optional enrichment. **This is the authoritative reference.**
+
+---
+
 ## Quick Start
 
 ### For End Users (No Build Required)

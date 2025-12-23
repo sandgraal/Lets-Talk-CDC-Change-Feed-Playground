@@ -1,0 +1,353 @@
+services:
+  # =============================================================================
+  # SOURCE DATABASE
+  # =============================================================================
+  postgres-source:
+    image: postgres:15-alpine
+    container_name: cdc-source
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_worker_processes=20
+      - -c
+      - wal_keep_size=128
+      - -c
+      - max_connections=200
+      - -c
+      - log_statement=all
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: source
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./source/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d source"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # KAFKA INFRASTRUCTURE
+  # =============================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: cdc-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test:
+        ["CMD", "bash", "-c", "echo srvr | nc localhost 2181 | grep -q 'Mode'"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - cdc-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: cdc-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Intentionally short retention to demonstrate lag pressure
+      KAFKA_LOG_RETENTION_MS: 300000
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 30000
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bash",
+          "-c",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1",
+        ]
+      interval: 7s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # DEBEZIUM CONNECT
+  # =============================================================================
+  connect:
+    image: debezium/connect:2.6
+    container_name: cdc-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-source:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: cdc-connect-cluster
+      CONFIG_STORAGE_TOPIC: cdc-connect-configs
+      OFFSET_STORAGE_TOPIC: cdc-connect-offsets
+      STATUS_STORAGE_TOPIC: cdc-connect-status
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+      # Enable exactly-once semantics where supported
+      CONNECT_EXACTLY_ONCE_SOURCE_SUPPORT: enabled
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 7s
+      timeout: 5s
+      retries: 15
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # CONNECTOR REGISTRATION
+  # =============================================================================
+  connector-init:
+    image: curlimages/curl:8.5.0
+    container_name: cdc-connector-init
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./connectors:/connectors:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Connect to be fully ready..."
+        sleep 5
+        echo "Registering Debezium connector..."
+        curl -X POST -H "Content-Type: application/json" \
+          --data @/connectors/debezium-postgres.json \
+          http://connect:8083/connectors
+        echo ""
+        echo "Connector registered. Verifying..."
+        sleep 3
+        curl http://connect:8083/connectors/cdc-source-connector/status
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # SINK DATABASE
+  # =============================================================================
+  postgres-sink:
+    image: postgres:15-alpine
+    container_name: cdc-sink
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sink
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./sink/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sink"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # SINK CONSUMER
+  # =============================================================================
+  sink-consumer:
+    image: node:20-alpine
+    container_name: cdc-sink-consumer
+    working_dir: /app
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-sink:
+        condition: service_healthy
+      connector-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./sink/consumer.mjs:/app/consumer.mjs:ro
+      - ./sink/package.json:/app/package.json:ro
+    command: ["/bin/sh", "-c", "npm install && node consumer.mjs"]
+    environment:
+      KAFKA_BROKER: kafka:29092
+      KAFKA_TOPIC_PREFIX: cdc-source
+      SINK_HOST: postgres-sink
+      SINK_PORT: 5432
+      SINK_USER: postgres
+      SINK_PASSWORD: postgres
+      SINK_DB: sink
+      # Consumer group for offset tracking
+      CONSUMER_GROUP: cdc-sink-consumer
+      # Enable duplicate detection
+      ENABLE_DEDUP: "true"
+      # Log level for debugging
+      LOG_LEVEL: info
+    restart: unless-stopped
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # VERIFIER
+  # =============================================================================
+  verifier:
+    image: node:20-alpine
+    container_name: cdc-verifier
+    working_dir: /app
+    depends_on:
+      postgres-source:
+        condition: service_healthy
+      postgres-sink:
+        condition: service_healthy
+    volumes:
+      - ./verifier/verify.mjs:/app/verify.mjs:ro
+      - ./verifier/package.json:/app/package.json:ro
+    command: ["/bin/sh", "-c", "npm install && node verify.mjs"]
+    ports:
+      - "8089:8089"
+    environment:
+      SOURCE_HOST: postgres-source
+      SOURCE_PORT: 5432
+      SOURCE_USER: postgres
+      SOURCE_PASSWORD: postgres
+      SOURCE_DB: source
+      SINK_HOST: postgres-sink
+      SINK_PORT: 5432
+      SINK_USER: postgres
+      SINK_PASSWORD: postgres
+      SINK_DB: sink
+      VERIFY_INTERVAL_MS: 10000
+      HTTP_PORT: 8089
+    restart: unless-stopped
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # FAILURE INJECTOR
+  # =============================================================================
+  failure-injector:
+    image: docker:24-cli
+    container_name: cdc-failure-injector
+    working_dir: /app
+    depends_on:
+      connector-init:
+        condition: service_completed_successfully
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./failures:/app/failures:ro
+      - ./scenario.json:/app/scenario.json:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Failure Injector starting..."
+        echo "Will trigger failures according to scenario.json"
+        apk add --no-cache curl jq
+
+        # Wait for initial stabilization
+        sleep 30
+
+        # Parse and execute failure scenarios
+        for row in $$(cat /app/scenario.json | jq -c '.failures[]'); do
+          delay=$$(echo $$row | jq -r '.delay_seconds')
+          type=$$(echo $$row | jq -r '.type')
+          echo "[t=$$delay] Scheduling failure: $$type"
+        done
+
+        # Execute failures in sequence
+        cat /app/scenario.json | jq -c '.failures[]' | while read row; do
+          delay=$$(echo $$row | jq -r '.delay_seconds')
+          type=$$(echo $$row | jq -r '.type')
+          echo "Waiting $$delay seconds before triggering: $$type"
+          sleep $$delay
+          
+          case $$type in
+            restart)
+              echo ">>> TRIGGERING: Connector Restart"
+              /app/failures/restart.sh
+              ;;
+            lag)
+              echo ">>> TRIGGERING: Consumer Lag"
+              /app/failures/lag.sh
+              ;;
+            schema)
+              echo ">>> TRIGGERING: Schema Evolution"
+              docker exec cdc-source psql -U postgres -d source -f /app/failures/schema-evolution.sql 2>/dev/null || \
+                cat /app/failures/schema-evolution.sql | docker exec -i cdc-source psql -U postgres -d source
+              ;;
+            duplicate)
+              echo ">>> TRIGGERING: Duplicate Events (re-snapshot)"
+              /app/failures/duplicate.sh
+              ;;
+            backfill)
+              echo ">>> TRIGGERING: Backfill"
+              docker exec cdc-source psql -U postgres -d source -f /app/failures/backfill.sql 2>/dev/null || \
+                cat /app/failures/backfill.sql | docker exec -i cdc-source psql -U postgres -d source
+              ;;
+          esac
+          
+          echo ">>> Failure $$type triggered. Continuing..."
+        done
+
+        echo "All scheduled failures triggered. Injector going idle."
+        tail -f /dev/null
+    networks:
+      - cdc-net
+
+  # =============================================================================
+  # DATA GENERATOR (for continuous writes)
+  # =============================================================================
+  data-generator:
+    image: node:20-alpine
+    container_name: cdc-data-generator
+    working_dir: /app
+    depends_on:
+      postgres-source:
+        condition: service_healthy
+      connector-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./source/generator.mjs:/app/generator.mjs:ro
+      - ./source/package.json:/app/package.json:ro
+    command: ["/bin/sh", "-c", "npm install && node generator.mjs"]
+    environment:
+      SOURCE_HOST: postgres-source
+      SOURCE_PORT: 5432
+      SOURCE_USER: postgres
+      SOURCE_PASSWORD: postgres
+      SOURCE_DB: source
+      # Generate ops every N ms
+      INTERVAL_MS: 2000
+      # Stop after N ops (0 = infinite)
+      MAX_OPS: 0
+    restart: unless-stopped
+    networks:
+      - cdc-net
+
+networks:
+  cdc-net:
+    driver: bridge

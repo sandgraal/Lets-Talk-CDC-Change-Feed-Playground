@@ -1,0 +1,66 @@
+{
+  "id": "canonical-reference",
+  "name": "The Failure-Aware CDC Reference Pipeline",
+  "description": "Canonical CDC scenario demonstrating all common failure modes",
+  "version": "1.0.0",
+  "failures": [
+    {
+      "id": "restart",
+      "type": "restart",
+      "delay_seconds": 30,
+      "description": "Kill and restart Debezium connector mid-stream",
+      "expected_outcome": "Events resume from last committed offset; may see duplicates depending on exactly-once config"
+    },
+    {
+      "id": "lag",
+      "type": "lag",
+      "delay_seconds": 30,
+      "description": "Pause sink consumer while source continues writing",
+      "expected_outcome": "Consumer group lag increases; retention pressure on Kafka; catchup on resume"
+    },
+    {
+      "id": "schema",
+      "type": "schema",
+      "delay_seconds": 30,
+      "description": "ALTER TABLE to add new column",
+      "expected_outcome": "Schema change event emitted; sink must handle schema evolution"
+    },
+    {
+      "id": "duplicate",
+      "type": "duplicate",
+      "delay_seconds": 30,
+      "description": "Delete and recreate connector to force re-snapshot",
+      "expected_outcome": "All existing data re-emitted; sink must deduplicate or handle upserts"
+    },
+    {
+      "id": "backfill",
+      "type": "backfill",
+      "delay_seconds": 30,
+      "description": "Insert historical data directly into source",
+      "expected_outcome": "Historical records captured; ordering may differ from timestamp order"
+    }
+  ],
+  "verification": {
+    "tables": ["customers", "orders", "order_items"],
+    "comparison_mode": "eventual_consistency",
+    "tolerance_seconds": 30,
+    "checks": [
+      {
+        "name": "row_count_match",
+        "description": "Source and sink have same row counts"
+      },
+      {
+        "name": "data_integrity",
+        "description": "All rows match on primary key lookup"
+      },
+      {
+        "name": "no_orphans",
+        "description": "No rows in sink that don't exist in source"
+      },
+      {
+        "name": "schema_compatibility",
+        "description": "Sink schema can accept source schema"
+      }
+    ]
+  }
+}
