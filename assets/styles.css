@@ -3615,6 +3615,66 @@ body.megadesk-mode .hero-ambient .orb {
   color: #94a3b8;
 }
 
+.sim-shell__placeholder--error {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #f1c4c4;
+}
+
+.sim-shell__placeholder-actions {
+  margin: 10px 0 0;
+}
+
+.sim-shell__btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  background: rgba(37, 99, 235, 0.2);
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sim-shell__btn:hover {
+  background: rgba(37, 99, 235, 0.32);
+}
+
+/* Loading state shown while a simulator bundle is being fetched/mounted. */
+.sim-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.sim-loading__spinner {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  border-top-color: #93c5fd;
+  animation: sim-loading-spin 0.8s linear infinite;
+}
+
+@keyframes sim-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-loading__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 @media (max-width: 600px) {
   .schema {
     display: flex;

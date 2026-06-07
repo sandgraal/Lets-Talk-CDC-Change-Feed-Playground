@@ -124,10 +124,9 @@
     if (!root) return;
     root.innerHTML =
       '<div class="sim-shell__placeholder">' +
-      '<p>Enable the comparator_v2 feature flag to load the CDC Method Comparator.</p>' +
+      "<p>The CDC Method Comparator is turned off. Turn it on to compare polling, trigger, and log capture side by side.</p>" +
       '<p class="sim-shell__placeholder-actions">' +
-      '<button type="button" id="simShellEnableFlag">Enable & retry</button>' +
-      " <span aria-live=\"polite\">(Note: Previously saved flag state may override this setting)</span>" +
+      '<button type="button" class="sim-shell__btn" id="simShellEnableFlag">Turn on comparator</button>' +
       "</p>" +
       "</div>";
 
@@ -152,10 +151,21 @@
     const root = document.getElementById("simShellRoot");
     if (!root) return;
     root.innerHTML =
-      '<div class="sim-shell__placeholder">' +
-      '<p>Simulator preview unavailable. Run <code>npm run build:web</code> to generate comparator assets, then reload.</p>' +
-      `<p class="sim-shell__placeholder-actions">Tried: ${candidateHrefs(bundleHref).join(", ")}</p>` +
+      '<div class="sim-shell__placeholder sim-shell__placeholder--error" role="alert">' +
+      "<p>The CDC Method Comparator couldn't load — this is usually a temporary network hiccup.</p>" +
+      '<p class="sim-shell__placeholder-actions">' +
+      '<button type="button" class="sim-shell__btn" id="simShellRetry">Retry</button>' +
+      "</p>" +
       "</div>";
+    // Technical detail stays in the console for maintainers, not the learner UI.
+    console.warn(
+      "Simulator UI shell bundle could not be loaded. Tried:",
+      candidateHrefs(bundleHref).join(", ")
+    );
+    const retry = document.getElementById("simShellRetry");
+    if (retry) {
+      retry.addEventListener("click", () => global.location.reload(), { once: true });
+    }
   }
 
   async function loadShell() {
