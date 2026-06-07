@@ -1,13 +1,15 @@
 # Let's Talk CDC - Implementation Plan
 
-Status: v1
+Status: `0.1.0` snapshot
+
+> **Versioning note:** earlier drafts of this plan labelled the work "v1.0.0 GA". The project is currently a `0.1.0` snapshot (see the root `README.md`); the items below describe the scope that has shipped into that snapshot, not a tagged 1.0 release.
 
 ## Version History
 | Release | Highlights | Notes |
 | --- | --- | --- |
-| **v1.0.0** (current) | `comparator_v2` GA with the React comparator shell, multi-mode CDC engines, lane diff overlays, and the transactional “Orders + Items” scenario. | See [`docs/enablement/release-notes.md`](./enablement/release-notes.md) for the full narrative; statuses mirror [`docs/next-steps.md`](./next-steps.md).
+| **`0.1.0` snapshot** (current) | `comparator_v2` enabled by default with the React comparator shell, multi-mode CDC engines, lane diff overlays, and the transactional “Orders + Items” scenario. | See [`docs/enablement/release-notes.md`](./enablement/release-notes.md) for the full narrative; statuses mirror [`docs/next-steps.md`](./next-steps.md).
 
-### Current Release Scope (v1.0.0)
+### Current Snapshot Scope (`0.1.0`)
 _Status icons align with the sprint tracker so both documents stay in sync._
 - ✅ **Comparator architecture** – The React comparator shell streams polling, trigger, and log adapters through the shared EventBus, scheduler, metrics store, and CDC state machine under `src/engine`/`src/modes`.
 - ✅ **Event visibility & insights** – Event Log filters/export, lane diff overlays, metrics strip + dashboard, backlog/lag instrumentation, and local telemetry buffer surface CDC parity gaps.

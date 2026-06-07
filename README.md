@@ -170,12 +170,18 @@ The comparator mount (`#simShellRoot`) streams the Polling/Trigger/Log engines i
 - Browse open issues labeled `hacktoberfest`, `good first issue`, or `help wanted` to find a place to jump in.
 - Follow the contribution workflow described in `CONTRIBUTING.md` so pull requests can be reviewed and merged quickly.
 
+## Companion learning site
+
+This repository is the **interactive CDC simulator** — the hands-on "try it live" tool. For the concepts, beginner on-ramp, glossary, vendor/stack mappings, and written labs, head to the companion education site, **[Let's Talk CDC](https://sandgraal.github.io/letstalkcdc/)**. The two are deliberately separate: this repo stays focused on the simulator and the failure-aware reference pipeline, and links out for teaching rather than duplicating it.
+
 ## Project Status & Documentation
 
-**Current Status:** Snapshot build `0.1.0` (Health Score: 8.0/10) 🟡
+**Current Status:** Snapshot build `0.1.0` 🟡 — interactive comparator + change feed playground verified mounting on static HTTP hosting; build, unit (95), property (24), and Playwright E2E (8, incl. a static-hosting smoke test) all green.
 
 Latest assessment:
 
+- 🤝 [Agent Team Brief](docs/AGENT_TEAM_BRIEF.md) – Scope, boundaries vs the `letstalkcdc` site, and the prioritized backlog
+- 📚 [Docs Index](docs/README.md) – Map of all documentation by purpose
 - 📊 [Implementation Review Summary](docs/REVIEW_SUMMARY.md) – Quick overview of strengths, gaps, and risks
 - 📋 [Implementation Status Report](docs/IMPLEMENTATION_STATUS.md) – Deep dive across architecture, tests, and feature flags
 - 🎯 [Action Plan](docs/ACTION_PLAN.md) – Prioritized follow-ups to reach world-class readiness
