@@ -45,8 +45,16 @@
   async function importGeneratedModule(relativeHref) {
     const resolved = resolveHref(relativeHref);
 
-    if (assetHeaderEntries.length === 0) {
-      return import(/* @vite-ignore */ resolved);
+    // Prefer a native dynamic import so the browser resolves the bundle's
+    // relative cross-chunk imports (e.g. "./event-log-widget.js") against the
+    // bundle's own URL. The header-fetch + blob fallback below cannot resolve
+    // those (blob: URLs are non-hierarchical), so native import must win first.
+    try {
+      return await import(/* @vite-ignore */ resolved);
+    } catch (nativeError) {
+      if (assetHeaderEntries.length === 0) {
+        throw nativeError;
+      }
     }
 
     const headers = {};

@@ -654,6 +654,34 @@
     <script src="./assets/changefeed-playground-loader.js"></script>
     <script src="./assets/ui-shell-loader.js"></script>
     <script>
+      // Boot the Change Feed Playground. Its bundle self-mounts on import, but
+      // the loader only exposes a `.load()` handle — without this trigger the
+      // section sits on its "Preparing…" placeholder forever. Defer to idle so
+      // the base playground paints first, then mount unconditionally.
+      (() => {
+        let booted = false;
+        const boot = () => {
+          if (booted) return;
+          booted = true;
+          const handle = window.__LetstalkCdcChangefeedPlayground;
+          if (!handle || typeof handle.load !== "function") {
+            console.warn(
+              "Change feed playground loader handle missing — assets/changefeed-playground-loader.js did not load. The section will stay on its placeholder."
+            );
+            return;
+          }
+          handle.load().catch((error) => {
+            console.warn("Change feed playground unavailable", error);
+          });
+        };
+        if (typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(boot, { timeout: 2000 });
+        } else {
+          window.setTimeout(boot, 600);
+        }
+      })();
+    </script>
+    <script>
       (() => {
         const DEFAULT_STATUS_TEXT = "Add a column to begin";
 

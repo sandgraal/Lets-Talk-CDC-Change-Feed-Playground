@@ -50,7 +50,7 @@
   async function importGeneratedModule(relativeHref) {
     const resolved = resolveHref(relativeHref);
 
-    const shouldFetchWithHeaders = (() => {
+    const canFetchWithHeaders = (() => {
       if (assetHeaderEntries.length === 0) return false;
       try {
         const url = new URL(resolved, scriptBase);
@@ -60,8 +60,22 @@
       }
     })();
 
-    if (!shouldFetchWithHeaders) {
-      return import(/* @vite-ignore */ resolved);
+    // Prefer a native dynamic import: the browser resolves the bundle's
+    // relative cross-chunk imports (e.g. "./event-log-widget.js") against the
+    // bundle's own URL. This is the path that works for static hosting,
+    // Appwrite Sites (public assets), GitHub Pages, and `open index.html`.
+    try {
+      return await import(/* @vite-ignore */ resolved);
+    } catch (nativeError) {
+      // Native import only fails when the host genuinely refuses the request
+      // (e.g. a CDN that requires custom headers). Fall back to a
+      // header-authenticated fetch + blob import. NOTE: blob: URLs have a
+      // non-hierarchical base, so a code-split bundle that imports sibling
+      // chunks relatively will still fail here — keep the web bundles
+      // self-contained, or this fallback cannot help them.
+      if (!canFetchWithHeaders) {
+        throw nativeError;
+      }
     }
 
     const headers = {};
