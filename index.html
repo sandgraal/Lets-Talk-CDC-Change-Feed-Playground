@@ -479,7 +479,10 @@
           </div>
         </div>
         <div id="changefeedPlaygroundRoot" class="playground-react-root">
-          <p class="sim-shell__placeholder">Preparing the change feed playground…</p>
+          <div class="sim-loading" role="status" aria-live="polite">
+            <span class="sim-loading__spinner" aria-hidden="true"></span>
+            <span class="sim-loading__text">Loading the change feed playground…</span>
+          </div>
         </div>
       </section>
 
@@ -506,7 +509,10 @@
           </div>
         </div>
         <div id="simShellRoot">
-          <p>Preparing simulator preview…</p>
+          <div class="sim-loading" role="status" aria-live="polite">
+            <span class="sim-loading__spinner" aria-hidden="true"></span>
+            <span class="sim-loading__text">Loading the CDC method comparator…</span>
+          </div>
         </div>
         <div
           id="methodGuidance"
@@ -695,6 +701,18 @@
           }
           handle.load().catch((error) => {
             console.warn("Change feed playground unavailable", error);
+            const root = document.getElementById("changefeedPlaygroundRoot");
+            if (!root) return;
+            root.innerHTML =
+              '<div class="sim-shell__placeholder sim-shell__placeholder--error" role="alert">' +
+              "<p>The change feed playground couldn't load — this is usually a temporary network hiccup.</p>" +
+              '<p class="sim-shell__placeholder-actions">' +
+              '<button type="button" class="sim-shell__btn" id="changefeedRetry">Retry</button>' +
+              "</p></div>";
+            const retry = document.getElementById("changefeedRetry");
+            if (retry) {
+              retry.addEventListener("click", () => window.location.reload(), { once: true });
+            }
           });
         };
         if (typeof window.requestIdleCallback === "function") {
