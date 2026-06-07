@@ -89,16 +89,16 @@ Priority order: **W1 → (W2 ∥ W3) → W4.** All are scoped to the playground'
 
 ### W2 — Wayfinding & lightweight context (NOT content authoring)
 The goal is the opposite of writing a curriculum: keep the tool self-explanatory with the *least* prose, and route users to `letstalkcdc` for everything deeper.
-- [ ] **Add a one-line "what this is" framing** in the hero: this is the *interactive simulator* for CDC; for concepts/learning, link out to `letstalkcdc`.
+- [x] **Add a one-line "what this is" framing** in the hero — done: the hero now states this is the hands-on simulator and links out to `letstalkcdc`; `README.md` gained a "Companion learning site" section.
 - [ ] **Wire existing tooltips (the `ff_walkthrough` flag) to deep-link** to the matching `letstalkcdc` concept pages instead of re-explaining terms here. One sentence + a link, not a glossary.
-- [ ] **Establish the cross-link contract with `letstalkcdc`** (coordinate with that repo): it links *here* as "try it live"; this links *there* for concepts. Pick a stable URL/anchor scheme.
-- [ ] **Audit existing docs in this repo for scope creep** — `docs/` here already has cheat-sheets, playbooks, lab recipes, evaluation checklists. Decide per-doc: keep (tool-usage / failure-pipeline reference) or migrate to `letstalkcdc` (general CDC education). Err toward migrating education out.
+- [ ] **Establish the cross-link contract with `letstalkcdc`** (coordinate with that repo): it links *here* as "try it live"; this links *there* for concepts. Pick a stable URL/anchor scheme. _(First link landed: hero + README → `sandgraal.github.io/letstalkcdc/`.)_
+- [~] **Audit existing docs in this repo for scope creep** — started: `docs/README.md` flags `cdc-method-cheatsheet`, `cdc-demo-playbook`, `cdc-lab-recipes`, and `change-feed-evaluation-checklist` as migration candidates. Per-doc move is a maintainer decision, not yet executed.
 - **Acceptance:** a user can operate the simulator from inline context alone, and every "learn more" path leaves this repo for `letstalkcdc` — no duplicated explanations.
 
 ### W3 — Simulator UX / information architecture
 This is the playground's core craft. Make the tool itself clearer.
 - [ ] **Disambiguate the two simulators.** The page has both a "Change Feed Playground" (simple 3-lane) and a "CDC Method Comparator" (dense, multi-feature) with no signpost for which to use first. Decide: tutorial-then-tool, or merge. Add in-context framing either way.
-- [ ] **Difficulty tags on scenarios** (`assets/shared-scenarios.js`) surfaced in the gallery filter, so a user doesn't open "Orders + Items Transactions" first.
+- [x] **Difficulty tags on scenarios** (`assets/shared-scenarios.js`) — Beginner/Intermediate/Advanced badges now render on each gallery card. _Follow-up: add a difficulty **filter** (currently badge-only)._
 - [ ] **In-comparator first-run guidance** — explain lanes, lag, ordering, write amplification *as they appear* (reuse `ff_walkthrough`), with deep links out for the underlying concepts.
 - [ ] **Replace bare "Preparing…/unavailable" placeholders** with real loading states + actionable fallbacks.
 - [ ] **Mobile/responsive pass** on the 3-lane views.
@@ -110,10 +110,10 @@ Keep this focused on what makes it *different* from `letstalkcdc`'s sandbox: fai
 - [ ] Cross-link its README with `letstalkcdc`'s getting-started sandbox so the "getting started" vs "failure-aware reference" split is obvious.
 
 ### W5 — Repo hygiene & docs truth (quick wins)
-- [ ] **Delete `path/to/`** — two accidental 1-line placeholder files committed by mistake.
-- [ ] **Reconcile version drift** — `docs/next-steps.md` and `docs/IMPLEMENTATION_PLAN.md` still reference a "v1.0" that contradicts the `0.1.0` snapshot.
-- [ ] **Add `docs/README.md` index** mapping the remaining (tool-scoped) docs.
-- [ ] Update `README.md` "Current Status" to reflect this pass (E2E green, loader bug fixed) — and add a prominent link to `letstalkcdc` as the education hub.
+- [x] **Delete `path/to/`** — accidental placeholder files removed.
+- [x] **Reconcile version drift** — `IMPLEMENTATION_PLAN.md` + `next-steps.md` no longer claim a "v1.0.0 GA"; both reflect the `0.1.0` snapshot (anchor link fixed).
+- [x] **Add `docs/README.md` index** — maps docs by purpose and flags education-heavy docs as `letstalkcdc` migration candidates.
+- [x] Update `README.md` "Current Status" — reflects loader fix + green suites, and adds a "Companion learning site" section linking to `letstalkcdc`.
 
 ---
 
