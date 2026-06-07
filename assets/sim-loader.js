@@ -28,8 +28,15 @@
       }
     })();
 
-    if (assetHeaderEntries.length === 0) {
-      return import(/* @vite-ignore */ resolved);
+    // Prefer a native dynamic import so the browser resolves any relative
+    // cross-chunk imports against the bundle's own URL. The header-fetch + blob
+    // fallback below cannot resolve those (blob: URLs are non-hierarchical).
+    try {
+      return await import(/* @vite-ignore */ resolved);
+    } catch (nativeError) {
+      if (assetHeaderEntries.length === 0) {
+        throw nativeError;
+      }
     }
 
     const headers = {};
