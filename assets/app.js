@@ -841,6 +841,7 @@ const uiState = {
   lastShareId: null,
   scenarioFilter: "",
   scenarioTags: [],
+  scenarioDifficulty: null, // null = all; otherwise "beginner" | "intermediate" | "advanced"
   previewTemplate: null,
   pendingShareId: (() => {
     if (typeof window === "undefined") return null;
@@ -1166,6 +1167,7 @@ function renderTemplateGallery() {
 
   const filter = (uiState.scenarioFilter || "").trim().toLowerCase();
   const templates = SCENARIO_TEMPLATES.filter(template => {
+    if (uiState.scenarioDifficulty && template.difficulty !== uiState.scenarioDifficulty) return false;
     if (!matchesTagFilters(template)) return false;
     if (!filter) return true;
     const haystack = [
@@ -1410,9 +1412,52 @@ function matchesTagFilters(template) {
   return uiState.scenarioTags.every(tag => template.tags.includes(tag));
 }
 
+const DIFFICULTY_FILTER_ORDER = ["beginner", "intermediate", "advanced"];
+
+function renderDifficultyFilter() {
+  if (!els.templateTagBar) return;
+  const available = DIFFICULTY_FILTER_ORDER.filter(level =>
+    SCENARIO_TEMPLATES.some(template => template.difficulty === level)
+  );
+  if (available.length < 2) return; // nothing meaningful to filter by
+
+  const group = document.createElement("div");
+  group.className = "template-difficulty-filter";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", "Filter scenarios by difficulty");
+
+  available.forEach(level => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const isActive = uiState.scenarioDifficulty === level;
+    btn.className = `template-tag template-difficulty-chip template-difficulty-chip--${level}`;
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    btn.textContent = DIFFICULTY_LABELS[level];
+    btn.onclick = () => toggleScenarioDifficulty(level);
+    group.appendChild(btn);
+  });
+
+  els.templateTagBar.appendChild(group);
+}
+
+function toggleScenarioDifficulty(level) {
+  uiState.scenarioDifficulty = uiState.scenarioDifficulty === level ? null : level;
+  renderTemplateGallery();
+  window.dispatchEvent(new CustomEvent("cdc:scenario-filter", {
+    detail: {
+      query: uiState.scenarioFilter,
+      tags: uiState.scenarioTags,
+      difficulty: uiState.scenarioDifficulty,
+    },
+  }));
+}
+
 function renderTemplateTags(allTags) {
   if (!els.templateTagBar) return;
   els.templateTagBar.innerHTML = "";
+
+  renderDifficultyFilter();
+
   if (!allTags.length) return;
 
   allTags.forEach(tag => {
