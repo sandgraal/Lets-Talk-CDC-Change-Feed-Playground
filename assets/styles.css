@@ -3671,7 +3671,7 @@ body.megadesk-mode .hero-ambient .orb {
 
 @media (prefers-reduced-motion: reduce) {
   .sim-loading__spinner {
-    animation-duration: 2.4s;
+    animation: none;
   }
 }
 
