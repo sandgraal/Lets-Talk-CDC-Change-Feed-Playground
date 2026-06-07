@@ -1,6 +1,6 @@
 # Docs Index
 
-Documentation for the **Change Feed Playground** — the interactive CDC simulator.
+Documentation for the **interactive CDC simulator** (CDC Method Comparator + Change Feed Playground).
 
 > **Scope note:** this repo is the simulator + the failure-aware Docker pipeline. General CDC *education* (concepts, glossary, learning paths, vendor mappings) lives on the companion site **[Let's Talk CDC](https://sandgraal.github.io/letstalkcdc/)**, not here. See [`AGENT_TEAM_BRIEF.md`](AGENT_TEAM_BRIEF.md) §0 for the boundary. Docs below tagged **🔀 migration candidate** read as general CDC education and may belong on `letstalkcdc`; moving them is a maintainer decision, not done unilaterally.
 
