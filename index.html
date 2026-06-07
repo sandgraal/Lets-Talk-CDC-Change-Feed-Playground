@@ -664,7 +664,12 @@
           if (booted) return;
           booted = true;
           const handle = window.__LetstalkCdcChangefeedPlayground;
-          if (!handle || typeof handle.load !== "function") return;
+          if (!handle || typeof handle.load !== "function") {
+            console.warn(
+              "Change feed playground loader handle missing — assets/changefeed-playground-loader.js did not load. The section will stay on its placeholder."
+            );
+            return;
+          }
           handle.load().catch((error) => {
             console.warn("Change feed playground unavailable", error);
           });

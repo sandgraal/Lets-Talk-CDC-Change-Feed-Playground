@@ -13,7 +13,7 @@ const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test
 // file://. This is the condition under which `index.html`'s hardcoded
 // APPWRITE_CFG.assetHeaders activates the loaders' header path. A regression
 // in that path (e.g. importing code-split bundles via a non-hierarchical
-// blob: URL) breaks the comparator + changefeed playload on every deployed
+// blob: URL) breaks the comparator + changefeed playground on every deployed
 // site while file://-based specs stay green. This guards that gap.
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -34,8 +34,9 @@ suite("Static hosting smoke (served over HTTP)", () => {
       try {
         const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
         const relative = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
-        const filePath = path.join(repoRoot, relative);
-        if (!filePath.startsWith(repoRoot)) {
+        const filePath = path.resolve(repoRoot, relative);
+        const relToRoot = path.relative(repoRoot, filePath);
+        if (relToRoot.startsWith("..") || path.isAbsolute(relToRoot)) {
           res.writeHead(403).end("Forbidden");
           return;
         }
@@ -64,9 +65,14 @@ suite("Static hosting smoke (served over HTTP)", () => {
 
   test("comparator and changefeed playground mount on static HTTP hosting", async ({ page }) => {
     const loaderWarnings = [];
+    // Match only loader-specific failures, not unrelated "… unavailable"
+    // warnings (e.g. anonymous session, event log widget) that would make this
+    // smoke test flaky. These are the exact phrases the bundle loaders and the
+    // index.html changefeed bootstrap emit on failure.
+    const LOADER_FAILURE = /Simulator UI shell (?:load failed|bundle missing)|Changefeed[ -]playground (?:load failed|bundle missing)|Change feed playground unavailable|Failed to resolve module specifier/i;
     page.on("console", (msg) => {
       const text = msg.text();
-      if (/unavailable|bundle missing|Failed to resolve module specifier/i.test(text)) {
+      if (LOADER_FAILURE.test(text)) {
         loaderWarnings.push(text);
       }
     });
