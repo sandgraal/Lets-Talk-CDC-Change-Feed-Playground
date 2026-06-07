@@ -1,6 +1,7 @@
 const defaultScenarios = [
   {
     id: "crud-basic",
+    difficulty: "beginner",
     name: "CRUD Basic",
     label: "CRUD Basic",
     description: "Teaching delete visibility basics.",
@@ -25,6 +26,7 @@ const defaultScenarios = [
   },
   {
     id: "omnichannel-orders",
+    difficulty: "intermediate",
     name: "Omnichannel Orders",
     label: "Omnichannel Orders",
     description: "Walking through status transitions and fulfilment edge cases.",
@@ -78,6 +80,7 @@ const defaultScenarios = [
   },
   {
     id: "real-time-payments",
+    difficulty: "intermediate",
     name: "Real-time Payments",
     label: "Real-time Payments",
     description: "Demonstrating idempotent updates or risk review flows.",
@@ -121,6 +124,7 @@ const defaultScenarios = [
   },
   {
     id: "outbox-relay",
+    difficulty: "advanced",
     name: "Outbox Relay",
     label: "Outbox Relay",
     description: "Contrasting log capture with an application-managed outbox.",
@@ -220,6 +224,7 @@ const defaultScenarios = [
   },
   {
     id: "iot-telemetry",
+    difficulty: "intermediate",
     name: "IoT Telemetry",
     label: "IoT Telemetry",
     description: "Showing rolling measurements with anomaly flags.",
@@ -271,6 +276,7 @@ const defaultScenarios = [
   },
   {
     id: "retention-erasure",
+    difficulty: "advanced",
     name: "Retention & Erasure",
     label: "Retention & Erasure",
     description: "Walk through right-to-be-forgotten and legal hold flows.",
@@ -396,6 +402,7 @@ const defaultScenarios = [
   },
   {
     id: "schema-evolution",
+    difficulty: "intermediate",
     name: "Schema Evolution",
     label: "Schema Evolution",
     description: "Demonstrating column additions while capturing changes.",
@@ -454,6 +461,7 @@ const defaultScenarios = [
   },
   {
     id: "orders-items-transactions",
+    difficulty: "advanced",
     name: "Orders + Items Transactions",
     label: "Orders + Items Transactions",
     description: "Teaching multi-table commit semantics.",
@@ -508,6 +516,7 @@ const defaultScenarios = [
   },
   {
     id: "snapshot-replay",
+    difficulty: "advanced",
     name: "Snapshot Replay",
     label: "Snapshot Replay",
     description: "Offset resets and re-seeding change feeds.",
@@ -561,6 +570,7 @@ const defaultScenarios = [
   },
   {
     id: "burst-updates",
+    difficulty: "intermediate",
     name: "Burst Updates",
     label: "Burst Updates",
     description: "Stressing lag/ordering behaviour under rapid updates.",
@@ -586,6 +596,7 @@ const defaultScenarios = [
   },
   {
     id: "snapshot-to-stream",
+    difficulty: "advanced",
     name: "Snapshot ➜ Stream Handoff",
     label: "Snapshot ➜ Stream",
     description: "Showing snapshot catch-up handing off to change feed tails.",

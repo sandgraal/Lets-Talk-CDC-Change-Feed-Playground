@@ -602,6 +602,38 @@ function deriveTemplateSeed(seed, index) {
   return typeof seed === "number" ? seed : FALLBACK_TEMPLATE_SEED_BASE + index;
 }
 
+// Learner-facing difficulty for the scenario gallery. Source of truth is the
+// `difficulty` field in assets/shared-scenarios.js; this map is a safety net
+// so the badge still renders when the inline FALLBACK_SCENARIOS are used (i.e.
+// shared-scenarios.js failed to load) or a scenario omits the field.
+const SCENARIO_DIFFICULTY = Object.freeze({
+  "crud-basic": "beginner",
+  "omnichannel-orders": "intermediate",
+  "real-time-payments": "intermediate",
+  "schema-evolution": "intermediate",
+  "iot-telemetry": "intermediate",
+  "burst-updates": "intermediate",
+  "outbox-relay": "advanced",
+  "retention-erasure": "advanced",
+  "orders-items-transactions": "advanced",
+  "snapshot-replay": "advanced",
+  "snapshot-to-stream": "advanced",
+});
+
+const DIFFICULTY_LABELS = Object.freeze({
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+});
+
+function resolveTemplateDifficulty(template) {
+  const raw =
+    (typeof template.difficulty === "string" && template.difficulty) ||
+    SCENARIO_DIFFICULTY[template.id] ||
+    null;
+  return raw && DIFFICULTY_LABELS[raw] ? raw : null;
+}
+
 const SCENARIO_TEMPLATES = Object.freeze(
   SHARED_SCENARIOS
     .map((template, index) => ({
@@ -610,6 +642,7 @@ const SCENARIO_TEMPLATES = Object.freeze(
       label: template.label || template.name,
       description: template.description,
       highlight: template.highlight,
+      difficulty: resolveTemplateDifficulty(template),
       tags: Array.isArray(template.tags) ? [...template.tags] : [],
       seed: deriveTemplateSeed(template.seed, index),
       schemaVersion: typeof template.schemaVersion === "number" ? template.schemaVersion : undefined,
@@ -1192,6 +1225,13 @@ function renderTemplateGallery() {
     const title = document.createElement("h4");
     title.textContent = template.name;
     titleRow.appendChild(title);
+
+    if (template.difficulty && DIFFICULTY_LABELS[template.difficulty]) {
+      const difficultyBadge = document.createElement("span");
+      difficultyBadge.className = `template-card__difficulty template-card__difficulty--${template.difficulty}`;
+      difficultyBadge.textContent = DIFFICULTY_LABELS[template.difficulty];
+      titleRow.appendChild(difficultyBadge);
+    }
 
     if (isActive) {
       const activeBadge = document.createElement("span");
