@@ -14,7 +14,7 @@ There are **two sibling repos** in this CDC family. They must not duplicate each
 
 | Repo | Role | Owns |
 | --- | --- | --- |
-| **`letstalkcdc/`** (`~/Websites/letstalkcdc`, Eleventy site → `sandgraal.github.io/letstalkcdc/`) | **The education hub** | "What is CDC?", concepts, beginner on-ramp, learning paths, glossary, vendor-agnostic explanations + stack mappings (Debezium/Kafka/Matillion/Snowflake…), written labs, a getting-started Docker sandbox |
+| **`letstalkcdc/`** (Eleventy site → `https://sandgraal.github.io/letstalkcdc/`) | **The education hub** | "What is CDC?", concepts, beginner on-ramp, learning paths, glossary, vendor-agnostic explanations + stack mappings (Debezium/Kafka/Matillion/Snowflake…), written labs, a getting-started Docker sandbox |
 | **`Lets-Talk-CDC-Change-Feed-Playground/`** (this repo) | **The interactive simulator** | The in-browser method comparator + change feed playground, and the *failure-aware* Docker reference pipeline (`scenarios/01-canonical-reference/`) |
 
 **This repo is a standalone tool that is lightly self-explanatory.** It carries only the *minimum* context a user needs to operate the simulator, and **defers all deep teaching to `letstalkcdc` via links** rather than re-authoring it.
