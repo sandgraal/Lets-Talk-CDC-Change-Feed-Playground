@@ -1,5 +1,7 @@
 # Issue: Appwrite-backed persistence for scenarios and telemetry
 
+> **Update (2026-06):** the client integration is repaired (#285) and the required collections/attributes/permissions are now documented in [`../appwrite-setup.md`](../appwrite-setup.md). That covers the "document required schemas" item; the open work is the `scenarios` serialization change (Option A/B in that doc) so snapshots persist, plus configuring the collections in the Appwrite console.
+
 ## Summary
 Implement persistent storage powered by Appwrite so that simulator scenarios, configuration, and comparator telemetry survive page reloads and can be shared across sessions.
 
