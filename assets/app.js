@@ -1933,8 +1933,20 @@ async function maybeHydrateSharedScenario() {
     }
 
     // v2 packs the snapshot into a single `payload` string; older docs (if
-    // any) used top-level fields. Prefer payload, fall back to the doc itself.
-    const data = typeof doc.payload === "string" ? (safeParse(doc.payload) || {}) : doc;
+    // any) used top-level fields. Parse strictly: if a `payload` is present but
+    // not a valid object, abort rather than overwrite the current workspace
+    // with empties (safeParse returns the raw string on failure, so guard the
+    // type explicitly).
+    let data = doc;
+    if (typeof doc.payload === "string") {
+      let parsed;
+      try { parsed = JSON.parse(doc.payload); } catch { parsed = null; }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        refreshSchemaStatus("Shared scenario could not be read (corrupt payload).", "error");
+        return;
+      }
+      data = parsed;
+    }
 
     const officePref =
       typeof data.officeOptIn === "boolean"
