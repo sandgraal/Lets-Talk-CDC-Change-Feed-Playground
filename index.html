@@ -98,21 +98,27 @@
                 <button type="button" class="btn-ghost" id="btnOnboarding">
                   How the playground works
                 </button>
+                <!-- These point at the companion learning site (rendered
+                     pages) rather than raw docs/*.md, which the static deploy
+                     serves as text/markdown (a download, not a readable page).
+                     Concepts live on letstalkcdc per the scope boundary. -->
                 <a
                   class="btn-ghost"
-                  href="docs/change-feed-evaluation-checklist.md"
+                  href="https://sandgraal.github.io/letstalkcdc/intro/"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
+                  aria-label="Learn CDC methods on Let’s Talk CDC (opens in a new tab)"
                 >
-                  Open evaluation checklist
+                  Learn CDC methods <span aria-hidden="true">↗</span>
                 </a>
                 <a
                   class="btn-ghost"
-                  href="docs/cdc-method-cheatsheet.md"
+                  href="https://sandgraal.github.io/letstalkcdc/tooling/"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
+                  aria-label="Compare CDC tooling on Let’s Talk CDC (opens in a new tab)"
                 >
-                  Open method cheat sheet
+                  Compare CDC tooling <span aria-hidden="true">↗</span>
                 </a>
               </div>
               <p class="hero-pathways-tip">
