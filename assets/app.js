@@ -4187,7 +4187,8 @@ async function initAppwrite() {
   catch { try { await account.createAnonymousSession(); } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
 
   const channel = cfg.channel(cfg.databaseId, cfg.collectionId);
-  const unsubscribe = client.subscribe(channel, (msg) => {
+  // SDK v13 accepts a string or string[]; use the canonical array form.
+  const unsubscribe = client.subscribe([channel], (msg) => {
     const ev = (msg.events && msg.events[0]) || "";
     // Only react to document create events
     if (!ev.includes(".documents.*.create")) return;
