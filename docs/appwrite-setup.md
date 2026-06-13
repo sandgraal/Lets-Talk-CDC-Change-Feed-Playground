@@ -26,11 +26,11 @@ This guide is the exact, code-grounded setup needed to make those work. It compl
 
 ## 2. Sessions & permissions model
 
-On load the app calls `account.get()`, then `account.createAnonymousSession()` if there's no session (`assets/app.js → initAppwrite`). So **visitors act as either an anonymous user or a logged-in user — never a true API key**. Collection permissions must therefore grant the relevant role:
+On load the app calls `account.get()`, then *attempts* `account.createAnonymousSession()` if there's no session (`assets/app.js → initAppwrite`). That attempt is **best-effort** — if it fails the code logs a warning and continues as an unauthenticated guest. So requests run as a guest, an anonymous user, or a logged-in user — never a true API key. Set collection permissions for the role you actually rely on:
 
-- To let any visitor write/read: grant **Create** and **Read** to `Any` (or `Users` if you require login).
+- To let any visitor write/read **without login**: grant **Create** and **Read** to `Any`. This works for unauthenticated guests, so an anonymous session is **not required** in this mode.
 - For share links to open for *other* people, the `scenarios` collection needs **Read** for `Any`.
-- **Enable Anonymous sessions**: Appwrite Console → Auth → Settings → enable "Anonymous". Without it, `createAnonymousSession()` fails and writes are rejected.
+- **Anonymous sessions are optional** — enable them (Appwrite Console → Auth → Settings → "Anonymous") only if you scope permissions to `Users` instead of `Any`, or want a distinct per-visitor identity. With `Any` permissions, leaving them off is fine.
 
 > ⚠️ **Security trade-off:** `Create` for `Any` means anyone can write documents. For a public demo that's usually fine, but consider Appwrite's rate limits / abuse protection, or scope to `Users` with a login.
 
@@ -43,7 +43,7 @@ On load the app calls `account.get()`, then `account.createAnonymousSession()` i
 | Attribute | Type | Size | Required | Notes |
 | --- | --- | --- | --- | --- |
 | `ts_ms` | integer | — | yes | `Date.now()` at write time |
-| `op` | string | 16 | yes | op code (`c`/`r`/`u`/`d` or `insert`/`update`/`delete`) |
+| `op` | string | 16 | yes | Debezium-style op code — `publishEvent()` always writes one of `c` (create), `r` (read/snapshot), `u` (update), `d` (delete) |
 | `before` | string | 1,000,000 | no | row image before, JSON-stringified; nullable |
 | `after` | string | 1,000,000 | no | row image after, JSON-stringified; nullable |
 
