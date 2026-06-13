@@ -1586,6 +1586,24 @@ body[data-theme="light"] .hero-ambient .orb-three {
     max-width: 100%;
     box-sizing: border-box;
   }
+
+  /* Stack section headers so titles/eyebrows get full width instead of
+     competing with the action pills, which otherwise cram into a narrow
+     column on phones. Qualified with .workspace-panel (specificity 0-2-0)
+     so these win over the later non-media .section-title-row base rule —
+     media queries don't add specificity, so a bare selector would lose on
+     source order. */
+  .workspace-panel .section-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .workspace-panel .section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
 
 .card {
