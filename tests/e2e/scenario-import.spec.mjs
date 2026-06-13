@@ -8,7 +8,9 @@ const indexUrl = pathToFileURL(path.resolve(__dirname, "../../index.html")).href
 
 const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test.describe;
 
-// A valid export-format scenario payload (the shape exportScenario writes).
+// A minimal valid subset of the export payload. importScenario() only needs
+// `schema` (rows/events/scenarioId/comparator are optional); the real
+// exportScenario() also emits exported_at, remoteId, comparator, and officeOptIn.
 const SCENARIO = {
   version: 2,
   schema: [
@@ -31,7 +33,7 @@ async function importFile(page, contents, name = "scenario.json") {
   });
 }
 
-suite("Scenario import (file round-trip)", () => {
+suite("Scenario import (from file)", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.clear();
