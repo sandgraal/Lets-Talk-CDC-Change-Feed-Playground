@@ -1586,6 +1586,21 @@ body[data-theme="light"] .hero-ambient .orb-three {
     max-width: 100%;
     box-sizing: border-box;
   }
+
+  /* Stack section headers so titles/eyebrows get full width instead of
+     competing with the action pills, which otherwise cram into a narrow
+     column on phones. */
+  .section-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
 
 .card {
