@@ -1806,16 +1806,25 @@ async function saveScenarioRemote(options = {}) {
     return null;
   }
 
+  // Appwrite attributes are typed scalars — there is no nested-object/JSON
+  // type. Pack the nested snapshot (schema/rows/events/comparator) into a
+  // single `payload` string so it round-trips through a plain string
+  // attribute. See docs/appwrite-setup.md § "scenarios". The reader
+  // (maybeHydrateSharedScenario) unpacks `payload`, with a fallback to the
+  // legacy top-level fields.
   const snapshot = {
     kind: "scenario",
     version: 2,
     saved_at: new Date().toISOString(),
-    schema: clone(state.schema),
-    rows: clone(state.rows),
-    events: clone(state.events),
-    scenarioId: state.scenarioId,
-    comparator: buildComparatorExport(),
-    officeOptIn: officeSchemaOptIn,
+    scenarioId: state.scenarioId || null,
+    payload: JSON.stringify({
+      schema: clone(state.schema),
+      rows: clone(state.rows),
+      events: clone(state.events),
+      comparator: buildComparatorExport(),
+      officeOptIn: officeSchemaOptIn,
+      schemaVersion: state.schemaVersion,
+    }),
   };
 
   const reuseId = state.remoteId || uiState.lastShareId;
@@ -1923,31 +1932,50 @@ async function maybeHydrateSharedScenario() {
       return;
     }
 
+    // v2 packs the snapshot into a single `payload` string; older docs (if
+    // any) used top-level fields. Parse strictly: if a `payload` is present but
+    // not a valid object, abort rather than overwrite the current workspace
+    // with empties (safeParse returns the raw string on failure, so guard the
+    // type explicitly).
+    let data = doc;
+    if (typeof doc.payload === "string") {
+      let parsed;
+      try { parsed = JSON.parse(doc.payload); } catch { parsed = null; }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        refreshSchemaStatus("Shared scenario could not be read (corrupt payload).", "error");
+        return;
+      }
+      data = parsed;
+    }
+
     const officePref =
-      typeof doc.officeOptIn === "boolean"
-        ? doc.officeOptIn
-        : typeof doc.officeSchemaOptIn === "boolean"
-          ? doc.officeSchemaOptIn
-          : null;
+      typeof data.officeOptIn === "boolean"
+        ? data.officeOptIn
+        : typeof doc.officeOptIn === "boolean"
+          ? doc.officeOptIn
+          : typeof doc.officeSchemaOptIn === "boolean"
+            ? doc.officeSchemaOptIn
+            : null;
     if (officePref !== null) {
       setOfficeSchemaPreference(officePref);
     }
 
-    state.schema = doc.schema || [];
-    state.schemaVersion = Number(doc.schemaVersion) || 1;
-    state.rows = doc.rows || [];
-    state.events = doc.events || [];
-    state.scenarioId = doc.scenarioId || null;
+    const comparator = data.comparator || doc.comparator;
+    state.schema = data.schema || [];
+    state.schemaVersion = Number(data.schemaVersion ?? doc.schemaVersion) || 1;
+    state.rows = data.rows || [];
+    state.events = data.events || [];
+    state.scenarioId = doc.scenarioId || data.scenarioId || null;
     state.remoteId = doc.$id;
 
     if (state.events.length) selectLastEvent(); else resetEventSelection();
     if (state.scenarioId) storage.set(STORAGE_KEYS.lastTemplate, state.scenarioId);
-    if (doc.comparator?.preferences) {
-      applyComparatorPreferences(doc.comparator.preferences);
+    if (comparator?.preferences) {
+      applyComparatorPreferences(comparator.preferences);
     }
-    const sharedDetail = buildComparatorSnapshotDetail(doc.comparator, {
-      label: doc.scenarioId || "Shared scenario",
-      name: doc.scenarioId || "shared",
+    const sharedDetail = buildComparatorSnapshotDetail(comparator, {
+      label: state.scenarioId || "Shared scenario",
+      name: state.scenarioId || "shared",
       isLive: false,
       rowsLength: state.rows.length,
       eventsLength: state.events.length,
