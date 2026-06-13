@@ -644,9 +644,12 @@
         shareBaseUrl:
           "https://girhun.github.io/Lets-Talk-CDC-Change-Feed-Playground/",
         channel: (db, col) => `databases.${db}.collections.${col}.documents`,
-        assetHeaders: {
-          "X-Appwrite-Project": "68e009780030a983a57d",
-        },
+        // No assetHeaders: Appwrite Sites serves the generated bundles as
+        // public static assets (verified: they return 200 + text/javascript
+        // with and without X-Appwrite-Project). Omitting this keeps every
+        // bundle loader on the native dynamic import() path; the header-fetch
+        // + blob: fallback can't resolve code-split chunks and was the root
+        // cause of the comparator/playground failing to load on the deploy.
         featureFlags: [
           "comparator_v2",
           "ff_event_bus",
