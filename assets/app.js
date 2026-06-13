@@ -958,6 +958,10 @@ const METHOD_KEYS = ["polling", "trigger", "log"];
 
 const TOUR_DEFAULT_TIMEOUT = 4500;
 const TOUR_COMPARATOR_TIMEOUT = 7000;
+// Deep links into the companion education site (letstalkcdc) for the underlying
+// concepts. This playground is the hands-on tool; it points learners to
+// letstalkcdc for the theory rather than re-teaching it (see AGENT_TEAM_BRIEF §0).
+const LTCDC_BASE = "https://sandgraal.github.io/letstalkcdc/";
 const GUIDED_TOUR_STEPS = [
   {
     id: "workspace-schema",
@@ -982,6 +986,8 @@ const GUIDED_TOUR_STEPS = [
     selector: ".schema-demo-actions",
     title: "Schema walkthrough",
     description: "Use these helpers to add or drop the demo column while events stream. Schema change events land alongside CDC operations.",
+    learnHref: `${LTCDC_BASE}schema-evolution/`,
+    learnLabel: "Schema evolution on Let’s Talk CDC →",
   },
   {
     id: "comparator-preset",
@@ -989,12 +995,16 @@ const GUIDED_TOUR_STEPS = [
     title: "Pick a vendor preset",
     timeout: TOUR_COMPARATOR_TIMEOUT,
     description: "Choose the pipeline you want to mirror. The badges reveal source, capture, transport, and sink terminology for the walkthrough.",
+    learnHref: `${LTCDC_BASE}tooling/`,
+    learnLabel: "Compare CDC tooling on Let’s Talk CDC →",
   },
   {
     id: "comparator-callouts",
     selector: '[data-tour-target="comparator-callouts"]',
     title: "Honest method callouts",
     timeout: TOUR_COMPARATOR_TIMEOUT,
+    learnHref: `${LTCDC_BASE}intro/`,
+    learnLabel: "How polling, trigger & log differ →",
     getDescription: element => {
       const text = element?.textContent ? element.textContent.trim() : "";
       if (text) {
@@ -1010,6 +1020,8 @@ const GUIDED_TOUR_STEPS = [
     timeout: TOUR_COMPARATOR_TIMEOUT,
     description:
       "Lag, throughput, delete capture, ordering, and write amplification update live. Use the diff overlay just below to see missing, extra, and out-of-order operations.",
+    learnHref: `${LTCDC_BASE}observability/`,
+    learnLabel: "Lag & observability on Let’s Talk CDC →",
   },
   {
     id: "comparator-dashboard",
@@ -3219,6 +3231,7 @@ function createTourUi() {
     </div>
     <h3 class="tour-panel__title"></h3>
     <p class="tour-panel__body"></p>
+    <a class="tour-panel__learn" target="_blank" rel="noopener noreferrer" hidden></a>
     <div class="tour-panel__controls">
       <button type="button" class="tour-panel__prev btn-ghost">Back</button>
       <button type="button" class="tour-panel__next btn-primary">Next</button>
@@ -3231,6 +3244,7 @@ function createTourUi() {
     stepLabel: panel.querySelector(".tour-panel__step"),
     title: panel.querySelector(".tour-panel__title"),
     body: panel.querySelector(".tour-panel__body"),
+    learn: panel.querySelector(".tour-panel__learn"),
     nextBtn: panel.querySelector(".tour-panel__next"),
     prevBtn: panel.querySelector(".tour-panel__prev"),
     closeBtn: panel.querySelector(".tour-panel__close"),
@@ -3255,6 +3269,16 @@ function updateTourUi(stepIndex, step, placeholderDescription = "") {
     ui.body.textContent = step.description;
   } else {
     ui.body.textContent = placeholderDescription;
+  }
+  if (ui.learn) {
+    if (step?.learnHref) {
+      ui.learn.href = step.learnHref;
+      ui.learn.textContent = step.learnLabel || "Learn more →";
+      ui.learn.hidden = false;
+    } else {
+      ui.learn.removeAttribute("href");
+      ui.learn.hidden = true;
+    }
   }
   if (ui.prevBtn) ui.prevBtn.disabled = stepIndex === 0;
   if (ui.nextBtn) ui.nextBtn.textContent = stepIndex === steps.length - 1 ? "Finish" : "Next";
