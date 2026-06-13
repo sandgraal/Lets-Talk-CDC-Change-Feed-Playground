@@ -4177,14 +4177,18 @@ async function initAppwrite() {
   const client    = new Appwrite.Client().setEndpoint(cfg.endpoint).setProject(cfg.projectId);
   const account   = new Appwrite.Account(client);
   const databases = new Appwrite.Databases(client);
-  const realtime  = new Appwrite.Realtime(client);
+  // Appwrite SDK v13 removed the `Appwrite.Realtime` constructor; realtime is
+  // now `client.subscribe(channel, cb)` directly on the Client. The old
+  // `new Appwrite.Realtime(client)` threw "is not a constructor", which aborted
+  // initAppwrite entirely and silently disabled share links + persistence.
 
   // Try to ensure a session (optional; public perms will still work without it)
   try { await account.get(); }
   catch { try { await account.createAnonymousSession(); } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
 
   const channel = cfg.channel(cfg.databaseId, cfg.collectionId);
-  realtime.subscribe(channel, (msg) => {
+  // SDK v13 accepts a string or string[]; use the canonical array form.
+  const unsubscribe = client.subscribe([channel], (msg) => {
     const ev = (msg.events && msg.events[0]) || "";
     // Only react to document create events
     if (!ev.includes(".documents.*.create")) return;
@@ -4209,7 +4213,7 @@ async function initAppwrite() {
     }
   });
 
-  appwrite = { client, account, databases, realtime, cfg };
+  appwrite = { client, account, databases, unsubscribe, cfg };
 }
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return s; } }
