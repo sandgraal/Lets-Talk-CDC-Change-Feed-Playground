@@ -3478,6 +3478,24 @@ body.megadesk-mode .hero-ambient .orb {
   line-height: 1.4;
 }
 
+.tour-panel__learn {
+  display: inline-block;
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.tour-panel__learn:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tour-panel__learn[hidden] {
+  display: none;
+}
+
 .tour-panel__controls {
   display: flex;
   justify-content: space-between;
