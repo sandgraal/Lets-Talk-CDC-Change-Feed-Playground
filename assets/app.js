@@ -751,7 +751,6 @@ const els = {
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
-  onboardingEasterEgg: document.getElementById("onboardingEasterEgg"),
   methodGuidance: document.getElementById("methodGuidance"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
@@ -815,9 +814,6 @@ function ensureOnboardingElements() {
   }
   if (!els.onboardingStart) {
     els.onboardingStart = document.getElementById("onboardingStart");
-  }
-  if (!els.onboardingEasterEgg) {
-    els.onboardingEasterEgg = document.getElementById("onboardingEasterEgg");
   }
 }
 
@@ -1645,9 +1641,6 @@ function showOnboarding() {
   if (!els.onboardingOverlay) return;
   els.onboardingOverlay.hidden = false;
   document.body.classList.add("is-onboarding");
-  if (els.onboardingEasterEgg) {
-    els.onboardingEasterEgg.checked = false;
-  }
   const dialog = els.onboardingOverlay.querySelector(".onboarding-dialog");
   if (dialog && typeof dialog.focus === "function") {
     dialog.focus({ preventScroll: true });
@@ -1744,28 +1737,28 @@ function resetWorkspaceState(loadOffice) {
 
 function startFromScratch() {
   ensureOnboardingElements();
-  const loadOffice = Boolean(els.onboardingEasterEgg?.checked);
-  setOfficeSchemaPreference(loadOffice);
-
-  resetWorkspaceState(loadOffice);
-
+  // "Start from scratch" now always loads the Scranton sample schema (the old
+  // opt-in checkbox is gone) so learners land on a real, populated table
+  // instead of a blank "add a column" canvas.
+  setOfficeSchemaPreference(true);
+  resetWorkspaceState(true);
   storage.remove(STORAGE_KEYS.lastTemplate);
-  if (els.onboardingEasterEgg) els.onboardingEasterEgg.checked = false;
 
-  save();
   renderSchema();
   renderEditor();
-  renderTable();
+  // Seed a few sample rows from the schema. seedRows() also saves + renders the
+  // table, and auto-applies Office lore because isOfficeSchemaActive() is true.
+  seedRows();
   renderJSONLog();
   renderTemplateGallery();
   syncSchemaDemoButtons();
 
   refreshSchemaStatus(
-    loadOffice ? "Scranton schema unlocked. Dwight is watching." : "Blank workspace ready. Add a column to begin.",
-    loadOffice ? "success" : "muted"
+    "Scranton schema loaded with sample rows. Stream events or edit the table to begin.",
+    "success"
   );
-  updateLearning("schema");
-  trackEvent("workspace.scenario.start_from_scratch", { officeSchema: loadOffice });
+  updateLearning("events");
+  trackEvent("workspace.scenario.start_from_scratch", { officeSchema: true });
   hideOnboarding(true);
 }
 
@@ -3312,6 +3305,26 @@ function updateTourUi(stepIndex, step, placeholderDescription = "") {
   if (ui.nextBtn) ui.nextBtn.textContent = stepIndex === steps.length - 1 ? "Finish" : "Next";
 }
 
+// Show a transient note in the tour panel body (e.g. when a step is skipped).
+function showTourNote(message) {
+  if (activeTour?.ui?.body) activeTour.ui.body.textContent = message;
+}
+
+// When the comparator is turned off, its steps' targets never appear. Skip the
+// whole comparator block in one move (with a single note) instead of stalling
+// on each step's timeout.
+function skipRemainingComparatorSteps() {
+  if (!activeTour) return;
+  let i = activeTour.index;
+  while (i < activeTour.steps.length && String(activeTour.steps[i].id || "").startsWith("comparator-")) {
+    i += 1;
+    activeTour.skipped += 1;
+  }
+  showTourNote("The comparator isn’t turned on — skipping its steps. Enable it to explore lane metrics.");
+  activeTour.index = i - 1; // handleTourNext() advances to i (or finishes)
+  window.setTimeout(() => { if (activeTour) handleTourNext(); }, 1500);
+}
+
 function showTourStep(stepIndex) {
   if (!activeTour) return;
   const step = activeTour.steps[stepIndex];
@@ -3322,6 +3335,20 @@ function showTourStep(stepIndex) {
 
   updateTourUi(stepIndex, step);
 
+  // Comparator steps target React-rendered elements. If the comparator is off,
+  // skip its steps cleanly; otherwise scroll its region into view so React lays
+  // out before we wait, keeping waitForElement fast instead of timing out.
+  if (typeof step.id === "string" && step.id.startsWith("comparator-")) {
+    if (!isComparatorFlagEnabled()) {
+      skipRemainingComparatorSteps();
+      return;
+    }
+    const preview = document.getElementById("sim-shell-preview");
+    if (preview) {
+      try { preview.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* ignore */ }
+    }
+  }
+
   const timeout = typeof step.timeout === "number" ? step.timeout : TOUR_DEFAULT_TIMEOUT;
   const token = Symbol("tour-step");
   activeTour.pendingToken = token;
@@ -3330,7 +3357,12 @@ function showTourStep(stepIndex) {
       if (!activeTour || activeTour.pendingToken !== token) return;
 
       if (!element) {
-        handleTourNext();
+        // Don't silently jump — surface a brief note, then advance.
+        activeTour.skipped += 1;
+        showTourNote(`Skipping “${step.title}” — it isn’t available right now.`);
+        window.setTimeout(() => {
+          if (activeTour && activeTour.pendingToken === token) handleTourNext();
+        }, 1200);
         return;
       }
 
@@ -3405,7 +3437,7 @@ function handleTourKeydown(event) {
 function finishTour(completed, reason) {
   if (!activeTour) return;
   clearTourHighlight();
-  const { ui, startedAt, steps, index, keydownHandler } = activeTour;
+  const { ui, startedAt, steps, index, keydownHandler, skipped = 0 } = activeTour;
 
   if (ui) {
     if (ui.nextBtn) ui.nextBtn.removeEventListener("click", handleTourNext);
@@ -3420,7 +3452,12 @@ function finishTour(completed, reason) {
 
   const durationMs = Date.now() - startedAt;
   if (completed) {
-    trackEvent("tour.completed", { totalSteps: steps.length, durationMs });
+    trackEvent("tour.completed", {
+      totalSteps: steps.length,
+      durationMs,
+      skipped,
+      status: skipped > 0 ? "completed_with_skips" : "completed",
+    });
   } else {
     trackEvent("tour.dismissed", {
       totalSteps: steps.length,
@@ -3460,6 +3497,7 @@ function startGuidedTour() {
     ui,
     pendingToken: null,
     keydownHandler,
+    skipped: 0,
   };
 
   trackEvent("tour.started", {
@@ -4923,7 +4961,7 @@ function bindUiHandlers() {
   }
   if (els.onboardingStart) {
     els.onboardingStart.onclick = () => {
-      const template = getTemplateById("orders");
+      const template = getTemplateById("omnichannel-orders");
       applyScenarioTemplate(template, { focusStep: "rows", closeOnboarding: true });
     };
   }
