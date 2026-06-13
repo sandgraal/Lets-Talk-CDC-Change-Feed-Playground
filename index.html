@@ -642,7 +642,11 @@
     <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
     <script>
       window.APPWRITE_CFG = {
-        endpoint: "https://cloud.appwrite.io/v1",
+        // Regional endpoint: this project lives in Appwrite Cloud's `nyc`
+        // region. The generic https://cloud.appwrite.io/v1 returns
+        // "Project is not accessible in this region", which broke realtime +
+        // scenario persistence + share links.
+        endpoint: "https://nyc.cloud.appwrite.io/v1",
         projectId: "68e009780030a983a57d",
         databaseId: "68e028d90039fa4588f5",
         collectionId: "events",
