@@ -10,11 +10,15 @@ const repoRoot = path.resolve(path.dirname(__filename), "../..");
 const suite = process.env.PLAYWRIGHT_DISABLE === "1" ? test.describe.skip : test.describe;
 
 // Minimal static file server so the page is served over real HTTP(S), not
-// file://. This is the condition under which `index.html`'s hardcoded
-// APPWRITE_CFG.assetHeaders activates the loaders' header path. A regression
-// in that path (e.g. importing code-split bundles via a non-hierarchical
-// blob: URL) breaks the comparator + changefeed playground on every deployed
-// site while file://-based specs stay green. This guards that gap.
+// file://. The comparator + changefeed playground load their code-split bundles
+// through hand-written loaders; a regression there (e.g. importing a code-split
+// bundle via a non-hierarchical blob: URL) breaks both widgets on every deployed
+// site while file://-based specs stay green. This file guards that gap in two
+// configurations:
+//   1. default — APPWRITE_CFG has no assetHeaders, so loaders use native import().
+//   2. with assetHeaders injected — proves the loaders' native-import-first
+//      path still mounts the widgets even when a header-fetch is configured
+//      (the header/blob fallback alone cannot resolve code-split chunks).
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -25,8 +29,38 @@ const CONTENT_TYPES = {
   ".svg": "image/svg+xml",
 };
 
+const LOADER_FAILURE =
+  /Simulator UI shell (?:load failed|bundle missing)|Changefeed[ -]playground (?:load failed|bundle missing)|Change feed playground unavailable|Failed to resolve module specifier/i;
+
 let server;
 let baseUrl;
+
+async function expectBothWidgetsMount(page) {
+  const loaderWarnings = [];
+  page.on("console", (msg) => {
+    if (LOADER_FAILURE.test(msg.text())) loaderWarnings.push(msg.text());
+  });
+
+  await page.goto(`${baseUrl}/index.html`, { waitUntil: "load" });
+
+  // The CDC Method Comparator must render (the blob-import regression left it
+  // stuck on a "Simulator preview unavailable" placeholder).
+  await expect(page.getByRole("heading", { name: /CDC Method Comparator/i })).toBeVisible({
+    timeout: 15000,
+  });
+
+  // The Change Feed Playground must mount too (it is never imported unless the
+  // index.html bootstrap calls its loader's .load() handle).
+  const changefeedRoot = page.locator("#changefeedPlaygroundRoot");
+  await expect(changefeedRoot).not.toContainText(/Preparing the change feed playground/i, {
+    timeout: 15000,
+  });
+  await expect(changefeedRoot.getByText(/Source\s*→\s*Change Feed\s*→\s*Consumer/i)).toBeVisible({
+    timeout: 15000,
+  });
+
+  expect(loaderWarnings, `loader warnings: ${loaderWarnings.join(" | ")}`).toEqual([]);
+}
 
 suite("Static hosting smoke (served over HTTP)", () => {
   test.beforeAll(async () => {
@@ -63,38 +97,37 @@ suite("Static hosting smoke (served over HTTP)", () => {
     });
   });
 
-  test("comparator and changefeed playground mount on static HTTP hosting", async ({ page }) => {
-    const loaderWarnings = [];
-    // Match only loader-specific failures, not unrelated "… unavailable"
-    // warnings (e.g. anonymous session, event log widget) that would make this
-    // smoke test flaky. These are the exact phrases the bundle loaders and the
-    // index.html changefeed bootstrap emit on failure.
-    const LOADER_FAILURE = /Simulator UI shell (?:load failed|bundle missing)|Changefeed[ -]playground (?:load failed|bundle missing)|Change feed playground unavailable|Failed to resolve module specifier/i;
-    page.on("console", (msg) => {
-      const text = msg.text();
-      if (LOADER_FAILURE.test(text)) {
-        loaderWarnings.push(text);
-      }
-    });
+  test("both widgets mount over HTTP (default config)", async ({ page }) => {
+    await expectBothWidgetsMount(page);
+  });
 
-    await page.goto(`${baseUrl}/index.html`, { waitUntil: "load" });
-
-    // The CDC Method Comparator must render (the blob-import regression left it
-    // stuck on a "Simulator preview unavailable" placeholder).
-    await expect(page.getByRole("heading", { name: /CDC Method Comparator/i })).toBeVisible({
-      timeout: 15000,
+  test("both widgets mount over HTTP even when assetHeaders are configured", async ({ page }) => {
+    // Force the header-fetch condition the deployed site used to ship with, to
+    // prove the loaders' native-import-first path keeps both widgets working.
+    // Intercept the assignment of window.APPWRITE_CFG (set by an inline script
+    // in index.html) and graft assetHeaders on before the loader scripts read it.
+    await page.addInitScript(() => {
+      let stored;
+      Object.defineProperty(window, "APPWRITE_CFG", {
+        configurable: true,
+        get() {
+          return stored;
+        },
+        set(value) {
+          stored = value
+            ? { ...value, assetHeaders: { "X-Appwrite-Project": "smoke-test" } }
+            : value;
+        },
+      });
     });
+    await expectBothWidgetsMount(page);
 
-    // The Change Feed Playground must mount too (it is never imported unless the
-    // index.html bootstrap calls its loader's .load() handle).
-    const changefeedRoot = page.locator("#changefeedPlaygroundRoot");
-    await expect(changefeedRoot).not.toContainText(/Preparing the change feed playground/i, {
-      timeout: 15000,
-    });
-    await expect(changefeedRoot.getByText(/Source\s*→\s*Change Feed\s*→\s*Consumer/i)).toBeVisible({
-      timeout: 15000,
-    });
-
-    expect(loaderWarnings, `loader warnings: ${loaderWarnings.join(" | ")}`).toEqual([]);
+    // Guard against the injection silently no-op'ing (which would make this a
+    // duplicate of the default test): the page must actually have shipped with
+    // assetHeaders configured.
+    const injectedHeader = await page.evaluate(
+      () => window.APPWRITE_CFG?.assetHeaders?.["X-Appwrite-Project"],
+    );
+    expect(injectedHeader).toBe("smoke-test");
   });
 });
