@@ -35,9 +35,12 @@ Use the **Copy** button in that card to grab a JSON payload that can seed guided
 
 ## Appwrite configuration surface
 
+> For the **exact** collections, attributes, and permissions needed to make realtime, scenario persistence, and share links work — plus the known `scenarios` serialization caveat — see **[`appwrite-setup.md`](appwrite-setup.md)**. This section is just the config-object overview.
+
 `index.html` seeds an `APPWRITE_CFG` object that you can override for your own stack:
 
-- **endpoint / projectId / databaseId / collectionId / scenarioCollectionId** – Used by the workspace exporter/importer; keep demo data isolated per project.
+- **endpoint** – Must be the project's **regional** endpoint (e.g. `https://nyc.cloud.appwrite.io/v1`); the generic `https://cloud.appwrite.io/v1` returns "Project is not accessible in this region" and breaks realtime.
+- **projectId / databaseId / collectionId / scenarioCollectionId** – Used by the workspace exporter/importer; keep demo data isolated per project.
 - **shareBaseUrl** – Host name used when generating share links.
 - **channel(db, col)** – Helper to build realtime subscription topics.
 - **assetHeaders** – Optional map of headers (e.g., `X-Appwrite-Project`) sent when fetching hosted bundles like `assets/generated/ui-shell.js`.

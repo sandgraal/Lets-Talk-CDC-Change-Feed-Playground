@@ -12,6 +12,7 @@ Documentation for the **interactive CDC simulator** (CDC Method Comparator + Cha
 ## Using the simulator (tool-scoped)
 - [comparator-guide.md](comparator-guide.md) — launch, navigate, and demo the React comparator shell.
 - [configuration-guide.md](configuration-guide.md) — run-mode matrix, feature-flag sources, Appwrite setup.
+- [appwrite-setup.md](appwrite-setup.md) — exact collections, attributes, and permissions for realtime + persistence + share links.
 - [feature-flags.md](feature-flags.md) — flag catalogue and defaults.
 - [canonical-scenario.md](canonical-scenario.md) — the failure-aware Docker reference pipeline (what should/does happen, recovery).
 
