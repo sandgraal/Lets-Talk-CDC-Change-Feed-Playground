@@ -958,6 +958,32 @@
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(255, 255, 255, 0.96);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  transition: outline-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Transient spotlight when a "When to use which" method chip is clicked. */
+.sim-shell__lane-card--highlighted {
+  outline: 3px solid rgba(59, 130, 246, 0.85);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.18);
+  animation: sim-shell-lane-pulse 1.4s ease-out;
+}
+
+@keyframes sim-shell-lane-pulse {
+  0% {
+    outline-color: rgba(59, 130, 246, 0.95);
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.28);
+  }
+  100% {
+    outline-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-shell__lane-card--highlighted {
+    animation: none;
+  }
 }
 
 .sim-shell__lane-header {

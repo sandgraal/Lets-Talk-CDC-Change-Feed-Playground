@@ -3551,6 +3551,34 @@ body.megadesk-mode .hero-ambient .orb {
   color: #e0f2fe;
 }
 
+/* Clickable method chip — spotlights the matching comparator lane. */
+.method-guidance__chip {
+  font: inherit;
+  font-weight: 600;
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.method-guidance__chip::after {
+  content: " ↳";
+  opacity: 0.6;
+}
+
+.method-guidance__chip:hover,
+.method-guidance__chip:focus-visible {
+  background: rgba(37, 99, 235, 0.32);
+  border-color: rgba(147, 197, 253, 0.7);
+}
+
+body[data-theme="light"] .method-guidance__chip {
+  color: #1e3a8a;
+}
+
 .method-guidance__list dd {
   margin: 0;
   color: #cbd5f5;

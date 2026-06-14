@@ -1087,7 +1087,7 @@ function renderMethodGuidance() {
   const fragment = document.createDocumentFragment();
   const lead = document.createElement("p");
   lead.className = "section-lead";
-  lead.textContent = "Use the comparator preview to watch each capture pattern respond to the same operations. Start the guided walkthrough to see how capture choices change envelopes.";
+  lead.textContent = "When to use which — click a method to spotlight its lane in the comparator above and watch it react to the same operations.";
   fragment.appendChild(lead);
 
   const heading = document.createElement("h3");
@@ -1102,7 +1102,17 @@ function renderMethodGuidance() {
     const entry = copy[key];
     if (!entry) return;
     const dt = document.createElement("dt");
-    dt.textContent = entry.label;
+    // Clickable chip: spotlights the matching lane in the React comparator.
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "method-guidance__chip";
+    chip.dataset.method = key;
+    chip.textContent = entry.label;
+    chip.setAttribute("aria-label", `Spotlight the ${entry.label} lane in the comparator`);
+    chip.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("cdc:highlight-method", { detail: key }));
+    });
+    dt.appendChild(chip);
     const dd = document.createElement("dd");
     dd.textContent = entry.whenToUse;
     list.appendChild(dt);
