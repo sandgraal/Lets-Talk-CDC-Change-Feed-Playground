@@ -3761,6 +3761,45 @@ body[data-theme="light"] .method-guidance__chip {
   font-size: 0.95rem;
 }
 
+/* Outbound "go deeper" links into the letstalkcdc education site. */
+.method-guidance__deeper {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(59, 120, 201, 0.3);
+}
+
+.method-guidance__deeper-heading {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: #93c5fd;
+}
+
+.method-guidance__deeper-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.method-guidance__deeper-list a {
+  color: #dbeafe;
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(147, 197, 253, 0.45);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.method-guidance__deeper-list a:hover,
+.method-guidance__deeper-list a:focus-visible {
+  color: #ffffff;
+  border-color: rgba(147, 197, 253, 0.9);
+}
+
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;

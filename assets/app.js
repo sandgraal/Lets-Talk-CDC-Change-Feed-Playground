@@ -966,6 +966,16 @@ const TOUR_COMPARATOR_TIMEOUT = 7000;
 // concepts. This playground is the hands-on tool; it points learners to
 // letstalkcdc for the theory rather than re-teaching it (see AGENT_TEAM_BRIEF §0).
 const LTCDC_BASE = "https://sandgraal.github.io/letstalkcdc/";
+// Concepts the comparator demonstrates, each linked to its letstalkcdc page so
+// learners can jump from "what just happened" to the full theory. Slugs verified
+// against the letstalkcdc site; keep this list to concepts actually shown here.
+const CONCEPT_DEEP_LINKS = [
+  { label: "How polling, trigger & log differ", href: `${LTCDC_BASE}intro/` },
+  { label: "Replication lag & observability", href: `${LTCDC_BASE}observability/` },
+  { label: "Ordering & partitioning", href: `${LTCDC_BASE}partitioning/` },
+  { label: "Schema evolution", href: `${LTCDC_BASE}schema-evolution/` },
+  { label: "The change-event envelope", href: `${LTCDC_BASE}event-envelope/` },
+];
 const GUIDED_TOUR_STEPS = [
   {
     id: "workspace-schema",
@@ -1151,6 +1161,32 @@ function renderMethodGuidance() {
   });
 
   fragment.appendChild(list);
+
+  // Deep links out to the companion education site for the concepts this
+  // comparator demonstrates — the playground stays the hands-on tool and defers
+  // the theory to letstalkcdc (see AGENT_TEAM_BRIEF §0 / W2). Link, don't re-teach.
+  const deeper = document.createElement("div");
+  deeper.className = "method-guidance__deeper";
+  const deeperHeading = document.createElement("h4");
+  deeperHeading.className = "method-guidance__deeper-heading";
+  deeperHeading.textContent = "Go deeper on Let’s Talk CDC";
+  deeper.appendChild(deeperHeading);
+
+  const deeperList = document.createElement("ul");
+  deeperList.className = "method-guidance__deeper-list";
+  CONCEPT_DEEP_LINKS.forEach(({ label, href }) => {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `${label} →`;
+    li.appendChild(link);
+    deeperList.appendChild(li);
+  });
+  deeper.appendChild(deeperList);
+  fragment.appendChild(deeper);
+
   container.innerHTML = "";
   container.appendChild(fragment);
 }
