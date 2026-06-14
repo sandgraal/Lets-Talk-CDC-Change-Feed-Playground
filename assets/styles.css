@@ -2840,6 +2840,41 @@ select:focus {
   gap: 6px;
 }
 
+.onboarding-tour-hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted, #94a3b8);
+}
+
+.onboarding-tour-link {
+  font: inherit;
+  font-weight: 600;
+  color: #93c5fd;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  /* Neutralize the global <button> chrome (ripple + hover lift) so this
+     link-like control doesn't jump or show a ripple bubble in the modal. */
+  transform: none;
+  box-shadow: none;
+  transition: color 0.15s ease;
+}
+
+.onboarding-tour-link::before {
+  content: none;
+}
+
+.onboarding-tour-link:hover,
+.onboarding-tour-link:active,
+.onboarding-tour-link:focus-visible {
+  color: #bfdbfe;
+  transform: none;
+  box-shadow: none;
+}
+
 .onboarding-secret {
   display: inline-flex;
   align-items: center;
