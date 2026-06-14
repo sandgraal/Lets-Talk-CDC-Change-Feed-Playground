@@ -1019,6 +1019,42 @@ function computeSummary(lanes: LaneMetrics[]): Summary | null {
   };
 }
 
+// Plain-language, per-method conclusion for the current run — turns the raw lane
+// metrics into the "so what" (e.g. "Polling captured 50% of deletes · ~120ms
+// lag"). The theory behind each trade-off stays on Let's Talk CDC (deep links).
+// `bestDeletesPct` is the highest delete-capture across lanes this run. We judge
+// a lane's delete capture relative to it, so we only call out a lane as "missing
+// deletes" once another lane actually caught deletes it didn't — not while no
+// deletes have been emitted yet (when every lane reads 0%).
+function describeLaneTakeaway(
+  method: MethodOption,
+  metrics: Metrics,
+  bestDeletesPct: number,
+): { text: string; clean: boolean } {
+  const total = metrics.insertCount + metrics.updateCount + metrics.deleteCount;
+  if (total === 0) {
+    return { text: "nothing captured yet — press Start.", clean: true };
+  }
+  // Losing hard deletes is polling's characteristic flaw — it reads current
+  // state, so deletes between polls vanish. Trigger/log capture every delete;
+  // a momentary gap there is just lag (already shown), not a capture failure.
+  const losesDeletes = method === "polling" && metrics.deletesPct < bestDeletesPct - 1;
+  const amplifies = hasMeaningfulWriteAmplification(metrics.writeAmplification);
+  const parts: string[] = [];
+  parts.push(
+    losesDeletes
+      ? `captured ${Math.round(metrics.deletesPct)}% of deletes — hard deletes between reads disappear`
+      : "captured every change",
+  );
+  if (amplifies) {
+    parts.push(`added ${describeWriteAmplification(metrics.writeAmplification)} write amplification on the source`);
+  }
+  const lag = Math.round(metrics.lagMs);
+  const lagText = lag <= 0 ? "real-time" : `~${lag}ms lag`;
+  const clean = !losesDeletes && !amplifies;
+  return { text: `${parts.join(", ")} · ${lagText}.`, clean };
+}
+
 export function App() {
   const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
   if (storedPrefsRef.current === null) {
@@ -3986,6 +4022,32 @@ export function App() {
           );
         })}
       </div>
+
+      {metricsEnabled && hasLiveEvents && (
+        <section className="sim-shell__takeaway" aria-live="polite">
+          <h3 className="sim-shell__takeaway-title">What this run shows</h3>
+          <ul className="sim-shell__takeaway-list">
+            {laneMetrics.map(lane => {
+              const bestDeletesPct = Math.max(
+                ...laneMetrics.map(other => other.metrics.deletesPct),
+              );
+              const takeaway = describeLaneTakeaway(lane.method, lane.metrics, bestDeletesPct);
+              return (
+                <li
+                  key={lane.method}
+                  className="sim-shell__takeaway-item"
+                  data-tone={takeaway.clean ? "ok" : "warn"}
+                >
+                  <strong className="sim-shell__takeaway-method">
+                    {methodCopy[lane.method].label}
+                  </strong>{" "}
+                  {takeaway.text}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {metricsEnabled && summary && (
         <div className="sim-shell__summary" aria-live="polite">
