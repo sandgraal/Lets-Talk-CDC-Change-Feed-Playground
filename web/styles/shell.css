@@ -425,6 +425,55 @@
   font-size: 0.75rem;
 }
 
+/* Plain-language per-method run takeaway — the "so what" above the comparative
+   summary. Tone (left border) flags a clean capture vs. a trade-off. */
+.sim-shell__takeaway {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sim-shell__takeaway-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sim-shell__takeaway-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sim-shell__takeaway-item {
+  font-size: 0.95rem;
+  color: var(--muted-strong);
+  line-height: 1.45;
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--border);
+}
+
+.sim-shell__takeaway-item[data-tone="ok"] {
+  border-left-color: var(--sem-positive);
+}
+
+.sim-shell__takeaway-item[data-tone="warn"] {
+  border-left-color: var(--sem-warning);
+}
+
+.sim-shell__takeaway-method {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .sim-shell__summary {
   margin: 0;
   padding: 1rem 1.25rem;
