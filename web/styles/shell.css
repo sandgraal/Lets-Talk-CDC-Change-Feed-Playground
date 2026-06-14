@@ -425,6 +425,97 @@
   font-size: 0.75rem;
 }
 
+/* Guided challenges — "try it yourself" checklist; items latch to done. */
+.sim-shell__challenges {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sim-shell__challenges-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sim-shell__challenges-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sim-shell__challenges-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sim-shell__challenges-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sim-shell__challenge {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.sim-shell__challenge-check {
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.sim-shell__challenge[data-done="true"] .sim-shell__challenge-check {
+  color: var(--bg);
+  background: var(--sem-positive);
+  border-color: var(--sem-positive);
+}
+
+.sim-shell__challenge-body {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.sim-shell__challenge-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.sim-shell__challenge[data-done="true"] .sim-shell__challenge-label {
+  color: var(--sem-positive);
+}
+
+.sim-shell__challenge-status {
+  font-weight: 700;
+}
+
+.sim-shell__challenge-hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 /* Plain-language per-method run takeaway — the "so what" above the comparative
    summary. Tone (left border) flags a clean capture vs. a trade-off. */
 .sim-shell__takeaway {

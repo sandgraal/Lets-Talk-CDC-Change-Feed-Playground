@@ -1081,6 +1081,45 @@ function describeLatestEvent(event: CdcEvent): { text: string; tone: "info" | "w
   }
 }
 
+// Guided challenges — turn passive watching into active goals. Each is met by
+// driving the comparator (run a scenario, toggle apply policy, etc.) until its
+// CDC trade-off surfaces in the metrics. Completion latches for the session.
+type Challenge = {
+  id: string;
+  label: string;
+  hint: string;
+  isMet: (lanes: LaneMetrics[]) => boolean;
+};
+
+const CHALLENGES: Challenge[] = [
+  {
+    id: "miss-delete",
+    label: "Make polling miss a delete",
+    hint: "Run a scenario with deletes — polling reads current state, so hard deletes vanish while log and trigger keep them.",
+    isMet: lanes => {
+      const polling = lanes.find(lane => lane.method === "polling");
+      if (!polling) return false;
+      const best = Math.max(...lanes.map(lane => lane.metrics.deletesPct));
+      return polling.metrics.deletesPct < best - 1;
+    },
+  },
+  {
+    id: "write-amp",
+    label: "Expose trigger write amplification",
+    hint: "Triggers write an audit row per change — watch the source write overhead climb on the trigger lane.",
+    isMet: lanes => {
+      const trigger = lanes.find(lane => lane.method === "trigger");
+      return !!trigger && hasMeaningfulWriteAmplification(trigger.metrics.writeAmplification);
+    },
+  },
+  {
+    id: "schema-change",
+    label: "Capture a schema change",
+    hint: "Use the Schema Evolution scenario (or the schema walkthrough) — schema-change events stream alongside the data.",
+    isMet: lanes => lanes.some(lane => lane.metrics.schemaChangeCount > 0),
+  },
+];
+
 export function App() {
   const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
   if (storedPrefsRef.current === null) {
@@ -2711,6 +2750,24 @@ export function App() {
   }, [laneMetrics]);
   const latestNarration = latestEvent ? describeLatestEvent(latestEvent) : null;
 
+  // Guided-challenge completion latches: once a learner makes a trade-off
+  // surface, it stays checked even as the metrics keep changing.
+  const [completedChallenges, setCompletedChallenges] = useState<Set<string>>(
+    () => new Set(),
+  );
+  useEffect(() => {
+    setCompletedChallenges(prev => {
+      let next = prev;
+      for (const challenge of CHALLENGES) {
+        if (!prev.has(challenge.id) && challenge.isMet(laneMetrics)) {
+          if (next === prev) next = new Set(prev);
+          next.add(challenge.id);
+        }
+      }
+      return next;
+    });
+  }, [laneMetrics]);
+
   const scenarioComparatorDetail = useMemo<ComparatorSummaryDetail | null>(() => {
     const snapshot = scenario.comparator;
     if (!snapshot || !snapshot.summary) return null;
@@ -4058,6 +4115,42 @@ export function App() {
           );
         })}
       </div>
+
+      {metricsEnabled && (
+        <section className="sim-shell__challenges" aria-label="Guided challenges">
+          <div className="sim-shell__challenges-header">
+            <h3 className="sim-shell__challenges-title">Try it yourself</h3>
+            <span className="sim-shell__challenges-count">
+              {completedChallenges.size}/{CHALLENGES.length} done
+            </span>
+          </div>
+          <ul className="sim-shell__challenges-list">
+            {CHALLENGES.map(challenge => {
+              const done = completedChallenges.has(challenge.id);
+              return (
+                <li
+                  key={challenge.id}
+                  className="sim-shell__challenge"
+                  data-done={done ? "true" : "false"}
+                >
+                  <span className="sim-shell__challenge-check" aria-hidden="true">
+                    {done ? "✓" : "○"}
+                  </span>
+                  <span className="sim-shell__challenge-body">
+                    <span className="sim-shell__challenge-label">
+                      {challenge.label}
+                      <span className="sim-shell__challenge-status">
+                        {done ? " — done" : ""}
+                      </span>
+                    </span>
+                    <span className="sim-shell__challenge-hint">{challenge.hint}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {metricsEnabled && hasLiveEvents && (
         <section className="sim-shell__takeaway" aria-live="polite">
