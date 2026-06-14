@@ -1055,6 +1055,32 @@ function describeLaneTakeaway(
   return { text: `${parts.join(", ")} · ${lagText}.`, clean };
 }
 
+// Moment-to-moment "what just happened" narration for the most recent captured
+// event — connects a single operation to its CDC consequence as the lanes react.
+function describeLatestEvent(event: CdcEvent): { text: string; tone: "info" | "warn" } {
+  const subject = `${event.table} #${event.pk?.id ?? "?"}`;
+  if (event.op === "s" || event.schemaChange) {
+    return {
+      text: `Schema change on ${event.table} — schema-change events stream alongside the data, so consumers must handle the new shape.`,
+      tone: "warn",
+    };
+  }
+  switch (event.op) {
+    case "d":
+      return {
+        text: `Deleted ${subject} — polling reads current state, so it never sees this delete; trigger and log capture it.`,
+        tone: "warn",
+      };
+    case "u":
+      return {
+        text: `Updated ${subject} — every method captures it, though polling can miss intermediate updates between polls.`,
+        tone: "info",
+      };
+    default:
+      return { text: `Inserted ${subject} — captured by all three methods.`, tone: "info" };
+  }
+}
+
 export function App() {
   const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
   if (storedPrefsRef.current === null) {
@@ -2675,6 +2701,16 @@ export function App() {
     [laneMetrics],
   );
 
+  // Most recent captured event for the "what just happened" ticker. Prefer the
+  // log lane (complete capture); otherwise the latest event across active lanes.
+  const latestEvent = useMemo<CdcEvent | null>(() => {
+    const log = laneMetrics.find(lane => lane.method === "log");
+    const pool = log && log.events.length ? log.events : laneMetrics.flatMap(lane => lane.events);
+    if (!pool.length) return null;
+    return pool.reduce((latest, event) => (event.seq > latest.seq ? event : latest), pool[0]);
+  }, [laneMetrics]);
+  const latestNarration = latestEvent ? describeLatestEvent(latestEvent) : null;
+
   const scenarioComparatorDetail = useMemo<ComparatorSummaryDetail | null>(() => {
     const snapshot = scenario.comparator;
     if (!snapshot || !snapshot.summary) return null;
@@ -4133,6 +4169,19 @@ export function App() {
           lanes={metricsDashboardLanes}
           renderSchemaWalkthrough={schemaWalkthroughRenderer}
         />
+      )}
+
+      {metricsEnabled && hasLiveEvents && latestNarration && latestEvent && (
+        <p className="sim-shell__ticker" aria-live="polite">
+          <span className="sim-shell__ticker-label">Just now</span>
+          <span
+            key={latestEvent.seq}
+            className="sim-shell__ticker-text"
+            data-tone={latestNarration.tone}
+          >
+            {latestNarration.text}
+          </span>
+        </p>
       )}
 
       <div

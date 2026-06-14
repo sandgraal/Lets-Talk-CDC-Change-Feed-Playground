@@ -474,6 +474,55 @@
   font-weight: 700;
 }
 
+/* "What just happened" ticker — narrates the most recent captured event as the
+   lanes react below it. The text re-keys per event, replaying the flash. */
+.sim-shell__ticker {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+.sim-shell__ticker-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sim-shell__ticker-text {
+  color: var(--muted-strong);
+  animation: sim-shell-ticker-in 0.3s ease;
+}
+
+.sim-shell__ticker-text[data-tone="warn"] {
+  color: var(--sem-warning);
+}
+
+@keyframes sim-shell-ticker-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-shell__ticker-text {
+    animation: none;
+  }
+}
+
 .sim-shell__summary {
   margin: 0;
   padding: 1rem 1.25rem;
