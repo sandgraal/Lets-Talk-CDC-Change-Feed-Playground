@@ -4405,7 +4405,7 @@ export function App() {
                   )}
                   {displayEvents.length === 0 ? (
                     <li className="sim-shell__empty">
-                      {filtered ? "No events match the current filters." : "No events yet."}
+                      {filtered ? "No events match the current filters." : "No events yet — press Start to run all three methods on the same data."}
                     </li>
                   ) : (
                     displayEvents.map(event => (
