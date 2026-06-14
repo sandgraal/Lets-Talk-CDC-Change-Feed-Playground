@@ -1161,7 +1161,7 @@ function buildScorecard(lanes: LaneMetrics[]): ScorecardRow[] {
 
     const amplifies = hasMeaningfulWriteAmplification(m.writeAmplification);
     const overhead: ScorecardCell = {
-      value: amplifies ? formatWriteAmplificationRatio(m.writeAmplification as number) : "none",
+      value: amplifies ? formatWriteAmplificationRatio(m.writeAmplification) : "none",
       status: amplifies ? "warn" : "good",
     };
 
