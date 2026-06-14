@@ -824,3 +824,27 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   }
 }
+
+/* Respect prefers-reduced-motion: the playground otherwise runs a continuous
+   pulse on highlighted events plus fade-in and hover transforms. Calm them for
+   users who ask for reduced motion (WCAG 2.2.2 / 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  .cf-event-card--highlighted,
+  .cf-flow-hint {
+    animation: none;
+  }
+
+  .cf-event-card,
+  .cf-demo-card,
+  .cf-transaction,
+  .cf-field__clear,
+  .cf-progress {
+    transition: none;
+  }
+
+  .cf-event-card:hover,
+  .cf-demo-card:hover,
+  .cf-transaction:hover {
+    transform: none;
+  }
+}
