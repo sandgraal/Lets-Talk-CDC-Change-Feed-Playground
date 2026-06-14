@@ -185,6 +185,79 @@ const buildTransactionProgress = (state: PlaygroundViewState): TxProgress[] => {
     .slice(-MAX_TRANSACTIONS_SHOWN);
 };
 
+type TakeawayItem = { id: string; text: string; clean: boolean };
+
+// Plain-language "what this run shows" for the single feed. The playground's
+// headline lesson is transaction atomicity under the apply policy; we also call
+// out consumer lag, dropped events, and schema drift. Theory stays on Let's
+// Talk CDC (the page's deep links) — this only interprets the live run.
+const buildPlaygroundTakeaway = (
+  view: PlaygroundViewState,
+  transactions: TxProgress[],
+): TakeawayItem[] => {
+  const items: TakeawayItem[] = [];
+  const multiRow = transactions.filter(tx => tx.total > 1);
+  const partial = multiRow.filter(
+    tx => tx.stages.applied > 0 && tx.stages.applied < tx.total,
+  );
+
+  if (view.options.applyPolicy === "apply-on-commit") {
+    items.push({
+      id: "atomicity",
+      text: "Apply on commit — transactions apply all-or-nothing, so a consumer never reads a half-applied change.",
+      clean: true,
+    });
+  } else if (partial.length > 0) {
+    items.push({
+      id: "atomicity",
+      text: "Apply as polled — a multi-row transaction is partially visible right now; a consumer would read a half-applied change.",
+      clean: false,
+    });
+  } else if (multiRow.length > 0) {
+    items.push({
+      id: "atomicity",
+      text: "Apply as polled — events apply as they arrive, so multi-row transactions can flash partially before they complete.",
+      clean: false,
+    });
+  } else {
+    items.push({
+      id: "atomicity",
+      text: "Apply as polled — events apply as they arrive (no multi-row transactions in this run yet).",
+      clean: true,
+    });
+  }
+
+  const lag = Math.round(view.metrics.lagMs);
+  const backlog = view.metrics.backlog;
+  if (lag <= 0 && backlog === 0) {
+    items.push({ id: "lag", text: "The consumer is keeping up in real time.", clean: true });
+  } else {
+    items.push({
+      id: "lag",
+      text: `The consumer is ~${lag}ms behind${backlog > 0 ? `, with ${backlog} event${backlog === 1 ? "" : "s"} backlogged` : ""}.`,
+      clean: backlog === 0,
+    });
+  }
+
+  if (view.broker.dropped > 0) {
+    items.push({
+      id: "dropped",
+      text: `${view.broker.dropped} event${view.broker.dropped === 1 ? "" : "s"} dropped by delivery faults — the consumer never sees them.`,
+      clean: false,
+    });
+  }
+
+  if (view.options.schemaDrift) {
+    items.push({
+      id: "drift",
+      text: "Schema drift is on — new columns appear mid-stream; watch them flow source → consumer.",
+      clean: true,
+    });
+  }
+
+  return items;
+};
+
 export function ChangefeedPlayground() {
   const [state, dispatch] = useReducer(reducePlayground, undefined, () =>
     createInitialState()
@@ -210,6 +283,11 @@ export function ChangefeedPlayground() {
   const transactions = useMemo(
     () => buildTransactionProgress(viewState),
     [viewState]
+  );
+
+  const takeaway = useMemo(
+    () => buildPlaygroundTakeaway(viewState, transactions),
+    [viewState, transactions]
   );
 
   const handlePolicyChange = useCallback((policy: ApplyPolicy) => {
@@ -315,6 +393,23 @@ export function ChangefeedPlayground() {
           </div>
         </div>
       </header>
+
+      {transactions.length > 0 && (
+        <section className="cf-takeaway" aria-live="polite">
+          <h3 className="cf-takeaway__title">What this run shows</h3>
+          <ul className="cf-takeaway__list">
+            {takeaway.map(item => (
+              <li
+                key={item.id}
+                className="cf-takeaway__item"
+                data-tone={item.clean ? "ok" : "warn"}
+              >
+                {item.text}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="cf-toolbar" role="group" aria-label="Playground controls">
         <div className="cf-toolbar__row">
