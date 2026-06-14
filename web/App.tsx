@@ -1101,6 +1101,9 @@ export function App() {
   const [eventLogMethod, setEventLogMethod] = useState<MethodOption | null>(initialEventLogMethod);
   const [eventLogOp, setEventLogOp] = useState<string | null>(initialEventLogOp);
   const [applyOnCommit, setApplyOnCommit] = useState(storedPrefs?.applyOnCommit ?? false);
+  // Lane spotlighted from the static "When to use which" method chips (app.js
+  // dispatches cdc:highlight-method). Cleared automatically after a beat.
+  const [highlightedMethod, setHighlightedMethod] = useState<MethodOption | null>(null);
   const [consumerRateEnabled, setConsumerRateEnabled] = useState(
     storedPrefs?.consumerRateEnabled ?? false,
   );
@@ -3375,6 +3378,36 @@ export function App() {
     };
   }, [handlePause, handleReset, handleSeek, handleStart, handleStep]);
 
+  // Bridge from the static "When to use which" method chips: spotlight the
+  // matching lane when app.js dispatches cdc:highlight-method.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const key = event.detail;
+      if (typeof key === "string" && (METHOD_ORDER as readonly string[]).includes(key)) {
+        setHighlightedMethod(key as MethodOption);
+      }
+    };
+    window.addEventListener("cdc:highlight-method" as string, handler);
+    return () => window.removeEventListener("cdc:highlight-method" as string, handler);
+  }, []);
+
+  // Scroll the spotlighted lane into view and clear the highlight after a beat.
+  useEffect(() => {
+    if (!highlightedMethod) return;
+    const el = document.querySelector(`.sim-shell__lane-card[data-method="${highlightedMethod}"]`);
+    if (el && typeof (el as HTMLElement).scrollIntoView === "function") {
+      try {
+        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {
+        /* ignore */
+      }
+    }
+    const timer = window.setTimeout(() => setHighlightedMethod(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [highlightedMethod]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const api: ComparatorDebugApi = {
@@ -4250,7 +4283,11 @@ export function App() {
             ? filteredEvents.slice(Math.max(filteredEvents.length - MAX_TIMELINE_EVENTS, 0))
             : [];
           return (
-            <article key={method} className="sim-shell__lane-card">
+            <article
+              key={method}
+              data-method={method}
+              className={`sim-shell__lane-card${highlightedMethod === method ? " sim-shell__lane-card--highlighted" : ""}`}
+            >
               <header
                 className="sim-shell__lane-header"
                 data-tour-target={
