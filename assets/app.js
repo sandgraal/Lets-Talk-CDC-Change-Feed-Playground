@@ -1181,6 +1181,7 @@ function renderMethodGuidance() {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = `${label} →`;
+    link.setAttribute("aria-label", `${label} on Let’s Talk CDC (opens in a new tab)`);
     li.appendChild(link);
     deeperList.appendChild(li);
   });
