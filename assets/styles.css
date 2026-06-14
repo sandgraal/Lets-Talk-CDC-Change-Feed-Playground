@@ -14,6 +14,15 @@
   --danger: #f87171;
   --border: rgba(90, 118, 168, 0.36);
   --border-strong: rgba(129, 156, 204, 0.64);
+  /* Semantic chip/label text — tuned for dark surfaces; overridden for light
+     below so colored chips keep their contrast in both themes. */
+  --sem-danger: #fca5a5;
+  --sem-positive: #6ee7b7;
+  --sem-warning: #fcd34d;
+  --sem-ordering: #c7d2fe;
+  --sem-schema: #f0abfc;
+  --sem-amplification: #fdba74;
+  --sem-teal: #5eead4;
   --shadow-lg: 0 24px 48px -30px rgba(10, 18, 32, 0.65);
   --shadow-sm: 0 12px 28px -24px rgba(10, 20, 38, 0.5);
   --topbar-bg: rgba(6, 14, 28, 0.74);
@@ -65,6 +74,13 @@ body[data-theme="light"] {
   --accent-yellow: #f59e0b;
   --border: rgba(148, 163, 184, 0.45);
   --border-strong: rgba(51, 65, 85, 0.55);
+  --sem-danger: #b91c1c;
+  --sem-positive: #047857;
+  --sem-warning: #92400e;
+  --sem-ordering: #3730a3;
+  --sem-schema: #a21caf;
+  --sem-amplification: #c2410c;
+  --sem-teal: #0f766e;
   --shadow-lg: 0 24px 48px -28px rgba(148, 163, 184, 0.45);
   --shadow-sm: 0 12px 28px -20px rgba(148, 163, 184, 0.35);
   --topbar-bg: rgba(255, 255, 255, 0.9);
@@ -3815,7 +3831,7 @@ body[data-theme="light"] .method-guidance__chip {
   }
 }
 
-#sim-shell-preview[data-comparator-enabled="false"] {
+#simPanelCompare[data-comparator-enabled="false"] {
   opacity: 0.7;
   border-style: dashed;
 }

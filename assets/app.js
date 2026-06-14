@@ -996,9 +996,9 @@ const GUIDED_TOUR_STEPS = [
   {
     id: "comparator-preset",
     selector: ".sim-shell__preset-row",
-    title: "Pick a vendor preset",
+    title: "Read the pipeline blueprint",
     timeout: TOUR_COMPARATOR_TIMEOUT,
-    description: "Choose the pipeline you want to mirror. The badges reveal source, capture, transport, and sink terminology for the walkthrough.",
+    description: "These badges map the scenario onto a real pipeline — source, capture, transport, and sink — so the walkthrough terminology lines up with production CDC.",
     learnHref: `${LTCDC_BASE}tooling/`,
     learnLabel: "Compare CDC tooling on Let’s Talk CDC →",
   },

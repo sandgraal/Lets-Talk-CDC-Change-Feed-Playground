@@ -1,10 +1,14 @@
 /* The playground inherits the page palette so it stays coherent with the rest
-   of the site and follows the light/dark theme toggle. The --cf-* tokens are
-   kept as a thin alias layer (referencing the page tokens) so the many rules
-   below don't need to change. Declared on `body` (not :root) so that the
-   var(--page-token) references resolve against the theme override the page
-   sets on `body[data-theme="light"]` — declaring them on :root would lock
-   them to the dark root values. */
+   of the site and follows the light/dark theme toggle. The --cf-* tokens are a
+   thin alias layer over the page tokens so the many .cf-* rules below don't
+   change. They are declared on `body` (not :root) on purpose: a custom property
+   whose value is `var(--page-token)` is substituted using that page token as
+   computed *on the element where the alias itself is declared*. The page sets
+   its light overrides on `body[data-theme="light"]`, so an alias on `body`
+   picks up the per-theme value; an alias on :root (the html element, which the
+   body-level overrides never reach) would freeze to the dark root values
+   regardless of theme. Verified empirically — the :root version stayed dark in
+   light mode. */
 body {
   --cf-bg: transparent; /* renders flush inside the .simulator card */
   --cf-panel: var(--bg-surface);
