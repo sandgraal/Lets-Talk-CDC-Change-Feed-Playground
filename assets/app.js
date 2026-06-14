@@ -3322,7 +3322,13 @@ function skipRemainingComparatorSteps() {
   }
   showTourNote("The comparator isn’t turned on — skipping its steps. Enable it to explore lane metrics.");
   activeTour.index = i - 1; // handleTourNext() advances to i (or finishes)
-  window.setTimeout(() => { if (activeTour) handleTourNext(); }, 1500);
+  // Claim a fresh pendingToken so a manual Next/Back (or a prior step's
+  // waitForElement resolving) can't double-advance or apply a stale highlight.
+  const token = Symbol("tour-skip");
+  activeTour.pendingToken = token;
+  window.setTimeout(() => {
+    if (activeTour && activeTour.pendingToken === token) handleTourNext();
+  }, 1500);
 }
 
 function showTourStep(stepIndex) {

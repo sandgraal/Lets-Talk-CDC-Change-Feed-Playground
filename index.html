@@ -731,57 +731,10 @@
         }
       })();
     </script>
-    <script>
-      (() => {
-        const DEFAULT_STATUS_TEXT = "Add a column to begin";
-
-        const overlay = document.getElementById("onboardingOverlay");
-        const status = document.getElementById("schemaStatus");
-        const pills = document.getElementById("schemaPills");
-        const start = document.getElementById("onboardingStart");
-
-        const defaultState = {
-          schema: [],
-          rows: [],
-          events: [],
-          schemaVersion: 1,
-          scenarioId: null,
-          remoteId: null,
-        };
-
-        function seedBlankWorkspace() {
-          try {
-            window.localStorage.setItem(
-              "cdc_playground",
-              JSON.stringify(defaultState)
-            );
-            window.localStorage.setItem(
-              "cdc_playground_office_opt_in_v1",
-              "false"
-            );
-          } catch {
-            /* ignore storage errors */
-          }
-          if (status) status.textContent = DEFAULT_STATUS_TEXT;
-          if (pills) pills.replaceChildren();
-          if (overlay) overlay.style.display = "none";
-        }
-
-        start?.addEventListener("click", (event) => {
-          event.preventDefault();
-          seedBlankWorkspace();
-        });
-
-        function initializeOverlay() {
-          if (status && !status.textContent) {
-            status.textContent = DEFAULT_STATUS_TEXT;
-          }
-          if (overlay) overlay.style.display = "";
-        }
-
-        window.seedBlankWorkspace = seedBlankWorkspace;
-      })();
-    </script>
+    <!-- Onboarding is handled in assets/app.js (bindUiHandlers /
+         startFromScratch). A previous inline script also bound #onboardingStart
+         to seed a blank workspace, which conflicted with app.js's handler — it
+         has been removed so app.js is the single source of truth. -->
     <script type="module" src="assets/method-copy.js"></script>
     <script type="module" src="assets/shared-scenarios.js"></script>
     <script src="assets/sim-loader.js"></script>
