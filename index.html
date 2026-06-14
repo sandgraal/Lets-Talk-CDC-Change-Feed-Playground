@@ -473,19 +473,11 @@
               Change Feed Atomicity Playground
             </h2>
             <p class="section-lead">
-              Three-lane view of source rows, change feed partitions, and consumer apply policies. Toggle drift, drop faults,
-              and backlog throttling to see how transactions behave.
-            </p>
-            <p class="section-lead section-lead--muted">
-              Best for understanding <strong>one</strong> change feed end to end. To compare polling, trigger, and
-              log capture side by side, jump to the
+              Drive one change feed end to end — switch the apply policy (apply on commit vs as polled),
+              introduce schema drift, and drop events to watch how transactions hold up. To compare polling,
+              trigger, and log side by side, use the
               <a href="#sim-shell-preview">CDC Method Comparator</a> below.
             </p>
-          </div>
-          <div class="section-actions" role="group" aria-label="Playground actions">
-            <span class="section-pill">Apply on commit vs as polled</span>
-            <span class="section-pill">Commit &amp; schema drift</span>
-            <span class="section-pill">Lag &amp; backlog badges</span>
           </div>
         </div>
         <div id="changefeedPlaygroundRoot" class="playground-react-root">
@@ -508,13 +500,9 @@
               Compare CDC Capture Methods (beta)
             </h2>
             <p class="section-lead">
-              Load the CDC Method Comparator to see how polling, trigger, and
-              log-based capture respond as you run the same operations.
-            </p>
-            <p class="section-lead section-lead--muted">
-              Use this after the
-              <a href="#changefeed-playground">playground above</a> when you want to contrast capture
-              <strong>strategies</strong> rather than trace a single feed.
+              Run the same operations through polling, trigger, and log capture at once and watch lag,
+              ordering, and delete capture diverge live. Best right after the
+              <a href="#changefeed-playground">playground above</a>.
             </p>
           </div>
         </div>
