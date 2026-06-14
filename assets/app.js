@@ -3313,10 +3313,6 @@ function waitForElement(selector, timeout = TOUR_DEFAULT_TIMEOUT) {
 }
 
 function createTourUi() {
-  const scrim = document.createElement("div");
-  scrim.className = "tour-scrim";
-  scrim.setAttribute("aria-hidden", "true");
-
   const panel = document.createElement("div");
   panel.className = "tour-panel";
   panel.setAttribute("role", "dialog");
@@ -3338,7 +3334,6 @@ function createTourUi() {
   `;
 
   return {
-    scrim,
     panel,
     stepLabel: panel.querySelector(".tour-panel__step"),
     title: panel.querySelector(".tour-panel__title"),
@@ -3432,7 +3427,7 @@ function showTourStep(stepIndex) {
     activateSimulatorTab("compare");
     const preview = document.getElementById("simulator");
     if (preview) {
-      try { preview.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* ignore */ }
+      try { preview.scrollIntoView({ block: "start" }); } catch { /* ignore */ }
     }
   }
 
@@ -3459,7 +3454,10 @@ function showTourStep(stepIndex) {
       activeTour.highlightEl = element;
 
       try {
-        element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+        // Instant (not smooth): the workspace streams events continuously, and a
+        // smooth scroll gets interrupted by the layout shifts, leaving the
+        // spotlighted element off-screen. Jump straight to it.
+        element.scrollIntoView({ block: "center", inline: "center" });
       } catch {
         /* ignore */
       }
@@ -3564,7 +3562,6 @@ function stopGuidedTour(reason = "manual") {
 function startGuidedTour() {
   if (activeTour) return;
   const ui = createTourUi();
-  document.body.appendChild(ui.scrim);
   document.body.appendChild(ui.panel);
   document.body.classList.add("tour-active");
 

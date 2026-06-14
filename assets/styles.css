@@ -3465,15 +3465,10 @@ body.megadesk-mode .hero-ambient .orb {
   opacity: 0.25;
 }
 
-.tour-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(12, 12, 27, 0.45);
-  backdrop-filter: blur(1.5px);
-  z-index: 9000;
-  pointer-events: none;
-}
-
+/* No full-screen dim scrim: the page's backdrop-filter cards create stacking
+   contexts that trap a highlighted child below a root-level scrim (it would
+   render *behind* the dim). The element-attached outline + elevation below is
+   the spotlight instead — it tracks the element as the workspace streams. */
 .tour-panel {
   position: fixed;
   bottom: 32px;
@@ -3561,10 +3556,12 @@ body.megadesk-mode .hero-ambient .orb {
 .tour-highlight {
   position: relative;
   z-index: 9100;
-  outline: 3px solid rgba(99, 102, 241, 0.9);
+  outline: 3px solid rgba(99, 102, 241, 0.95);
   outline-offset: 4px;
   border-radius: 12px;
-  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.2);
+  /* Glow + elevation so the spotlighted element reads as focused without a
+     full-screen dim (which the page's stacking contexts would trap it under). */
+  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.28), 0 18px 44px -12px rgba(8, 14, 30, 0.6);
   transition: outline-color 0.2s ease, box-shadow 0.2s ease;
 }
 
