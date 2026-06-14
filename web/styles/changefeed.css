@@ -1,17 +1,24 @@
-:root {
-  --cf-bg: #0f172a;
-  --cf-panel: #111827;
-  --cf-card: #0b1221;
-  --cf-border: #1f2937;
-  --cf-muted: #9ca3af;
-  --cf-text: #e5e7eb;
-  --cf-accent: #38bdf8;
-  --cf-accent-2: #a855f7;
+/* The playground inherits the page palette so it stays coherent with the rest
+   of the site and follows the light/dark theme toggle. The --cf-* tokens are
+   kept as a thin alias layer (referencing the page tokens) so the many rules
+   below don't need to change. Declared on `body` (not :root) so that the
+   var(--page-token) references resolve against the theme override the page
+   sets on `body[data-theme="light"]` — declaring them on :root would lock
+   them to the dark root values. */
+body {
+  --cf-bg: transparent; /* renders flush inside the .simulator card */
+  --cf-panel: var(--bg-surface);
+  --cf-card: var(--card);
+  --cf-border: var(--border);
+  --cf-muted: var(--muted);
+  --cf-text: var(--ink);
+  --cf-accent: var(--accent);
+  --cf-accent-2: #a855f7; /* semantic secondary: buffered / highlighted state */
   --cf-positive: #22c55e;
-  --cf-warning: #f59e0b;
-  --cf-danger: #ef4444;
-  --cf-tooltip-bg: #1e293b;
-  --cf-tooltip-border: #334155;
+  --cf-warning: var(--accent-yellow);
+  --cf-danger: var(--danger);
+  --cf-tooltip-bg: var(--bg-surface);
+  --cf-tooltip-border: var(--border-strong);
 }
 
 /* Tooltip Styles */
@@ -58,10 +65,9 @@
 .cf-shell {
   background: var(--cf-bg);
   color: var(--cf-text);
-  padding: 1.5rem;
-  border-radius: 1.25rem;
-  border: 1px solid var(--cf-border);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  padding: 0; /* the .simulator card supplies the outer frame + padding */
+  border: none;
+  box-shadow: none;
   display: grid;
   gap: 1.5rem;
 }
