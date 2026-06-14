@@ -42,6 +42,7 @@ import {
 } from "../src/ui/generator";
 import {
   describeWriteAmplification,
+  formatWriteAmplificationRatio,
   hasMeaningfulWriteAmplification,
 } from "../src/ui/writeAmplification";
 
@@ -1119,6 +1120,60 @@ const CHALLENGES: Challenge[] = [
     isMet: lanes => lanes.some(lane => lane.metrics.schemaChangeCount > 0),
   },
 ];
+
+// At-a-glance trade-off scorecard: each method graded on the three live,
+// pedagogically-core criteria (delete capture, freshness, source overhead).
+// Ordering is omitted on purpose — the orderingOk metric flags ts_ms
+// interleaving on every lane in multi-table runs, so it can't be graded fairly.
+type ScorecardStatus = "good" | "warn" | "bad";
+type ScorecardCell = { value: string; status: ScorecardStatus };
+type ScorecardRow = {
+  method: MethodOption;
+  deletes: ScorecardCell;
+  freshness: ScorecardCell;
+  overhead: ScorecardCell;
+};
+
+function buildScorecard(lanes: LaneMetrics[]): ScorecardRow[] {
+  const bestDeletesPct = Math.max(...lanes.map(lane => lane.metrics.deletesPct));
+  const lags = lanes.map(lane => lane.metrics.lagMs);
+  const bestLag = Math.min(...lags);
+  const worstLag = Math.max(...lags);
+  const lagSpread = worstLag - bestLag;
+
+  return lanes.map(lane => {
+    const m = lane.metrics;
+
+    // Categorical, not a raw percentage: deletesPct is unreliable to surface
+    // per-lane (it reads 0% transiently before a lane applies, and can exceed
+    // 100% on re-deletes). "all" vs "partial" keyed to polling's real flaw.
+    const losesDeletes = lane.method === "polling" && m.deletesPct < bestDeletesPct - 1;
+    const deletes: ScorecardCell = {
+      value: losesDeletes ? "partial" : "all",
+      status: losesDeletes ? "bad" : "good",
+    };
+
+    // Freshness graded relative to the other lanes this run.
+    const freshness: ScorecardCell = {
+      value: `~${Math.round(m.lagMs)}ms`,
+      status: lagSpread > 1 && m.lagMs >= worstLag - 1 ? "warn" : "good",
+    };
+
+    const amplifies = hasMeaningfulWriteAmplification(m.writeAmplification);
+    const overhead: ScorecardCell = {
+      value: amplifies ? formatWriteAmplificationRatio(m.writeAmplification) : "none",
+      status: amplifies ? "warn" : "good",
+    };
+
+    return { method: lane.method, deletes, freshness, overhead };
+  });
+}
+
+const SCORECARD_ICON: Record<ScorecardStatus, string> = {
+  good: "✓",
+  warn: "⚠",
+  bad: "✗",
+};
 
 export function App() {
   const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
@@ -2750,6 +2805,8 @@ export function App() {
   }, [laneMetrics]);
   const latestNarration = latestEvent ? describeLatestEvent(latestEvent) : null;
 
+  const scorecard = useMemo(() => buildScorecard(laneMetrics), [laneMetrics]);
+
   // Guided-challenge completion latches: once a learner makes a trade-off
   // surface, it stays checked even as the metrics keep changing.
   const [completedChallenges, setCompletedChallenges] = useState<Set<string>>(
@@ -4175,6 +4232,45 @@ export function App() {
               );
             })}
           </ul>
+        </section>
+      )}
+
+      {metricsEnabled && hasLiveEvents && (
+        <section className="sim-shell__scorecard" aria-label="Method trade-off scorecard">
+          <h3 className="sim-shell__scorecard-title">Trade-offs at a glance</h3>
+          <div className="sim-shell__scorecard-scroll">
+            <table className="sim-shell__scorecard-table">
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col">Deletes captured</th>
+                  <th scope="col">Freshness</th>
+                  <th scope="col">Source overhead</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scorecard.map(row => (
+                  <tr key={row.method}>
+                    <th scope="row">{methodCopy[row.method].label}</th>
+                    {([row.deletes, row.freshness, row.overhead] as ScorecardCell[]).map(
+                      (cell, cellIndex) => (
+                        <td key={cellIndex} data-status={cell.status}>
+                          <span
+                            className="sim-shell__scorecard-icon"
+                            role="img"
+                            aria-label={cell.status === "good" ? "Good" : cell.status === "warn" ? "Warning" : "Bad"}
+                          >
+                            {SCORECARD_ICON[cell.status]}
+                          </span>{" "}
+                          {cell.value}
+                        </td>
+                      ),
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 

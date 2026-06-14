@@ -516,6 +516,83 @@
   line-height: 1.4;
 }
 
+/* Trade-off scorecard — methods × criteria at a glance, graded from live metrics. */
+.sim-shell__scorecard {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sim-shell__scorecard-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sim-shell__scorecard-scroll {
+  overflow-x: auto;
+}
+
+.sim-shell__scorecard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 360px;
+}
+
+.sim-shell__scorecard-table th,
+.sim-shell__scorecard-table td {
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.sim-shell__scorecard-table thead th {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sim-shell__scorecard-table tbody th {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.sim-shell__scorecard-table tbody tr:last-child th,
+.sim-shell__scorecard-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sim-shell__scorecard-table td {
+  color: var(--muted-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-shell__scorecard-icon {
+  font-weight: 700;
+}
+
+.sim-shell__scorecard-table td[data-status="good"] .sim-shell__scorecard-icon {
+  color: var(--sem-positive);
+}
+
+.sim-shell__scorecard-table td[data-status="warn"] .sim-shell__scorecard-icon {
+  color: var(--sem-warning);
+}
+
+.sim-shell__scorecard-table td[data-status="bad"] .sim-shell__scorecard-icon {
+  color: var(--sem-danger);
+}
+
 /* Plain-language per-method run takeaway — the "so what" above the comparative
    summary. Tone (left border) flags a clean capture vs. a trade-off. */
 .sim-shell__takeaway {
