@@ -43,19 +43,32 @@ async function expectBothWidgetsMount(page) {
 
   await page.goto(`${baseUrl}/index.html`, { waitUntil: "load" });
 
-  // The CDC Method Comparator must render (the blob-import regression left it
-  // stuck on a "Simulator preview unavailable" placeholder).
-  await expect(page.getByRole("heading", { name: /CDC Method Comparator/i })).toBeVisible({
-    timeout: 15000,
-  });
-
-  // The Change Feed Playground must mount too (it is never imported unless the
+  // The Change Feed Playground is the default ("Drive one feed") tab of the
+  // unified Simulator card and must mount (it is never imported unless the
   // index.html bootstrap calls its loader's .load() handle).
   const changefeedRoot = page.locator("#changefeedPlaygroundRoot");
   await expect(changefeedRoot).not.toContainText(/Preparing the change feed playground/i, {
     timeout: 15000,
   });
   await expect(changefeedRoot.getByText(/Source\s*→\s*Change Feed\s*→\s*Consumer/i)).toBeVisible({
+    timeout: 15000,
+  });
+
+  // The CDC Method Comparator lives behind the "Compare methods" tab; activate
+  // it and confirm it still renders (the blob-import regression left it stuck
+  // on a "Simulator preview unavailable" placeholder).
+  await page.waitForFunction(
+    () => {
+      const tab = document.getElementById("simTabCompare");
+      if (!tab) return false;
+      if (tab.getAttribute("aria-selected") === "true") return true;
+      tab.click();
+      return tab.getAttribute("aria-selected") === "true";
+    },
+    null,
+    { timeout: 15000 },
+  );
+  await expect(page.getByRole("heading", { name: /CDC Method Comparator/i })).toBeVisible({
     timeout: 15000,
   });
 

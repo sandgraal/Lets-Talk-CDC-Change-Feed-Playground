@@ -32,11 +32,9 @@ import {
   type EmitFn,
   serializeEventLogNdjson,
 } from "../src";
-import { parseHarnessHistoryMarkdown } from "../src";
 import { createSafeStorage, type SafeStorage, type StorageLike } from "../src";
 import { normalizeComparatorSummary } from "../src/utils/normalizeComparatorSummary";
 import { ScenarioRunner, diffLane } from "../sim";
-import harnessHistoryMd from "../docs/harness-history.md?raw";
 import {
   createGeneratorOp,
   createGeneratorStateFromScenario,
@@ -70,7 +68,6 @@ import { SchemaWalkthrough } from "./components/SchemaWalkthrough";
 import { LaneDiffOverlay } from "./components/LaneDiffOverlay";
 import { PresetGuidance } from "./components/PresetGuidance";
 import { ScenarioGuidancePanel } from "./components/ScenarioGuidance";
-import { PlaygroundCorePreview } from "./components/PlaygroundCorePreview";
 import { SCENARIOS, ShellScenario } from "./scenarios";
 import { track, trackClockControl } from "./telemetry";
 import "./styles/shell.css";
@@ -79,7 +76,6 @@ import tooltipCopyData from "../assets/tooltip-copy.js";
 import {
   DEFAULT_SCENARIO_FILTER,
   applyScenarioFilters,
-  collectScenarioTags,
   loadScenarioFilterDetail,
   normaliseScenarioFilterDetail,
   saveScenarioFilterDetail,
@@ -1134,14 +1130,6 @@ export function App() {
   const activeMethodsRef = useRef(activeMethods);
   const clockRef = useRef(clock);
   const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET_ID];
-  const presetOptions = useMemo(
-    () =>
-      Object.values(PRESETS).map(presetOption => ({
-        id: presetOption.id,
-        label: presetOption.label,
-      })),
-    [],
-  );
   const methodCopy = useMemo(() => {
     const overrides = preset.methodCopyOverrides ?? {};
     return METHOD_ORDER.reduce((acc, method) => {
@@ -1168,15 +1156,6 @@ export function App() {
         {} as Record<MethodOption, { label: string; tooltip?: string }>,
       ),
     [methodCopy],
-  );
-  const scenarioTagSet = useMemo(() => new Set(scenarioTags), [scenarioTags]);
-  const availableScenarioTags = useMemo(
-    () =>
-      collectScenarioTags(SCENARIOS, {
-        liveScenario: liveScenario ?? undefined,
-        additionalTags: [scenarioTags],
-      }),
-    [liveScenario, scenarioTags],
   );
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1311,10 +1290,6 @@ export function App() {
       window.removeEventListener("cdc:scenario-filter-request" as string, handler);
     };
   }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
-  const harnessHistory = useMemo(
-    () => parseHarnessHistoryMarkdown(harnessHistoryMd),
-    [],
-  );
   const ensureLaneStorage = useCallback((method: MethodOption) => {
     let storage = laneStorageRef.current[method];
     if (!storage) {
@@ -2624,12 +2599,6 @@ export function App() {
     [scenario.name],
   );
 
-  const handlePresetSelect = useCallback((value: string) => {
-    if (!isVendorPresetId(value)) return;
-    setPresetId(value);
-    track("comparator.preset.select", { presetId: value });
-  }, []);
-
   const handleScenarioFilterChange = useCallback(
     (value: string) => {
       setScenarioFilter(value);
@@ -2638,24 +2607,6 @@ export function App() {
     },
     [broadcastScenarioFilter, scenarioTags],
   );
-
-  const handleScenarioTagToggle = useCallback(
-    (tag: string) => {
-      const hasTag = scenarioTags.includes(tag);
-      const nextTags = hasTag ? scenarioTags.filter(entry => entry !== tag) : [...scenarioTags, tag];
-      setScenarioTags(nextTags);
-      broadcastScenarioFilter(scenarioFilter, nextTags);
-      track("comparator.scenario.tag_toggle", { tag, active: !hasTag });
-    },
-    [broadcastScenarioFilter, scenarioFilter, scenarioTags],
-  );
-
-  const handleScenarioTagClear = useCallback(() => {
-    if (!scenarioTags.length) return;
-    setScenarioTags([]);
-    broadcastScenarioFilter(scenarioFilter, []);
-    track("comparator.scenario.tag_clear");
-  }, [broadcastScenarioFilter, scenarioFilter, scenarioTags]);
 
   const handleScenarioSelect = useCallback((value: string) => {
     userSelectedScenarioRef.current = true;
@@ -3659,44 +3610,8 @@ export function App() {
               placeholder="Find by label, description, or tag"
             />
           </label>
-          {availableScenarioTags.length > 0 ? (
-            <div className="sim-shell__scenario-tags" role="group" aria-label="Scenario tags">
-              {availableScenarioTags.map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  className="sim-shell__scenario-tag"
-                  data-active={scenarioTagSet.has(tag) ? "true" : "false"}
-                  aria-pressed={scenarioTagSet.has(tag)}
-                  onClick={() => handleScenarioTagToggle(tag)}
-                >
-                  #{tag}
-                </button>
-              ))}
-              {scenarioTags.length ? (
-                <button
-                  type="button"
-                  className="sim-shell__scenario-tag sim-shell__scenario-tag--clear"
-                  onClick={handleScenarioTagClear}
-                >
-                  Clear
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </div>
         <div className="sim-shell__actions sim-shell__actions--scenario" role="group" aria-label="Scenario controls">
-          <select
-            aria-label="Vendor preset"
-            value={presetId}
-            onChange={event => handlePresetSelect(event.target.value)}
-          >
-            {presetOptions.map(option => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
           <select
             aria-label="Scenario"
             value={scenarioId}
@@ -3792,8 +3707,6 @@ export function App() {
         }))}
       />
 
-      <PlaygroundCorePreview scenarios={SCENARIOS} />
-
       <div className="sim-shell__event-filters" role="group" aria-label="Event filters">
         {isConsumerPaused && (
           <div className="sim-shell__pause-banner" role="status" aria-live="polite">
@@ -3842,49 +3755,6 @@ export function App() {
           onReplayEvent={handleReplayEvent}
           maxVisibleEvents={MAX_EVENT_LOG_ROWS}
         />
-      )}
-
-      {harnessHistory && (harnessHistory.rows.length > 0 || harnessHistory.placeholder) && (
-        <section className="sim-shell__harness-history" aria-label="Harness nightly history">
-          <details>
-            <summary>Harness nightly history</summary>
-            {harnessHistory.rows.length > 0 ? (
-              <div className="sim-shell__harness-history-table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      {harnessHistory.headers.map(header => (
-                        <th key={header}>{header}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {harnessHistory.rows.map((row, rowIndex) => (
-                      <tr key={`harness-row-${rowIndex}`}>
-                        {row.map((cell, cellIndex) => {
-                          const text = cell.text || "—";
-                          const link = cell.href ? (
-                            <a href={cell.href} target="_blank" rel="noreferrer noopener">
-                              {text}
-                            </a>
-                          ) : (
-                            text
-                          );
-                          const content = cell.emphasis ? <em>{link}</em> : link;
-                          return <td key={`harness-cell-${rowIndex}-${cellIndex}`}>{content}</td>;
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="sim-shell__harness-history-empty">
-                {harnessHistory.placeholder ?? "No harness runs captured yet."}
-              </p>
-            )}
-          </details>
-        </section>
       )}
 
       <div
@@ -4562,9 +4432,6 @@ export function App() {
         })}
       </div>
 
-      <footer className="sim-shell__footer">
-        Scenario clock: {clock}ms · {laneMetrics.reduce((sum, lane) => sum + lane.events.length, 0)} total events emitted
-      </footer>
     </section>
   );
 }

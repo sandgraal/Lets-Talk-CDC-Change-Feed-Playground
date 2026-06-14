@@ -753,6 +753,10 @@ const els = {
   onboardingStart: document.getElementById("onboardingStart"),
   onboardingTour: document.getElementById("onboardingTour"),
   methodGuidance: document.getElementById("methodGuidance"),
+  simTabFeed: document.getElementById("simTabFeed"),
+  simTabCompare: document.getElementById("simTabCompare"),
+  simPanelFeed: document.getElementById("simPanelFeed"),
+  simPanelCompare: document.getElementById("simPanelCompare"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
   quickstartCards: {
@@ -992,9 +996,9 @@ const GUIDED_TOUR_STEPS = [
   {
     id: "comparator-preset",
     selector: ".sim-shell__preset-row",
-    title: "Pick a vendor preset",
+    title: "Read the pipeline blueprint",
     timeout: TOUR_COMPARATOR_TIMEOUT,
-    description: "Choose the pipeline you want to mirror. The badges reveal source, capture, transport, and sink terminology for the walkthrough.",
+    description: "These badges map the scenario onto a real pipeline — source, capture, transport, and sink — so the walkthrough terminology lines up with production CDC.",
     learnHref: `${LTCDC_BASE}tooling/`,
     learnLabel: "Compare CDC tooling on Let’s Talk CDC →",
   },
@@ -1052,8 +1056,31 @@ function isComparatorFlagEnabled() {
   }
 }
 
+// Unified Simulator card: switch between the single-feed playground tab and the
+// method comparator tab. Keeps ARIA state, roving tabindex, and panel
+// visibility in sync. Returns true when the requested tab exists.
+function activateSimulatorTab(mode, { focus = false } = {}) {
+  const tabs = {
+    feed: { tab: els.simTabFeed, panel: els.simPanelFeed },
+    compare: { tab: els.simTabCompare, panel: els.simPanelCompare },
+  };
+  const target = tabs[mode];
+  if (!target || !target.tab || !target.panel) return false;
+  Object.entries(tabs).forEach(([key, { tab, panel }]) => {
+    if (!tab || !panel) return;
+    const selected = key === mode;
+    tab.setAttribute("aria-selected", selected ? "true" : "false");
+    tab.tabIndex = selected ? 0 : -1;
+    panel.hidden = !selected;
+  });
+  if (focus) {
+    try { target.tab.focus(); } catch { /* ignore */ }
+  }
+  return true;
+}
+
 function renderComparatorFlagState(enabled) {
-  const panel = document.getElementById("sim-shell-preview");
+  const panel = document.getElementById("simPanelCompare");
   if (!panel) return;
   panel.dataset.comparatorEnabled = enabled ? "true" : "false";
 
@@ -3363,7 +3390,10 @@ function showTourStep(stepIndex) {
       skipRemainingComparatorSteps();
       return;
     }
-    const preview = document.getElementById("sim-shell-preview");
+    // The comparator lives behind the "Compare methods" tab — surface it before
+    // we wait on its React-rendered elements, then scroll the card into view.
+    activateSimulatorTab("compare");
+    const preview = document.getElementById("simulator");
     if (preview) {
       try { preview.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* ignore */ }
     }
@@ -4998,6 +5028,23 @@ function bindUiHandlers() {
   if (els.onboardingOverlay) {
     els.onboardingOverlay.addEventListener("click", (event) => {
       if (event.target === els.onboardingOverlay) hideOnboarding(true);
+    });
+  }
+
+  // Unified Simulator card tabs (single feed ↔ method comparator).
+  const simTabs = [els.simTabFeed, els.simTabCompare].filter(Boolean);
+  if (simTabs.length) {
+    els.simTabFeed?.addEventListener("click", () => activateSimulatorTab("feed"));
+    els.simTabCompare?.addEventListener("click", () => activateSimulatorTab("compare"));
+    simTabs.forEach((tab, index) => {
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+        event.preventDefault();
+        const dir = event.key === "ArrowRight" ? 1 : -1;
+        const next = (index + dir + simTabs.length) % simTabs.length;
+        const mode = simTabs[next] === els.simTabCompare ? "compare" : "feed";
+        activateSimulatorTab(mode, { focus: true });
+      });
     });
   }
 
