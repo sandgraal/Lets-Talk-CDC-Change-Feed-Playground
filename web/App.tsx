@@ -4255,7 +4255,11 @@ export function App() {
                     {([row.deletes, row.freshness, row.overhead] as ScorecardCell[]).map(
                       (cell, cellIndex) => (
                         <td key={cellIndex} data-status={cell.status}>
-                          <span className="sim-shell__scorecard-icon" aria-hidden="true">
+                          <span
+                            className="sim-shell__scorecard-icon"
+                            role="img"
+                            aria-label={cell.status === "good" ? "Good" : cell.status === "warn" ? "Warning" : "Bad"}
+                          >
                             {SCORECARD_ICON[cell.status]}
                           </span>{" "}
                           {cell.value}
