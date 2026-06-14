@@ -502,6 +502,7 @@ body {
 }
 
 .cf-table__cell,
+.cf-table__cell--muted,
 .cf-event-card__body {
   overflow-wrap: anywhere;
 }
