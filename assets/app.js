@@ -751,6 +751,7 @@ const els = {
   onboardingClose: document.getElementById("onboardingClose"),
   onboardingDismiss: document.getElementById("onboardingDismiss"),
   onboardingStart: document.getElementById("onboardingStart"),
+  onboardingTour: document.getElementById("onboardingTour"),
   methodGuidance: document.getElementById("methodGuidance"),
   saveRemote: document.getElementById("btnSaveRemote"),
   shareLink: document.getElementById("btnShareLink"),
@@ -814,6 +815,9 @@ function ensureOnboardingElements() {
   }
   if (!els.onboardingStart) {
     els.onboardingStart = document.getElementById("onboardingStart");
+  }
+  if (!els.onboardingTour) {
+    els.onboardingTour = document.getElementById("onboardingTour");
   }
 }
 
@@ -4979,6 +4983,16 @@ function bindUiHandlers() {
     els.onboardingStart.onclick = () => {
       const template = getTemplateById("omnichannel-orders");
       applyScenarioTemplate(template, { focusStep: "rows", closeOnboarding: true });
+    };
+  }
+  if (els.onboardingTour) {
+    els.onboardingTour.onclick = () => {
+      // Load real demo content so the tour has lanes/events to spotlight,
+      // close the welcome modal, then launch the guided walkthrough.
+      const template = getTemplateById("omnichannel-orders");
+      if (template) applyScenarioTemplate(template, { focusStep: "events", closeOnboarding: true });
+      else hideOnboarding(true);
+      startGuidedTour();
     };
   }
   if (els.onboardingOverlay) {

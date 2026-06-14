@@ -2840,6 +2840,29 @@ select:focus {
   gap: 6px;
 }
 
+.onboarding-tour-hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted, #94a3b8);
+}
+
+.onboarding-tour-link {
+  font: inherit;
+  font-weight: 600;
+  color: #93c5fd;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.onboarding-tour-link:hover,
+.onboarding-tour-link:focus-visible {
+  color: #bfdbfe;
+}
+
 .onboarding-secret {
   display: inline-flex;
   align-items: center;
