@@ -23,11 +23,14 @@ suite("Workspace onboarding", () => {
     });
   });
 
-  test("start from scratch without Scranton seeds a blank schema", async ({ page }) => {
+  test("start from scratch loads the Scranton schema with sample rows", async ({ page }) => {
     await loadWorkspace(page);
 
     const overlay = page.locator("#onboardingOverlay");
     await expect(overlay).toBeVisible({ timeout: 15000 });
+
+    // The old opt-in Scranton checkbox is gone.
+    await expect(page.locator("#onboardingEasterEgg")).toHaveCount(0);
 
     const startButton = page.getByRole("button", { name: "Start from scratch" });
     await expect(startButton).toBeVisible();
@@ -35,18 +38,16 @@ suite("Workspace onboarding", () => {
 
     await expect(overlay).toBeHidden();
 
-    const schemaPills = page.locator("#schemaPills .pill");
-    await expect(schemaPills).toHaveCount(0);
-
-    await expect(page.locator("#schemaStatus")).toContainText("Add a column to begin");
+    // Learners land on the populated 6-column Scranton schema, not a blank canvas.
+    await expect(page.locator("#schemaPills .pill")).toHaveCount(6);
 
     const stored = await page.evaluate(() => window.localStorage.getItem("cdc_playground"));
     expect(stored).toBeTruthy();
     const parsed = stored ? JSON.parse(stored) : null;
-    expect(parsed?.schema ?? []).toHaveLength(0);
-    expect(parsed?.rows ?? []).toHaveLength(0);
+    expect(parsed?.schema ?? []).toHaveLength(6);
+    expect((parsed?.rows ?? []).length).toBeGreaterThan(0);
 
     const officePref = await page.evaluate(() => window.localStorage.getItem("cdc_playground_office_opt_in_v1"));
-    expect(officePref).toBe("false");
+    expect(officePref).toBe("true");
   });
 });
