@@ -1700,4 +1700,19 @@
   .sim-shell__lane-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Mobile safety: let the comparator's nested grids/flex rows shrink below
+     their intrinsic content width and wrap long monospace payloads, so narrow
+     viewports don't force the card (and the page) into horizontal scroll. */
+  .sim-shell,
+  .sim-shell * {
+    min-width: 0;
+  }
+
+  .sim-shell__event,
+  .sim-shell__event-log-item,
+  .sim-shell__event-log-details code,
+  .sim-shell__metrics {
+    overflow-wrap: anywhere;
+  }
 }

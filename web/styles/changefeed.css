@@ -487,6 +487,25 @@ body {
   font-weight: 400;
 }
 
+/* Mobile safety: by default grid/flex children won't shrink below their
+   content's intrinsic width, so long monospace payloads (e.g. row JSON) push
+   a lane — and the whole page — into horizontal scroll on narrow viewports.
+   Allow the children to shrink and let the payload text wrap instead. */
+.cf-lane,
+.cf-table,
+.cf-table__row,
+.cf-table__nested-row,
+.cf-event-stack,
+.cf-event-card,
+.cf-event-card__body {
+  min-width: 0;
+}
+
+.cf-table__cell,
+.cf-event-card__body {
+  overflow-wrap: anywhere;
+}
+
 .cf-event-stack {
   display: grid;
   gap: 0.4rem;
