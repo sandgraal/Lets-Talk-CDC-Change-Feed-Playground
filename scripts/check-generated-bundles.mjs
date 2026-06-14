@@ -26,6 +26,10 @@ const bundleChecks = [
     rebuild: "npm run build:web",
   },
   {
+    output: join(GENERATED_DIR, "ui-changefeed-playground.css"),
+    rebuild: "npm run build:web",
+  },
+  {
     output: join(GENERATED_DIR, "event-log-widget.js"),
     rebuild: "npm run build:web",
   },
