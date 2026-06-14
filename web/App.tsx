@@ -1102,8 +1102,10 @@ export function App() {
   const [eventLogOp, setEventLogOp] = useState<string | null>(initialEventLogOp);
   const [applyOnCommit, setApplyOnCommit] = useState(storedPrefs?.applyOnCommit ?? false);
   // Lane spotlighted from the static "When to use which" method chips (app.js
-  // dispatches cdc:highlight-method). Cleared automatically after a beat.
-  const [highlightedMethod, setHighlightedMethod] = useState<MethodOption | null>(null);
+  // dispatches cdc:highlight-method). The nonce makes repeat clicks on the same
+  // method re-trigger the scroll + pulse (React would otherwise bail on an
+  // unchanged value). Cleared automatically after a beat.
+  const [highlight, setHighlight] = useState<{ method: MethodOption; nonce: number } | null>(null);
   const [consumerRateEnabled, setConsumerRateEnabled] = useState(
     storedPrefs?.consumerRateEnabled ?? false,
   );
@@ -3386,7 +3388,7 @@ export function App() {
       if (!(event instanceof CustomEvent)) return;
       const key = event.detail;
       if (typeof key === "string" && (METHOD_ORDER as readonly string[]).includes(key)) {
-        setHighlightedMethod(key as MethodOption);
+        setHighlight((prev) => ({ method: key as MethodOption, nonce: (prev?.nonce ?? 0) + 1 }));
       }
     };
     window.addEventListener("cdc:highlight-method" as string, handler);
@@ -3394,19 +3396,26 @@ export function App() {
   }, []);
 
   // Scroll the spotlighted lane into view and clear the highlight after a beat.
+  // Re-runs on every click (nonce changes the object identity), so repeat
+  // clicks on the same method re-scroll and replay the pulse.
   useEffect(() => {
-    if (!highlightedMethod) return;
-    const el = document.querySelector(`.sim-shell__lane-card[data-method="${highlightedMethod}"]`);
-    if (el && typeof (el as HTMLElement).scrollIntoView === "function") {
+    if (!highlight) return;
+    const el = document.querySelector(`.sim-shell__lane-card[data-method="${highlight.method}"]`);
+    if (el instanceof HTMLElement) {
       try {
-        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
       } catch {
         /* ignore */
       }
+      // Restart the CSS pulse even when re-selecting the already-highlighted
+      // lane (the class is unchanged, so toggle the animation via a reflow).
+      el.style.animation = "none";
+      void el.offsetWidth;
+      el.style.animation = "";
     }
-    const timer = window.setTimeout(() => setHighlightedMethod(null), 2500);
+    const timer = window.setTimeout(() => setHighlight(null), 2500);
     return () => window.clearTimeout(timer);
-  }, [highlightedMethod]);
+  }, [highlight]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -4286,7 +4295,7 @@ export function App() {
             <article
               key={method}
               data-method={method}
-              className={`sim-shell__lane-card${highlightedMethod === method ? " sim-shell__lane-card--highlighted" : ""}`}
+              className={`sim-shell__lane-card${highlight?.method === method ? " sim-shell__lane-card--highlighted" : ""}`}
             >
               <header
                 className="sim-shell__lane-header"
