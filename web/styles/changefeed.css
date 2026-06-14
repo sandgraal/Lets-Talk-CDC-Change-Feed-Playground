@@ -155,6 +155,48 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Plain-language "what this run shows" synthesis for the single feed. */
+.cf-takeaway {
+  background: var(--cf-panel);
+  border: 1px solid var(--cf-border);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.cf-takeaway__title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cf-muted);
+}
+
+.cf-takeaway__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cf-takeaway__item {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--cf-text);
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--cf-border);
+}
+
+.cf-takeaway__item[data-tone="ok"] {
+  border-left-color: var(--sem-positive);
+}
+
+.cf-takeaway__item[data-tone="warn"] {
+  border-left-color: var(--sem-warning);
+}
+
 .cf-toolbar {
   background: var(--cf-panel);
   border: 1px solid var(--cf-border);
