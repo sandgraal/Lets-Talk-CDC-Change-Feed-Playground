@@ -714,6 +714,13 @@
   font-weight: 600;
   color: var(--ink);
 }
+.sim-shell__summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-self: flex-start;
+}
+
 .sim-shell__summary-copy {
   border: 1px solid var(--accent);
   background: var(--accent-soft);

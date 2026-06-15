@@ -3226,44 +3226,85 @@ export function App() {
     );
   }, [isConsumerPaused, totalBacklog]);
 
-  const handleCopySummary = useCallback(() => {
-    if (!summary) return;
-    const parts: string[] = [];
-    parts.push(`${scenario.label}: ${scenario.description}`);
-    parts.push(`Methods: ${activeMethods.map(method => methodCopy[method].label).join(", ")}`);
-    if (summary.bestLag) {
-      parts.push(`Fastest ${methodCopy[summary.bestLag.method].label} at ${Math.round(summary.bestLag.metrics.lagMs)}ms`);
+  // Complete, shareable/saveable run report: per-method plain-language takeaways
+  // + the trade-off scorecard + the comparative summary, as portable Markdown.
+  const runReport = useMemo(() => {
+    if (!hasLiveEvents) return "";
+    const bestDeletesPct = Math.max(...laneMetrics.map(lane => lane.metrics.deletesPct));
+    const lines: string[] = [];
+    lines.push(`# CDC run report — ${scenario.label}`);
+    lines.push("");
+    if (scenario.description) lines.push(scenario.description);
+    lines.push(`Methods: ${activeMethods.map(method => methodCopy[method].label).join(", ")}`);
+    if (scenario.tags?.length) lines.push(`Tags: ${scenario.tags.join(", ")}`);
+    lines.push("");
+    lines.push("## What each method did");
+    for (const lane of laneMetrics) {
+      const takeaway = describeLaneTakeaway(lane.method, lane.metrics, bestDeletesPct);
+      lines.push(`- ${methodCopy[lane.method].label}: ${takeaway.text}`);
     }
-    if (summary.lagSpread > 0) {
-      parts.push(`${methodCopy[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms`);
-    }
-    parts.push(`Lowest delete capture: ${methodCopy[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`);
-    if (
-      summary.triggerWriteAmplification &&
-      hasMeaningfulWriteAmplification(summary.triggerWriteAmplification.metrics.writeAmplification)
-    ) {
-      const label = describeWriteAmplification(
-        summary.triggerWriteAmplification.metrics.writeAmplification,
+    lines.push("");
+    lines.push("## Trade-offs at a glance");
+    lines.push("| Method | Deletes captured | Freshness | Source overhead |");
+    lines.push("| --- | --- | --- | --- |");
+    for (const row of scorecard) {
+      lines.push(
+        `| ${methodCopy[row.method].label} | ${row.deletes.value} | ${row.freshness.value} | ${row.overhead.value} |`,
       );
-      parts.push(
-        `Trigger write amplification: ${methodCopy[summary.triggerWriteAmplification.method].label} ${label}`,
+    }
+    if (summary) {
+      lines.push("");
+      lines.push("## Summary");
+      lines.push(
+        `- Fastest: ${methodCopy[summary.bestLag.method].label} at ${Math.round(summary.bestLag.metrics.lagMs)}ms` +
+          (summary.lagSpread > 0
+            ? ` (${methodCopy[summary.worstLag.method].label} trails by ${Math.round(summary.lagSpread)}ms)`
+            : ""),
+      );
+      lines.push(
+        `- Lowest delete capture: ${methodCopy[summary.lowestDeletes.method].label} (${Math.round(summary.lowestDeletes.metrics.deletesPct)}%)`,
+      );
+      if (
+        summary.triggerWriteAmplification &&
+        hasMeaningfulWriteAmplification(summary.triggerWriteAmplification.metrics.writeAmplification)
+      ) {
+        lines.push(
+          `- Trigger write amplification: ${describeWriteAmplification(summary.triggerWriteAmplification.metrics.writeAmplification)}`,
+        );
+      }
+      if (snapshotSummaryList) lines.push(`- Snapshot rows: ${snapshotSummaryList}`);
+      lines.push(
+        `- Ordering: ${summary.orderingIssues.length ? `issues on ${summary.orderingIssues.map(method => methodCopy[method].label).join(", ")}` : "all lanes aligned"}`,
       );
     }
-    if (snapshotSummaryList) {
-      parts.push(`Snapshot rows: ${snapshotSummaryList}`);
-    }
-    parts.push(`Ordering: ${summary.orderingIssues.length ? summary.orderingIssues.map(method => methodCopy[method].label).join(", ") : "All lanes aligned"}`);
-    if (scenario.tags?.length) parts.push(`Tags: ${scenario.tags.join(', ')}`);
+    lines.push("");
+    lines.push("Learn more about CDC: https://sandgraal.github.io/letstalkcdc/");
+    return lines.join("\n");
+  }, [hasLiveEvents, scenario, activeMethods, laneMetrics, scorecard, summary, snapshotSummaryList, methodCopy]);
+
+  const handleCopyReport = useCallback(() => {
+    if (!runReport) return;
     navigator.clipboard
-      .writeText(parts.join('\n'))
+      .writeText(runReport)
       .then(() => setSummaryCopied(true))
       .catch(() => setSummaryCopied(false));
-    track("comparator.summary.copied", {
-      scenario: scenario.name,
-      tags: scenario.tags ?? [],
-      methods: activeMethods,
-    });
-  }, [summary, scenario, activeMethods, methodCopy, snapshotSummaryList]);
+    track("comparator.report.copied", { scenario: scenario.name, methods: activeMethods });
+  }, [runReport, scenario, activeMethods]);
+
+  const handleDownloadReport = useCallback(() => {
+    if (!runReport || typeof document === "undefined") return;
+    const blob = new Blob([runReport], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    const slug = (scenario.name || "report").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "report";
+    anchor.download = `cdc-run-${slug}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    track("comparator.report.downloaded", { scenario: scenario.name });
+  }, [runReport, scenario]);
 
   const handleLaneOverlayInspect = useCallback(
     (method: MethodOption) => {
@@ -4315,9 +4356,14 @@ export function App() {
                 : ` Issues: ${summary.orderingIssues.map(method => methodCopy[method].label).join(", ")}`}
             </li>
           </ul>
-          <button type="button" className="sim-shell__summary-copy" onClick={handleCopySummary}>
-            {summaryCopied ? "Copied" : "Copy summary"}
-          </button>
+          <div className="sim-shell__summary-actions">
+            <button type="button" className="sim-shell__summary-copy" onClick={handleCopyReport}>
+              {summaryCopied ? "Copied" : "Copy report"}
+            </button>
+            <button type="button" className="sim-shell__summary-copy" onClick={handleDownloadReport}>
+              Download .md
+            </button>
+          </div>
         </div>
       )}
 
