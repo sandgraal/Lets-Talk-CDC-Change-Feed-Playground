@@ -615,6 +615,65 @@
   line-height: 1.4;
 }
 
+/* "Details" disclosure — tucks the scorecard, comparative summary, and metrics
+   dashboard so the headline takeaway / predict / challenges stay prominent. */
+/* NB: no display:grid/flex here — that overrides <details> native collapse and
+   renders the children even when closed. Keep default display; space children
+   with margins (which only apply when the disclosure is open). */
+.sim-shell__details {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: transparent;
+  padding: 0.25rem 0.75rem;
+}
+
+.sim-shell__details[open] {
+  padding-bottom: 0.85rem;
+}
+
+.sim-shell__details > *:not(.sim-shell__details-summary) {
+  margin: 0.75rem 0 0;
+}
+
+/* The tucked panels set their own display (grid/flex), which would override the
+   UA stylesheet's display:none on closed-<details> children — so hide them
+   explicitly while collapsed. */
+.sim-shell__details:not([open]) > *:not(.sim-shell__details-summary) {
+  display: none;
+}
+
+.sim-shell__details-summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-strong);
+  padding: 0.55rem 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sim-shell__details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sim-shell__details-summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.sim-shell__details[open] .sim-shell__details-summary::before {
+  content: "▾";
+}
+
+.sim-shell__details-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Trade-off scorecard — methods × criteria at a glance, graded from live metrics. */
 .sim-shell__scorecard {
   margin: 0;

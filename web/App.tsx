@@ -4410,6 +4410,11 @@ export function App() {
       )}
 
       {metricsEnabled && hasLiveEvents && (
+        <details className="sim-shell__details">
+          <summary className="sim-shell__details-summary">
+            Details — scorecard, lane checks &amp; summary
+          </summary>
+          {hasLiveEvents && (
         <section className="sim-shell__scorecard" aria-label="Method trade-off scorecard">
           <h3 className="sim-shell__scorecard-title">Trade-offs at a glance</h3>
           <div className="sim-shell__scorecard-scroll">
@@ -4530,6 +4535,8 @@ export function App() {
             ))}
           </ul>
         </section>
+      )}
+        </details>
       )}
 
       {metricsDashboardLanes.length > 0 && (
