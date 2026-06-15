@@ -1175,6 +1175,39 @@ const SCORECARD_ICON: Record<ScorecardStatus, string> = {
   bad: "✗",
 };
 
+// Scenario recommender — lowers the blank-dropdown friction by pointing a learner
+// at a scenario that demonstrates each core lesson. Data-driven: each pick is the
+// first available scenario that genuinely has the trait, so links never dangle.
+type ScenarioRecommendation = { lesson: string; scenario: ShellScenario };
+
+function buildScenarioRecommendations(scenarios: ShellScenario[]): ScenarioRecommendation[] {
+  const recs: ScenarioRecommendation[] = [];
+  const used = new Set<string>();
+  const matches = (s: ShellScenario, re: RegExp) =>
+    re.test(s.id) || re.test(s.label) || (s.tags ?? []).some(tag => re.test(tag));
+  const add = (lesson: string, pred: (s: ShellScenario) => boolean) => {
+    const found = scenarios.find(s => !used.has(s.name) && pred(s));
+    if (found) {
+      recs.push({ lesson, scenario: found });
+      used.add(found.name);
+    }
+  };
+
+  add("See polling drop a delete", s => (s.ops ?? []).some(op => op.op === "delete"));
+  add(
+    "Watch schema drift flow through",
+    s => matches(s, /schema|drift/i) || (s.schemaVersion ?? 1) > 1,
+  );
+  add(
+    "Compare multi-table atomicity",
+    s =>
+      (s.ops ?? []).some(op => Boolean(op.txn)) ||
+      matches(s, /transaction|multi|items|outbox/i),
+  );
+
+  return recs;
+}
+
 export function App() {
   const storedPrefsRef = useRef<ComparatorPreferences | null>(null);
   if (storedPrefsRef.current === null) {
@@ -2807,6 +2840,8 @@ export function App() {
 
   const scorecard = useMemo(() => buildScorecard(laneMetrics), [laneMetrics]);
 
+  const scenarioRecommendations = useMemo(() => buildScenarioRecommendations(SCENARIOS), []);
+
   // Guided-challenge completion latches: once a learner makes a trade-off
   // surface, it stays checked even as the metrics keep changing.
   const [completedChallenges, setCompletedChallenges] = useState<Set<string>>(
@@ -3838,6 +3873,24 @@ export function App() {
             />
           </label>
         </div>
+        {scenarioRecommendations.length > 0 && (
+          <div className="sim-shell__recommender">
+            <span className="sim-shell__recommender-label">New to CDC? Try:</span>
+            <div className="sim-shell__recommender-chips">
+              {scenarioRecommendations.map(rec => (
+                <button
+                  key={rec.scenario.name}
+                  type="button"
+                  className="sim-shell__recommender-chip"
+                  onClick={() => handleScenarioSelect(rec.scenario.name)}
+                  title={`Loads the ${rec.scenario.label} scenario`}
+                >
+                  {rec.lesson}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="sim-shell__actions sim-shell__actions--scenario" role="group" aria-label="Scenario controls">
           <select
             aria-label="Scenario"
