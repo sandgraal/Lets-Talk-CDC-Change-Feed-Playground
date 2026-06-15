@@ -2860,6 +2860,30 @@ export function App() {
     });
   }, [laneMetrics]);
 
+  // Predict-then-reveal: the learner commits to a guess before the run, and the
+  // run grades it when polling actually drops a delete (same divergence signal as
+  // the scorecard). Reset per scenario so each run is a fresh question.
+  const scenarioHasDeletes = useMemo(
+    () => (scenario.ops ?? []).some(op => op.op === "delete"),
+    [scenario.ops],
+  );
+  const pollingActive = laneMetrics.some(lane => lane.method === "polling");
+  const [deletePrediction, setDeletePrediction] = useState<MethodOption | null>(null);
+  const [deletePredictionRevealed, setDeletePredictionRevealed] = useState(false);
+  useEffect(() => {
+    setDeletePrediction(null);
+    setDeletePredictionRevealed(false);
+  }, [scenario.name]);
+  useEffect(() => {
+    if (!deletePrediction || deletePredictionRevealed) return;
+    const polling = laneMetrics.find(lane => lane.method === "polling");
+    if (!polling) return;
+    const bestDeletesPct = Math.max(...laneMetrics.map(lane => lane.metrics.deletesPct));
+    if (polling.metrics.deletesPct < bestDeletesPct - 1) {
+      setDeletePredictionRevealed(true);
+    }
+  }, [deletePrediction, deletePredictionRevealed, laneMetrics]);
+
   const scenarioComparatorDetail = useMemo<ComparatorSummaryDetail | null>(() => {
     const snapshot = scenario.comparator;
     if (!snapshot || !snapshot.summary) return null;
@@ -4266,6 +4290,62 @@ export function App() {
           );
         })}
       </div>
+
+      {metricsEnabled && scenarioHasDeletes && pollingActive && (
+        <section className="sim-shell__predict" aria-label="Predict and reveal">
+          {!deletePredictionRevealed ? (
+            <>
+              <h3 className="sim-shell__predict-title">Predict &amp; reveal</h3>
+              <p className="sim-shell__predict-question">
+                Before you run it — which method will <strong>miss a hard delete</strong>?
+              </p>
+              <div className="sim-shell__predict-options" role="group" aria-label="Your prediction">
+                {laneMetrics.map(lane => (
+                  <button
+                    key={lane.method}
+                    type="button"
+                    className="sim-shell__predict-option"
+                    data-selected={deletePrediction === lane.method ? "true" : "false"}
+                    aria-pressed={deletePrediction === lane.method}
+                    onClick={() => setDeletePrediction(lane.method)}
+                  >
+                    {methodCopy[lane.method].label}
+                  </button>
+                ))}
+              </div>
+              {deletePrediction && (
+                <p className="sim-shell__predict-pending">
+                  You picked {methodCopy[deletePrediction].label}. Press Start and watch the deletes…
+                </p>
+              )}
+            </>
+          ) : (
+            <div
+              className="sim-shell__predict-reveal"
+              data-correct={deletePrediction === "polling" ? "true" : "false"}
+              aria-live="polite"
+            >
+              <p>
+                <strong>{deletePrediction === "polling" ? "Correct! ✓" : "Not quite."}</strong>{" "}
+                {methodCopy.polling.label} missed the hard delete — it reads current state, so
+                deletes between polls vanish. Trigger and log captured it.
+                {deletePrediction !== "polling" &&
+                  ` (You picked ${methodCopy[deletePrediction as MethodOption].label}.)`}
+              </p>
+              <button
+                type="button"
+                className="sim-shell__predict-again"
+                onClick={() => {
+                  setDeletePrediction(null);
+                  setDeletePredictionRevealed(false);
+                }}
+              >
+                Predict again
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {metricsEnabled && (
         <section className="sim-shell__challenges" aria-label="Guided challenges">
