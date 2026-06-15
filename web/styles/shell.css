@@ -425,6 +425,105 @@
   font-size: 0.75rem;
 }
 
+/* Predict-then-reveal — commit to a guess, the run grades it. Accent-framed to
+   read as an interactive prompt vs. the neutral synthesis panels. */
+.sim-shell__predict {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sim-shell__predict-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.sim-shell__predict-question {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.sim-shell__predict-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sim-shell__predict-option {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.9rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sim-shell__predict-option:hover {
+  border-color: var(--accent);
+}
+
+.sim-shell__predict-option[data-selected="true"] {
+  background: var(--accent-strong);
+  color: #ffffff;
+  border-color: var(--accent-strong);
+}
+
+.sim-shell__predict-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sim-shell__predict-pending {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted-strong);
+}
+
+.sim-shell__predict-reveal {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sim-shell__predict-reveal p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.sim-shell__predict-reveal[data-correct="true"] p strong {
+  color: var(--sem-positive);
+}
+
+.sim-shell__predict-reveal[data-correct="false"] p strong {
+  color: var(--sem-warning);
+}
+
+.sim-shell__predict-again {
+  justify-self: start;
+  border: 1px solid var(--accent);
+  background: var(--card);
+  color: var(--accent);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.sim-shell__predict-again:hover {
+  background: var(--accent-soft);
+}
+
 /* Guided challenges — "try it yourself" checklist; items latch to done. */
 .sim-shell__challenges {
   margin: 0;
