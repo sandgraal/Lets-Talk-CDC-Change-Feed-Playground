@@ -615,8 +615,8 @@
   line-height: 1.4;
 }
 
-/* "Details" disclosure — tucks the scorecard, comparative summary, and metrics
-   dashboard so the headline takeaway / predict / challenges stay prominent. */
+/* "Details" disclosure — tucks the scorecard, comparative summary, and lane checks
+   overlay so the headline takeaway / predict / challenges stay prominent. */
 /* NB: no display:grid/flex here — that overrides <details> native collapse and
    renders the children even when closed. Keep default display; space children
    with margins (which only apply when the disclosure is open). */
