@@ -1101,6 +1101,48 @@
   gap: 0.5rem;
 }
 
+/* Scenario recommender — "New to CDC? Try:" chips that load a scenario
+   demonstrating each core lesson, lowering blank-dropdown friction. */
+.sim-shell__recommender {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.sim-shell__recommender-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sim-shell__recommender-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sim-shell__recommender-chip {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sim-shell__recommender-chip:hover {
+  background: rgba(75, 163, 255, 0.28);
+}
+
+.sim-shell__recommender-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .sim-shell__scenario-sync {
   border: 1px solid var(--border);
   background: var(--accent-soft);
