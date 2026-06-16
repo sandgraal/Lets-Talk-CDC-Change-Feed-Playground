@@ -4332,9 +4332,23 @@ async function initAppwrite() {
   // `new Appwrite.Realtime(client)` threw "is not a constructor", which aborted
   // initAppwrite entirely and silently disabled share links + persistence.
 
-  // Try to ensure a session (optional; public perms will still work without it)
-  try { await account.get(); }
-  catch { try { await account.createAnonymousSession(); } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
+  // Try to ensure a session. account.get() throwing is normal (no session yet);
+  // we then fall back to an anonymous session. If BOTH throw, the backend is
+  // unreachable — project paused, network down, or DNS failure.
+  let sessionOk = false;
+  try { await account.get(); sessionOk = true; }
+  catch { try { await account.createAnonymousSession(); sessionOk = true; } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
+
+  // Graceful degradation: when the backend is unreachable, do NOT call
+  // client.subscribe(). The realtime client would otherwise retry the WebSocket
+  // every ~1s indefinitely ("Realtime got disconnected. Reconnect will be
+  // attempted in 1 seconds."), flooding the console. Leaving `appwrite = null`
+  // also makes publishEvent/share/persistence no-op via their
+  // `if (!appwrite) return` guards — i.e. clean offline mode.
+  if (!sessionOk) {
+    console.warn("Appwrite backend unreachable; running offline (realtime sync + remote save disabled).");
+    return;
+  }
 
   const channel = cfg.channel(cfg.databaseId, cfg.collectionId);
   // SDK v13 accepts a string or string[]; use the canonical array form.
