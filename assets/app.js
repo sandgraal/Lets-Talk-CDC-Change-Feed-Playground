@@ -4332,9 +4332,46 @@ async function initAppwrite() {
   // `new Appwrite.Realtime(client)` threw "is not a constructor", which aborted
   // initAppwrite entirely and silently disabled share links + persistence.
 
-  // Try to ensure a session (optional; public perms will still work without it)
-  try { await account.get(); }
-  catch { try { await account.createAnonymousSession(); } catch (e) { console.warn("Anonymous session unavailable", e.message); } }
+  // Try to ensure a session. account.get() throwing is normal (no session yet);
+  // we then fall back to an anonymous session. Both are best-effort: with `Any`
+  // collection perms the app runs fine as an unauthenticated guest, so a failed
+  // session must NOT disable realtime/persistence (see docs/appwrite-setup.md
+  // § "Sessions & permissions model"). What we must avoid is calling
+  // client.subscribe() against an *unreachable* backend — that opens a WebSocket
+  // the realtime client then retries every ~1s forever ("Realtime got
+  // disconnected. Reconnect will be attempted in 1 seconds."), flooding the
+  // console. So we gate on reachability, not on whether a session was obtained.
+  //
+  // An Appwrite request that received an HTTP response (even 401/403) carries
+  // that status in `err.code`; a network failure (project paused, offline, DNS)
+  // surfaces as code 0 / a plain fetch error. If the backend answered *either*
+  // call it's reachable.
+  const respondedWithHttpStatus = (err) => typeof err?.code === "number" && err.code > 0;
+  let backendReachable = false;
+  try {
+    await account.get();
+    backendReachable = true; // a session already exists → reachable
+  } catch (getErr) {
+    if (respondedWithHttpStatus(getErr)) backendReachable = true; // 401 (no session) still means reachable
+    try {
+      await account.createAnonymousSession();
+      backendReachable = true;
+    } catch (sessionErr) {
+      if (respondedWithHttpStatus(sessionErr)) backendReachable = true;
+      // Log full error objects (not just .message, which is often empty) so the
+      // auth-vs-network distinction is diagnosable from the console.
+      console.warn("Appwrite session unavailable; continuing as guest if reachable.", { getErr, sessionErr });
+    }
+  }
+
+  // Graceful degradation: when the backend never responded, stay fully offline.
+  // Don't call client.subscribe() (avoids the ~1s reconnect flood) and leave
+  // `appwrite = null` so publishEvent/share/persistence no-op via their existing
+  // `if (!appwrite) return` guards.
+  if (!backendReachable) {
+    console.warn("Appwrite backend unreachable; running offline (realtime sync + remote save disabled).");
+    return;
+  }
 
   const channel = cfg.channel(cfg.databaseId, cfg.collectionId);
   // SDK v13 accepts a string or string[]; use the canonical array form.
