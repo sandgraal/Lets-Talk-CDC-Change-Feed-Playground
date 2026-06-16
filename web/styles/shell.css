@@ -615,6 +615,57 @@
   line-height: 1.4;
 }
 
+/* Schema walkthrough — interactive Add/Drop-column control, rendered standalone
+   (prominent) for schema scenarios. */
+.sim-shell__schema-demo {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-surface);
+  padding: 1rem 1.2rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sim-shell__schema-demo h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.sim-shell__schema-demo p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.sim-shell__schema-demo-status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.sim-shell__schema-demo-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sim-shell__schema-demo-buttons button {
+  flex: 1 1 180px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sim-shell__schema-demo-buttons button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* "Details" disclosure — tucks the scorecard, comparative summary, and lane checks
    overlay so the headline takeaway / predict / challenges stay prominent. */
 /* NB: no display:grid/flex here — that overrides <details> native collapse and

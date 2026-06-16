@@ -3427,6 +3427,11 @@ export function App() {
       );
     };
   }, [activeMethods, handleSchemaChange, schemaColumnPresent, schemaDemoEnabled, schemaStatusText, scenario.tags]);
+  // Rendered standalone (prominent) so it isn't hidden when the metrics
+  // dashboard is tucked into the Details disclosure.
+  const standaloneSchemaWalkthrough = schemaWalkthroughRenderer
+    ? schemaWalkthroughRenderer(activeMethods[0] ?? "")
+    : null;
   const updateMethodConfig = useCallback(<T extends MethodOption, K extends keyof MethodConfigMap[T]>(
     method: T,
     key: K,
@@ -4383,6 +4388,8 @@ export function App() {
         </section>
       )}
 
+      {standaloneSchemaWalkthrough}
+
       {metricsEnabled && hasLiveEvents && (
         <section className="sim-shell__takeaway" aria-live="polite">
           <h3 className="sim-shell__takeaway-title">What this run shows</h3>
@@ -4409,10 +4416,10 @@ export function App() {
         </section>
       )}
 
-      {metricsEnabled && hasLiveEvents && (
+      {metricsEnabled && (hasLiveEvents || metricsDashboardLanes.length > 0) && (
         <details className="sim-shell__details">
           <summary className="sim-shell__details-summary">
-            Details — scorecard, lane checks &amp; summary
+            Details — scorecard, lane checks, summary &amp; metrics
           </summary>
           {hasLiveEvents && (
         <section className="sim-shell__scorecard" aria-label="Method trade-off scorecard">
@@ -4536,14 +4543,10 @@ export function App() {
           </ul>
         </section>
       )}
+          {metricsDashboardLanes.length > 0 && (
+            <MetricsDashboard lanes={metricsDashboardLanes} />
+          )}
         </details>
-      )}
-
-      {metricsDashboardLanes.length > 0 && (
-        <MetricsDashboard
-          lanes={metricsDashboardLanes}
-          renderSchemaWalkthrough={schemaWalkthroughRenderer}
-        />
       )}
 
       {metricsEnabled && hasLiveEvents && latestNarration && latestEvent && (
