@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from "react";
+import type { FC } from "react";
 import { TOOLTIP_COPY } from "../tooltips";
 import { describeWriteAmplification, hasMeaningfulWriteAmplification } from "../writeAmplification";
 
@@ -22,7 +22,6 @@ export type MetricsDashboardLane = {
 
 export type MetricsDashboardProps = {
   lanes: MetricsDashboardLane[];
-  renderSchemaWalkthrough?: (laneId: string) => ReactNode;
 };
 
 const formatNumber = (value: number) =>
@@ -33,7 +32,6 @@ const formatLag = (value: number) =>
 
 export const MetricsDashboard: FC<MetricsDashboardProps> = ({
   lanes,
-  renderSchemaWalkthrough,
 }) => {
   const totals = lanes.reduce(
     (acc, lane) => {
@@ -61,11 +59,6 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
             <header>
               <h4 data-tooltip={lane.tooltip || undefined}>{lane.label}</h4>
             </header>
-            {renderSchemaWalkthrough && (
-              <div className="sim-shell__schema-demo-inline">
-                {renderSchemaWalkthrough(lane.id)}
-              </div>
-            )}
             <dl>
               <div>
                 <dt>Produced</dt>
