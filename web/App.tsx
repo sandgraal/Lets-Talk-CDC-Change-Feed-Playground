@@ -4416,7 +4416,7 @@ export function App() {
         </section>
       )}
 
-      {metricsEnabled && (hasLiveEvents || metricsDashboardLanes.length > 0) && (
+      {metricsEnabled && hasLiveEvents && (
         <details className="sim-shell__details">
           <summary className="sim-shell__details-summary">
             Details — scorecard, lane checks, summary &amp; metrics
